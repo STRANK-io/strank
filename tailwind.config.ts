@@ -19,6 +19,12 @@ const config = {
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
+        brand: {
+          primary: '#FF6A39', // PANTONE 1645C
+          secondary: '#FF9E1B', // PANTONE 1375C
+          tertiary: '#FED141', // PANTONE 122C
+          dark: '#414042', // Dark gray
+        },
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
