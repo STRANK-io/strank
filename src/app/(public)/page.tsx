@@ -58,8 +58,10 @@ export default function Home() {
 
         <div className="mb-[48px] mt-[91px] flex flex-col items-center gap-6">
           <GoogleSignButton />
-          {/* //TODO: 서비스 둘러보기 링크 추가 */}
-          <Link href="" className="text-lg font-medium leading-[23px] text-brand-dark">
+          <Link
+            href="https://bit.ly/strank"
+            className="text-lg font-medium leading-[23px] text-brand-dark"
+          >
             서비스 둘러보기
           </Link>
         </div>
