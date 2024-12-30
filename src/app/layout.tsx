@@ -2,7 +2,7 @@ import '@/styles/globals.css'
 import Providers from '@/components/providers'
 import { pretendardFont } from '@/lib/fonts'
 import { Metadata } from 'next'
-import { Toaster } from '@/components/ui/toaster'
+import { Toaster } from 'sonner'
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -24,11 +24,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className={`${pretendardFont.variable} font-sans`} suppressHydrationWarning>
-      <body className="bg-background text-foreground">
+      <body className="bg-background text-foreground" suppressHydrationWarning>
         <main className="mx-auto min-h-screen w-full max-w-[393px] pt-11">
           <Providers>{children}</Providers>
         </main>
-        <Toaster />
+        <Toaster toastOptions={{ unstyled: true }} duration={2000} />
       </body>
     </html>
   )

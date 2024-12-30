@@ -208,7 +208,12 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_count: {
+        Row: {
+          total_users: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       increment_api_usage: {
