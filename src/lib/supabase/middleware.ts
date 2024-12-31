@@ -71,7 +71,15 @@ async function handleRouting(
 ) {
   const path = request.nextUrl.pathname
 
-  // 1. 홈페이지, auth/callback 누구나 접근 가능 (auth/callback에서 세션 교환해서 그 이후에 세션이 생김)
+  // 0. 로그인한 유저는 공개 페이지 접근 불가능 -> 원래 있던 페이지로 이동 (//TODO: 동작 확인 필요)
+  if (user?.strava_connected_at && isPublicPath(path)) {
+    return {
+      shouldRedirect: true,
+      response: NextResponse.redirect(new URL(path, request.url)),
+    }
+  }
+
+  // 1. 홈페이지, auth/callback 로그인 없이 접근 가능 (auth/callback에서 세션 교환해서 그 이후에 세션이 생김)
   if (path === ROUTES.PUBLIC.HOME || path === ROUTES.PUBLIC.AUTH_CALLBACK) {
     return { shouldRedirect: false }
   }
@@ -87,9 +95,8 @@ async function handleRouting(
     }
   }
 
-  // 3. 세션이 없으면 홈으로 리다이렉트
+  // 3. 세션이 없으면 약관 페이지 이후로는 접근 불가능 -> 홈으로 리다이렉트
   if (!session) {
-    console.log('page:', path)
     return {
       shouldRedirect: true,
       response: NextResponse.redirect(
@@ -98,11 +105,12 @@ async function handleRouting(
     }
   }
 
-  // 4. 세션은 있고 유저 정보가 없는 경우 (구글 로그인만 하고 유저 정보 입력 안 함)
+  // 4. 세션은 있고 유저 정보가 없는 경우 (구글 로그인만 하고 유저 정보 입력 안 함) -> 구글 로그인 ~ 유저 정보 등록 페이지 사이에만 접근 가능
   if (!user) {
     if (
       path === ROUTES.PUBLIC.AUTH_CALLBACK ||
       path === ROUTES.PUBLIC.TERMS ||
+      path === ROUTES.PUBLIC.STRAVA_CONNECT ||
       path === ROUTES.PUBLIC.REGISTER_USER_INFO
     ) {
       return { shouldRedirect: false }
@@ -115,7 +123,7 @@ async function handleRouting(
     }
   }
 
-  // 5. 스트라바 미연동 유저는 연동 관련 페이지만 접근 가능
+  // 5. 스트라바 미연동 -> 연동 관련 페이지만 접근 가능
   if (!user.strava_connected_at) {
     if (
       path === ROUTES.PUBLIC.STRAVA_CONNECT ||

@@ -47,7 +47,7 @@ export default function Home() {
         <div className="flex flex-1 items-center justify-center">
           <div className="relative h-[313px] w-[313px]">
             <Image
-              src="/strank-vertical.png"
+              src="/images/strank-vertical.png"
               alt="Strank Logo"
               fill
               className="object-contain"

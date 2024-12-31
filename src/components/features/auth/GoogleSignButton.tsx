@@ -32,6 +32,7 @@ export function GoogleSignButton() {
       size="lg"
       className="h-[65px] w-full rounded-2xl bg-brand-primary text-lg font-medium leading-[23px] hover:bg-brand-primary/90"
       onClick={handleSignIn}
+      style={{ boxShadow: '0px 4px 8px 0px #FF6A3952' }}
     >
       Sign in with Google
     </Button>

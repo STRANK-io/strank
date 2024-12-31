@@ -20,8 +20,12 @@ const checkUserCapacity = async (supabase: SupabaseClient<Database>) => {
     .single()
 
   if (userCountError || userCapacityError || !userCountData || !userCapacityData) {
-    userCountError && console.error('Failed to check user count:', { userCountError })
-    userCapacityError && console.error('Failed to check user capacity:', { userCapacityError })
+    if (userCountError) {
+      console.error('Failed to check user count:', { userCountError })
+    }
+    if (userCapacityError) {
+      console.error('Failed to check user capacity:', { userCapacityError })
+    }
     return { error: true }
   }
 
