@@ -216,6 +216,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_user_info: {
+        Args: {
+          nickname?: string
+          district?: string
+          profile_image_url?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       user_role: 'user' | 'admin'

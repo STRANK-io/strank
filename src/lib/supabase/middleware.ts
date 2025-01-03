@@ -1,5 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
-import { Session, type SupabaseClient } from '@supabase/supabase-js'
+import { User, type SupabaseClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isPublicPath, ROUTES } from '@/lib/constants/routes'
 import { ERROR_CODES } from '@/lib/constants/error'
@@ -36,29 +36,29 @@ async function handleLogout(request: NextRequest) {
 // 인증 상태 확인 함수
 async function checkAuthStatus(supabase: SupabaseClient<Database>) {
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    data: { user: sessionUser },
+  } = await supabase.auth.getUser()
 
-  if (!session) {
+  if (!sessionUser) {
     return {
       isValid: false,
       user: null,
-      session: null,
+      sessionUser: null,
       error: ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED,
     }
   }
 
   // 유저 데이터 확인
-  const { data: user } = await supabase
+  const { data: user, error } = await supabase
     .from('users')
     .select('*')
-    .eq('id', session.user.id)
+    .eq('id', sessionUser.id)
     .maybeSingle()
 
   return {
     isValid: !!user && !user.deleted_at,
     user,
-    session,
+    sessionUser: sessionUser,
     error: user?.deleted_at ? ERROR_CODES.AUTH.EXITED_USER : null,
   }
 }
@@ -66,12 +66,11 @@ async function checkAuthStatus(supabase: SupabaseClient<Database>) {
 // 라우팅 규칙 적용 함수
 async function handleRouting(
   request: NextRequest,
-  session: Session | null,
+  sessionUser: User | null,
   user: Tables<'users'> | null
 ) {
   const path = request.nextUrl.pathname
-
-  // 0. 로그인한 유저는 공개 페이지 접근 불가능 -> 원래 있던 페이지로 이동 (//TODO: 동작 확인 필요)
+  // 0. 가입 완료한 유저는 공개 페이지 접근 불가능 -> 원래 있던 페이지로 이동 (//TODO: 동작 확인 필요)
   if (user?.strava_connected_at && isPublicPath(path)) {
     return {
       shouldRedirect: true,
@@ -96,7 +95,7 @@ async function handleRouting(
   }
 
   // 3. 세션이 없으면 약관 페이지 이후로는 접근 불가능 -> 홈으로 리다이렉트
-  if (!session) {
+  if (!sessionUser) {
     return {
       shouldRedirect: true,
       response: NextResponse.redirect(
@@ -105,7 +104,7 @@ async function handleRouting(
     }
   }
 
-  // 4. 세션은 있고 유저 정보가 없는 경우 (구글 로그인만 하고 유저 정보 입력 안 함) -> 구글 로그인 ~ 유저 정보 등록 페이지 사이에만 접근 가능
+  // 4. 세션은 있고 유저 정보가 없는 경우 (구글 로그인 ~ 유저정보입력 완료 사이)
   if (!user) {
     if (
       path === ROUTES.PUBLIC.AUTH_CALLBACK ||
@@ -123,31 +122,6 @@ async function handleRouting(
     }
   }
 
-  // 5. 스트라바 미연동 -> 연동 관련 페이지만 접근 가능
-  if (!user.strava_connected_at) {
-    if (
-      path === ROUTES.PUBLIC.STRAVA_CONNECT ||
-      path === ROUTES.PUBLIC.REGISTER_USER_INFO ||
-      path === ROUTES.PUBLIC.STRAVA_SYNC
-    ) {
-      return { shouldRedirect: false }
-    }
-    return {
-      shouldRedirect: true,
-      response: NextResponse.redirect(
-        new URL(`/?error=${ERROR_CODES.AUTH.STRAVA_CONNECTION_REQUIRED}`, request.url)
-      ),
-    }
-  }
-
-  // 6. 인증 완료된 유저는 퍼블릭 페이지 접근시 rankings로 리다이렉트
-  if (isPublicPath(path)) {
-    return {
-      shouldRedirect: true,
-      response: NextResponse.redirect(new URL(ROUTES.PRIVATE.RANKINGS, request.url)),
-    }
-  }
-
   return { shouldRedirect: false }
 }
 
@@ -159,7 +133,7 @@ export async function handleAuthAndRouting(request: NextRequest) {
     const authStatus = await checkAuthStatus(supabase)
 
     // 라우팅 규칙 적용
-    const routingResult = await handleRouting(request, authStatus.session, authStatus.user)
+    const routingResult = await handleRouting(request, authStatus.sessionUser, authStatus.user)
     if (routingResult.shouldRedirect) {
       return routingResult.response
     }

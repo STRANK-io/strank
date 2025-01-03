@@ -7,6 +7,8 @@ export const ERROR_CODES = {
     EXITED_USER: 'exited_user',
     BETA_TESTER_RECRUITMENT_CLOSED: 'beta_tester_recruitment_closed',
     STRAVA_CONNECTION_REQUIRED: 'strava_connection_required',
+    IMAGE_PROCESSING_FAILED: 'image_processing_failed',
+    IMAGE_UPLOAD_FAILED: 'image_upload_failed',
   },
   INTERNAL_ERROR: 'internal_error',
 } as const
@@ -21,6 +23,9 @@ export const ERROR_MESSAGES = {
   [ERROR_CODES.AUTH.BETA_TESTER_RECRUITMENT_CLOSED]:
     '아쉽게도 베타 테스터 모집이 마감되었습니다.\n다음 모집 회차에 참여해주세요!',
   [ERROR_CODES.AUTH.STRAVA_CONNECTION_REQUIRED]: 'Strava 계정 연동이 필요합니다.',
+  [ERROR_CODES.AUTH.IMAGE_UPLOAD_FAILED]: '프로필 이미지 업로드에 실패했습니다. 다시 시도해주세요.',
+  [ERROR_CODES.AUTH.IMAGE_PROCESSING_FAILED]:
+    '프로필 이미지 처리에 실패했습니다. 다시 시도해주세요.',
   [ERROR_CODES.INTERNAL_ERROR]: '시스템 오류가 발생했습니다. 다시 시도해주세요.',
 } as const
 

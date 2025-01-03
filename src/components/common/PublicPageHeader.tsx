@@ -5,18 +5,14 @@ import BackIcon from './icons/BackIcon'
 
 interface PublicPageHeaderProps {
   title: string
-  href?: string
+  href: string
 }
 
 export default function PublicPageHeader({ title, href }: PublicPageHeaderProps) {
   const router = useRouter()
 
   const handleClick = () => {
-    if (href) {
-      router.push(href)
-    } else {
-      router.back()
-    }
+    router.push(href, { scroll: false })
   }
 
   return (
