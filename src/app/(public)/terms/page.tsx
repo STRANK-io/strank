@@ -7,7 +7,7 @@ import { ROUTES } from '@/lib/constants/routes'
 
 export default function TermsPage() {
   return (
-    <div className="mb-[143px] min-h-screen">
+    <div className="mb-[143px] mt-11">
       <PublicPageHeader title="약관 동의" href={ROUTES.PUBLIC.HOME} />
       <StepIndicator />
       <StrankImage />

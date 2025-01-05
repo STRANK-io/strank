@@ -4,10 +4,7 @@ import { ERROR_CODES } from '@/lib/constants/error'
 import { ROUTES } from '@/lib/constants/routes'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/lib/supabase/supabase'
-
-const redirectWithError = (origin: string, errorCode: string) => {
-  return NextResponse.redirect(`${origin}/?error=${errorCode}`)
-}
+import { redirectWithError } from '@/lib/utils/auth'
 
 const checkUserCapacity = async (supabase: SupabaseClient<Database>) => {
   const { data: userCountData, error: userCountError } = await supabase
@@ -40,14 +37,14 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
 
   if (!code) {
-    return redirectWithError(origin, ERROR_CODES.AUTH.AUTH_CALLBACK_ERROR)
+    return redirectWithError(origin, ROUTES.PUBLIC.HOME, ERROR_CODES.AUTH.AUTH_CALLBACK_ERROR)
   }
 
   const supabase = await createClient()
   const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code)
 
   if (sessionError) {
-    return redirectWithError(origin, ERROR_CODES.AUTH.AUTH_CALLBACK_ERROR)
+    return redirectWithError(origin, ROUTES.PUBLIC.HOME, ERROR_CODES.AUTH.AUTH_CALLBACK_ERROR)
   }
 
   const {
@@ -56,7 +53,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser()
 
   if (userError || !authUser?.id) {
-    return redirectWithError(origin, ERROR_CODES.AUTH.AUTH_CALLBACK_ERROR)
+    return redirectWithError(origin, ROUTES.PUBLIC.HOME, ERROR_CODES.AUTH.AUTH_CALLBACK_ERROR)
   }
 
   // 유저 데이터 확인
@@ -71,13 +68,17 @@ export async function GET(request: Request) {
     const { error, hasCapacity } = await checkUserCapacity(supabase)
 
     if (error) {
-      return redirectWithError(origin, ERROR_CODES.INTERNAL_ERROR)
+      return redirectWithError(origin, ROUTES.PUBLIC.HOME, ERROR_CODES.INTERNAL_ERROR)
     }
 
     // 베타 테스터 모집 종료
     if (!hasCapacity) {
       await supabase.auth.signOut()
-      return redirectWithError(origin, ERROR_CODES.AUTH.BETA_TESTER_RECRUITMENT_CLOSED)
+      return redirectWithError(
+        origin,
+        ROUTES.PUBLIC.HOME,
+        ERROR_CODES.AUTH.BETA_TESTER_RECRUITMENT_CLOSED
+      )
     }
   }
 

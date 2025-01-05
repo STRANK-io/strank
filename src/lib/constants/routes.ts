@@ -16,9 +16,14 @@ export const ROUTES = {
 } as const
 
 export const PUBLIC_PATHS = Object.values(ROUTES.PUBLIC)
+export const PRIVATE_PATHS = Object.values(ROUTES.PRIVATE)
 
 export const isPublicPath = (path: string): boolean => {
   return PUBLIC_PATHS.some(publicPath =>
     publicPath === '/' ? path === '/' : path.startsWith(publicPath)
   )
+}
+
+export const isPrivatePath = (path: string): boolean => {
+  return PRIVATE_PATHS.some(privatePath => path.startsWith(privatePath))
 }

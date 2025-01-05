@@ -31,7 +31,7 @@ export default function Home() {
   }, [error])
 
   return (
-    <div className="flex flex-col">
+    <div className="mt-11 flex flex-col">
       <div className="flex items-center justify-center px-[10px] py-4">
         <h1 className="text-xl font-bold leading-[25px]">로그인</h1>
       </div>
@@ -45,17 +45,14 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="flex flex-1 items-center justify-center">
-          <div className="relative h-[313px] w-[313px]">
-            <Image
-              src="/images/strank-vertical.png"
-              alt="Strank Logo"
-              fill
-              className="object-contain"
-              priority
-            />
-          </div>
-        </div>
+        <Image
+          src="/images/strank-vertical-logo.png"
+          alt="Strank Logo"
+          width={313}
+          height={313}
+          className="mx-auto object-contain"
+          priority
+        />
 
         <div className="mb-[48px] mt-[91px] flex flex-col items-center gap-6">
           <GoogleSignButton />

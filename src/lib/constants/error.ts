@@ -9,8 +9,10 @@ export const ERROR_CODES = {
     STRAVA_CONNECTION_REQUIRED: 'strava_connection_required',
     IMAGE_PROCESSING_FAILED: 'image_processing_failed',
     IMAGE_UPLOAD_FAILED: 'image_upload_failed',
+    STRAVA_CONNECTION_FAILED: 'strava_connection_failed',
   },
   INTERNAL_ERROR: 'internal_error',
+  STRAVA_API_LIMIT_EXCEEDED: 'strava_api_limit_exceeded',
 } as const
 
 // TODO: 에러 메세지 컨펌 받기
@@ -22,11 +24,16 @@ export const ERROR_MESSAGES = {
   [ERROR_CODES.AUTH.EXITED_USER]: '탈퇴한 회원입니다.',
   [ERROR_CODES.AUTH.BETA_TESTER_RECRUITMENT_CLOSED]:
     '아쉽게도 베타 테스터 모집이 마감되었습니다.\n다음 모집 회차에 참여해주세요!',
-  [ERROR_CODES.AUTH.STRAVA_CONNECTION_REQUIRED]: 'Strava 계정 연동이 필요합니다.',
   [ERROR_CODES.AUTH.IMAGE_UPLOAD_FAILED]: '프로필 이미지 업로드에 실패했습니다. 다시 시도해주세요.',
   [ERROR_CODES.AUTH.IMAGE_PROCESSING_FAILED]:
     '프로필 이미지 처리에 실패했습니다. 다시 시도해주세요.',
+  [ERROR_CODES.AUTH.STRAVA_CONNECTION_REQUIRED]: 'Strava 계정 연동이 필요합니다.',
+  [ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED]:
+    '연결에 문제가 발생하였습니다. 다시 한번 시도해주세요.',
   [ERROR_CODES.INTERNAL_ERROR]: '시스템 오류가 발생했습니다. 다시 시도해주세요.',
+  // TODO: 문구 받아서 수정 필요
+  [ERROR_CODES.STRAVA_API_LIMIT_EXCEEDED]:
+    'Strava API 일일 사용량을 초과했습니다. 내일 다시 시도해주세요.',
 } as const
 
 export type ErrorMessageCode = keyof typeof ERROR_MESSAGES

@@ -19,7 +19,7 @@ export default async function RegisterUserInfoPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="mt-11">
       <PublicPageHeader title="기본정보 입력" href={ROUTES.PUBLIC.STRAVA_CONNECT} />
       <StepIndicator />
       <UserInfoForm user={user} />

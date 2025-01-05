@@ -32,7 +32,7 @@ export default function StepIndicator() {
                   'h-5 w-5 rounded-full border',
                   isCurrent && 'border-brand-primary bg-[#FF6A394D]',
                   isCompleted && 'border-brand-primary bg-brand-primary',
-                  !isCompleted && !isCurrent && 'border-[#E0E3E0] bg-[#E0E3E0]'
+                  !isCompleted && !isCurrent && 'border-brand-disabled bg-brand-disabled'
                 )}
               />
               <span className={cn('text-sm font-bold leading-[18px] text-brand-dark')}>

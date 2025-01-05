@@ -19,6 +19,7 @@
     --brand-secondary: 33 100% 55%; /* #FF9E1B - PANTONE 1375C */
     --brand-tertiary: 47 99% 62%; /* #FED141 - PANTONE 122C */
     --brand-dark: 240 1% 25%; /* #414042 */
+    --brand-disabled: 120 6% 89%; /* #E0E3E0 */
 
     --primary: var(--brand-primary);
     --primary-foreground: 0 0% 98%;

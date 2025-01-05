@@ -13,7 +13,7 @@ export function PrimaryButton({ text, disabled = false, onClick, ...props }: Pri
       className={cn(
         'h-[65px] w-full rounded-2xl bg-brand-primary  hover:bg-brand-primary ',
         'text-lg font-medium leading-[23.4px]',
-        'disabled:bg-[#E0E3E0] disabled:text-white'
+        'disabled:bg-brand-disabled disabled:text-white'
       )}
       onClick={onClick}
       disabled={disabled}

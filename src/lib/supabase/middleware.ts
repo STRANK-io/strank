@@ -1,9 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { User, type SupabaseClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
-import { isPublicPath, ROUTES } from '@/lib/constants/routes'
+import { isPrivatePath, isPublicPath, ROUTES } from '@/lib/constants/routes'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { Database, Tables } from '@/lib/supabase/supabase'
+import { redirectWithError } from '@/lib/utils/auth'
 
 // TODO: 로그인 기능 전체 구현 후 하나씩 테스트 필요
 export async function createClient(request: NextRequest) {
@@ -70,11 +71,12 @@ async function handleRouting(
   user: Tables<'users'> | null
 ) {
   const path = request.nextUrl.pathname
-  // 0. 가입 완료한 유저는 공개 페이지 접근 불가능 -> 원래 있던 페이지로 이동 (//TODO: 동작 확인 필요)
+  // TODO: 탈퇴 후 모든 절차 해보면서 잘 되는지 확인 필요 (코드 정리도 하면 좋겠다)
+  // 0. 가입 완료한 유저는 공개 페이지 접근 불가능 -> rankings 페이지로 이동
   if (user?.strava_connected_at && isPublicPath(path)) {
     return {
       shouldRedirect: true,
-      response: NextResponse.redirect(new URL(path, request.url)),
+      response: NextResponse.redirect(new URL(ROUTES.PRIVATE.RANKINGS, request.url)),
     }
   }
 
@@ -88,8 +90,10 @@ async function handleRouting(
     await handleLogout(request)
     return {
       shouldRedirect: true,
-      response: NextResponse.redirect(
-        new URL(`/?error=${ERROR_CODES.AUTH.EXITED_USER}`, request.url)
+      response: redirectWithError(
+        request.nextUrl.origin,
+        ROUTES.PUBLIC.HOME,
+        ERROR_CODES.AUTH.EXITED_USER
       ),
     }
   }
@@ -98,8 +102,10 @@ async function handleRouting(
   if (!sessionUser) {
     return {
       shouldRedirect: true,
-      response: NextResponse.redirect(
-        new URL(`/?error=${ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED}`, request.url)
+      response: redirectWithError(
+        request.nextUrl.origin,
+        ROUTES.PUBLIC.HOME,
+        ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED
       ),
     }
   }
@@ -116,8 +122,21 @@ async function handleRouting(
     }
     return {
       shouldRedirect: true,
-      response: NextResponse.redirect(
-        new URL(`/?error=${ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED}`, request.url)
+      response: redirectWithError(
+        request.nextUrl.origin,
+        ROUTES.PUBLIC.HOME,
+        ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED
+      ),
+    }
+  }
+
+  if (!user.strava_connected_at && isPrivatePath(path)) {
+    return {
+      shouldRedirect: true,
+      response: redirectWithError(
+        request.nextUrl.origin,
+        ROUTES.PUBLIC.HOME,
+        ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED
       ),
     }
   }
@@ -141,6 +160,6 @@ export async function handleAuthAndRouting(request: NextRequest) {
     return response
   } catch (error) {
     console.error('Middleware Error:', error)
-    return NextResponse.redirect(new URL(`/?error=${ERROR_CODES.INTERNAL_ERROR}`, request.url))
+    return redirectWithError(request.nextUrl.origin, ROUTES.PUBLIC.HOME, ERROR_CODES.INTERNAL_ERROR)
   }
 }
