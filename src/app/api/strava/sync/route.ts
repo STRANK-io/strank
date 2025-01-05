@@ -10,12 +10,37 @@ export async function GET() {
   const encoder = new TextEncoder()
 
   let currentUser: User | null = null
+  let isControllerClosed = false
 
   const stream = new ReadableStream({
     async start(controller) {
       const send = (progress: number, status: string) => {
-        const data = JSON.stringify({ progress, status })
-        controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+        if (!isControllerClosed) {
+          try {
+            const data = JSON.stringify({ progress, status })
+            controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+          } catch (error) {
+            console.error('Failed to send data:', error)
+          }
+        }
+      }
+
+      const closeController = async () => {
+        if (!isControllerClosed) {
+          isControllerClosed = true
+          try {
+            await new Promise(resolve => setTimeout(resolve, 100))
+            controller.close()
+          } catch (error) {
+            if (
+              error instanceof TypeError &&
+              error.message.includes('Controller is already closed')
+            ) {
+              return
+            }
+            console.error('Failed to close controller:', error)
+          }
+        }
       }
 
       try {
@@ -27,7 +52,7 @@ export async function GET() {
 
         if (userError || !user) {
           send(0, ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED)
-          controller.close()
+          closeController()
           return
         }
 
@@ -42,7 +67,7 @@ export async function GET() {
 
         if (tokenError || !tokenData) {
           send(0, ERROR_CODES.AUTH.STRAVA_CONNECTION_REQUIRED)
-          controller.close()
+          closeController()
           return
         }
 
@@ -124,7 +149,7 @@ export async function GET() {
         }
 
         send(100, 'completed')
-        controller.close()
+        closeController()
       } catch (error: any) {
         console.error('Sync error:', error)
 
@@ -149,7 +174,7 @@ export async function GET() {
         } catch (sendError) {
           console.error('Failed to send error to client:', sendError)
         } finally {
-          controller.close()
+          closeController()
         }
       }
     },
