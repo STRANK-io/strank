@@ -95,7 +95,7 @@ export default function StravaSyncPage() {
   }, [router, connectionAttempts])
 
   return (
-    <div className="pt-[148px]">
+    <div className="pt-[104px]">
       <div className="bg-brand-disabled fixed left-0 top-0 h-2 w-full">
         <div
           className="h-full rounded-full bg-brand-primary transition-all duration-300"

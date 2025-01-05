@@ -34,7 +34,7 @@ export default function StravaConnectPage() {
   }, [error])
 
   return (
-    <div className="mt-11">
+    <div>
       <PublicPageHeader title="스트라바 연동" href={ROUTES.PUBLIC.TERMS} />
       <StepIndicator />
       <Title />

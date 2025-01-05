@@ -31,7 +31,7 @@ export default function Home() {
   }, [error])
 
   return (
-    <div className="mt-11 flex flex-col">
+    <div className="flex flex-col">
       <div className="flex items-center justify-center px-[10px] py-4">
         <h1 className="text-xl font-bold leading-[25px]">로그인</h1>
       </div>
