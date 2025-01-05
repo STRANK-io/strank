@@ -12,7 +12,7 @@ export default function TermsPage() {
       <StepIndicator />
       <StrankImage />
       <TermsAgreement />
-      <div className="fixed bottom-12 left-0 right-0 mx-auto max-w-[393px] px-5">
+      <div className="fixed bottom-12 left-1/2 w-full max-w-[393px] -translate-x-1/2 px-5">
         <AgreeButton />
       </div>
     </div>
