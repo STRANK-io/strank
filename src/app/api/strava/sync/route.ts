@@ -71,40 +71,15 @@ export async function GET() {
           return
         }
 
-        let page = 1
+        const page = 1
         let allActivities: StravaActivity[] = []
-        let hasMore = true
-        let totalPages = null
 
-        // 첫 페이지 확인
-        const firstPageResponse = await fetchStravaActivities(
-          tokenData.access_token,
-          page,
-          supabase
-        )
-        if (firstPageResponse.length > 0) {
-          totalPages = firstPageResponse.length < SYNC_CONFIG.FETCH_PAGE_SIZE ? 1 : null
-          allActivities = firstPageResponse
-          send(calculateProgress(1, totalPages, 0, null), 'fetching')
-        }
+        // 첫 페이지만 가져오기 (최근 200개)
+        const activities = await fetchStravaActivities(tokenData.access_token, page, supabase)
 
-        // 나머지 페이지 가져오기
-        while (hasMore && firstPageResponse.length === SYNC_CONFIG.FETCH_PAGE_SIZE) {
-          page++
-          const pageActivities = await fetchStravaActivities(tokenData.access_token, page, supabase)
-
-          if (pageActivities.length < SYNC_CONFIG.FETCH_PAGE_SIZE) {
-            hasMore = false
-            totalPages = page
-          }
-
-          if (pageActivities.length > 0) {
-            allActivities = [...allActivities, ...pageActivities]
-            send(calculateProgress(page, totalPages, 0, null), 'fetching')
-          } else {
-            hasMore = false
-            totalPages = page - 1
-          }
+        if (activities.length > 0) {
+          allActivities = activities
+          send(calculateProgress(page, page, 0, null), 'fetching')
         }
 
         // 활동 데이터 처리
@@ -114,7 +89,7 @@ export async function GET() {
         for (let i = 0; i < total; i += SYNC_CONFIG.BATCH_SIZE) {
           const batch = allActivities.slice(i, i + SYNC_CONFIG.BATCH_SIZE)
           await processActivities(batch, user.id, supabase)
-          send(calculateProgress(totalPages!, totalPages, i + batch.length, total), 'processing')
+          send(calculateProgress(page, page, i + batch.length, total), 'processing')
         }
 
         // 모든 데이터 처리가 완료된 후 strava_connected_at 업데이트 (최대 2번 재시도)

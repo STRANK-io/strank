@@ -1,5 +1,14 @@
 import { STRAVA_VISIBILITY } from '@/lib/constants/strava'
 
+export interface StravaTokenResponse {
+  token_type: string
+  expires_at: number
+  expires_in: number
+  refresh_token: string
+  access_token: string
+  athlete: any // 사용하지 않아서 정의하지 않음
+}
+
 export interface StravaActivity {
   id: number
   name: string

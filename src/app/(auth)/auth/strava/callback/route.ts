@@ -3,18 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { ROUTES } from '@/lib/constants/routes'
 import { redirectWithError } from '@/lib/utils/auth'
-
-const STRAVA_TOKEN_URL = 'https://www.strava.com/oauth/token'
-
-// TODO: 이거 찍어보고 타입 정의 필요
-interface StravaTokenResponse {
-  token_type: string
-  expires_at: number
-  expires_in: number
-  refresh_token: string
-  access_token: string
-  athlete: any
-}
+import { StravaTokenResponse } from '@/lib/types/strava'
+import { STRAVA_TOKEN_URL } from '@/lib/constants/strava'
 
 export async function GET(request: Request) {
   try {
@@ -56,7 +46,6 @@ export async function GET(request: Request) {
     }
 
     const stravaData: StravaTokenResponse = await tokenResponse.json()
-    console.log('stravaData', stravaData)
     // Supabase 클라이언트 초기화
     const supabase = await createClient()
 

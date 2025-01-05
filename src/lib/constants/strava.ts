@@ -1,3 +1,4 @@
+export const STRAVA_TOKEN_URL = 'https://www.strava.com/oauth/token'
 export const STRAVA_API_URL = 'https://www.strava.com/api/v3'
 export const STRAVA_ATHLETE_ACTIVITIES_ENDPOINT = '/athlete/activities'
 
