@@ -24,11 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className={`${pretendardFont.variable} font-sans`} suppressHydrationWarning>
-      <body className="bg-background text-foreground" suppressHydrationWarning>
-        <main className="mx-auto min-h-screen w-full max-w-[393px]">
-          {/* TODO: 393px screen 스타일 적용해서 싹 바꾸기 */}
-          <Providers>{children}</Providers>
-        </main>
+      <body suppressHydrationWarning>
+        {/* TODO: 393px screen 스타일 적용해서 싹 바꾸기 */}
+        <Providers>{children}</Providers>
+
         <Toaster toastOptions={{ unstyled: true }} duration={2000} />
       </body>
     </html>

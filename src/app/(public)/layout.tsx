@@ -32,9 +32,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const currentItem = HAS_TO_SHOW_HEADER_PATHS.find(item => item.path === pathname)
 
   return (
-    <div className="bg-white pt-11">
-      {currentItem && <PublicPageHeader title={currentItem.label} href={currentItem.prevPath} />}
-      {children}
-    </div>
+    <main className="min-h-screen bg-white">
+      <div className="mx-auto min-h-screen w-full max-w-[393px] pt-11">
+        {currentItem && <PublicPageHeader title={currentItem.label} href={currentItem.prevPath} />}
+        {children}
+      </div>
+    </main>
   )
 }
