@@ -11,13 +11,14 @@ export function GoogleSignButton() {
 
   const handleSignIn = async () => {
     try {
+      const redirectUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           queryParams: {
             access_type: 'offline',
           },
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${redirectUrl}/auth/callback`,
         },
       })
       if (error) throw error
