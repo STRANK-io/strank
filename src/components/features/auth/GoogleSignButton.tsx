@@ -12,14 +12,16 @@ export function GoogleSignButton() {
 
   const handleSignIn = async () => {
     try {
-      const redirectUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+      if (!process.env.NEXT_PUBLIC_APP_URL) {
+        throw new Error('NEXT_PUBLIC_APP_URL is not defined')
+      }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           queryParams: {
             access_type: 'offline',
           },
-          redirectTo: `${redirectUrl}${ROUTES.PUBLIC.AUTH_CALLBACK}`,
+          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}${ROUTES.PUBLIC.AUTH_CALLBACK}`,
         },
       })
       if (error) throw error
