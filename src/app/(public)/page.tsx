@@ -32,10 +32,6 @@ export default function Home() {
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-center justify-center px-[10px] py-4">
-        <h1 className="text-xl font-bold leading-[25px]">로그인</h1>
-      </div>
-
       <div className="flex flex-1 flex-col px-5">
         <div className="mb-8 mt-12 flex flex-col gap-6">
           <h2 className="text-[32px] font-bold leading-[42px]">STRANK</h2>

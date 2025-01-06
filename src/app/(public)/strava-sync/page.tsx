@@ -29,7 +29,6 @@ export default function StravaSyncPage() {
       const setupTimeout = () => {
         clearTimeout(timeoutId)
         timeoutId = setTimeout(() => {
-          console.log('Connection timeout reached')
           eventSource.close()
           if (connectionAttempts < MAX_RETRIES) {
             setConnectionAttempts(prev => prev + 1)
@@ -41,7 +40,6 @@ export default function StravaSyncPage() {
       }
 
       eventSource.addEventListener('open', () => {
-        console.log('SSE Connection opened')
         setupTimeout()
       })
 

@@ -1,4 +1,3 @@
-import PublicPageHeader from '@/components/common/PublicPageHeader'
 import StepIndicator from '@/components/common/StepIndicator'
 import { CompleteButton } from '@/components/features/registerUserInfo/CompleteButton'
 import { UserInfoForm } from '@/components/features/registerUserInfo/UserInfoForm'
@@ -20,7 +19,6 @@ export default async function RegisterUserInfoPage() {
 
   return (
     <div>
-      <PublicPageHeader title="기본정보 입력" href={ROUTES.PUBLIC.STRAVA_CONNECT} />
       <StepIndicator />
       <UserInfoForm user={user} />
       <div className="fixed bottom-12 left-1/2 w-full max-w-[393px] -translate-x-1/2 px-5">
