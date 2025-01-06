@@ -4,6 +4,7 @@ import { ChangeEvent, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
 import { User } from 'lucide-react'
+import Image from 'next/image'
 
 interface ProfileImageProps {
   imageUrl: string | null
@@ -38,12 +39,19 @@ export const ProfileImage = ({ imageUrl, onImageChange, buttonText }: ProfileIma
       <div className={cn('flex w-full flex-col items-center justify-center gap-3')}>
         <div
           className={cn(
-            'flex h-[94px] w-[94px] items-center justify-center overflow-hidden rounded-full bg-white',
+            'relative flex h-[94px] w-[94px] items-center justify-center overflow-hidden rounded-full bg-white',
             imageUrl ? 'bg-white' : 'bg-[#FFD7A1]'
           )}
         >
           {imageUrl ? (
-            <img src={imageUrl} alt="Profile" className="h-full w-full object-cover" />
+            <Image
+              src={imageUrl}
+              alt="Profile"
+              fill
+              className="object-cover"
+              sizes="94px"
+              priority
+            />
           ) : (
             <User className={cn('h-[55px] w-[55px] fill-brand-secondary text-transparent')} />
           )}

@@ -50,7 +50,7 @@ async function checkAuthStatus(supabase: SupabaseClient<Database>) {
   }
 
   // 유저 데이터 확인
-  const { data: user, error } = await supabase
+  const { data: user } = await supabase
     .from('users')
     .select('*')
     .eq('id', sessionUser.id)

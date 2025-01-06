@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { ROUTES } from '@/lib/constants/routes'
+import { cn } from '@/lib/utils/cn'
 
 export default function StravaSyncPage() {
   const [progress, setProgress] = useState(0)
@@ -44,8 +45,8 @@ export default function StravaSyncPage() {
       })
 
       // 브라우저의 기본 재연결 간격을 2초로 설정
-      const retryEvent = new Event('retry')
-      ;(retryEvent as any).retryTime = 2000
+      const retryEvent = new Event('retry') as Event & { retryTime: number }
+      retryEvent.retryTime = 2000
       eventSource.dispatchEvent(retryEvent)
 
       // 서버로부터 데이터를 받을 때마다 실행
@@ -108,7 +109,7 @@ export default function StravaSyncPage() {
 
   return (
     <div className="pt-[104px]">
-      <div className="bg-brand-disabled fixed left-0 top-0 h-2 w-full">
+      <div className={cn('fixed left-0 top-0 h-2 w-full', 'bg-brand-disabled')}>
         <div
           className="h-full rounded-full bg-brand-primary transition-all duration-300"
           style={{ width: `${progress}%` }}

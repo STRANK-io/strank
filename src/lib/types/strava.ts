@@ -6,7 +6,7 @@ export interface StravaTokenResponse {
   expires_in: number
   refresh_token: string
   access_token: string
-  athlete: any // 사용하지 않아서 정의하지 않음
+  athlete: Record<string, unknown>
 }
 
 export interface StravaActivity {

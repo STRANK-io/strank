@@ -125,7 +125,7 @@ export async function GET() {
 
         send(100, 'completed')
         closeController()
-      } catch (error: any) {
+      } catch (error) {
         console.error('Sync error:', error)
 
         // 에러 발생 시 토큰 삭제 및 strava_connected_at 초기화
@@ -145,7 +145,10 @@ export async function GET() {
         }
 
         try {
-          send(0, error.message || ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED)
+          send(
+            0,
+            error instanceof Error ? error.message : ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED
+          )
         } catch (sendError) {
           console.error('Failed to send error to client:', sendError)
         } finally {

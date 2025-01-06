@@ -4,12 +4,10 @@ export function useDebounce<T extends (...args: any[]) => any>(callback: T, dela
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const callbackRef = useRef(callback)
 
-  // 콜백 함수 레퍼런스 업데이트
   useEffect(() => {
     callbackRef.current = callback
   }, [callback])
 
-  // 클린업
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
