@@ -15,6 +15,7 @@ export const ERROR_CODES = {
   STRAVA_API_LIMIT_EXCEEDED: 'strava_api_limit_exceeded',
 } as const
 
+// TODO: 에러 메세지 컨펌 받기
 export const ERROR_MESSAGES = {
   [ERROR_CODES.AUTH.SESSION_EXPIRED]: '세션이 만료되었습니다. 다시 로그인해주세요.',
   [ERROR_CODES.AUTH.AUTH_CALLBACK_ERROR]: '인증 중 오류가 발생했습니다.',
