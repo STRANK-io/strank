@@ -11,9 +11,9 @@ export function PrimaryButton({ text, disabled = false, onClick, ...props }: Pri
   return (
     <Button
       className={cn(
-        'h-[65px] w-full rounded-2xl bg-brand-primary  hover:bg-brand-primary ',
+        'h-[65px] w-full rounded-2xl bg-brand-primary opacity-100  hover:bg-brand-primary ',
         'text-lg font-medium leading-[23.4px]',
-        'disabled:bg-brand-disabled disabled:text-white'
+        'disabled:bg-brand-disabled disabled:text-white disabled:opacity-100'
       )}
       onClick={onClick}
       disabled={disabled}
