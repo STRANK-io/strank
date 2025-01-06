@@ -5,6 +5,7 @@ import { ToastContent } from '@/components/common/ToastContent'
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants/error'
 import { createClient } from '@/lib/supabase/client'
 import { PrimaryButton } from '@/components/common/PrimaryButton'
+import { ROUTES } from '@/lib/constants/routes'
 
 export function GoogleSignButton() {
   const supabase = createClient()
@@ -18,7 +19,7 @@ export function GoogleSignButton() {
           queryParams: {
             access_type: 'offline',
           },
-          redirectTo: `${redirectUrl}/auth/callback`,
+          redirectTo: `${redirectUrl}${ROUTES.PUBLIC.AUTH_CALLBACK}`,
         },
       })
       if (error) throw error
