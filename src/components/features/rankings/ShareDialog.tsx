@@ -55,21 +55,65 @@ export default function ShareDialog({
         return
       }
 
+      // Canvas 생성
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        toast(<ToastContent text="이미지 생성에 실패했습니다." />)
+        return
+      }
+
+      // Canvas 크기 설정
+      canvas.width = 305 * 3 // 고해상도를 위해 3배 크기
+      canvas.height = 305 * 3
+
+      // 배경 이미지 로드
+      const bgImage = new Image()
+      bgImage.crossOrigin = 'anonymous'
+
+      await new Promise((resolve, reject) => {
+        bgImage.onload = resolve
+        bgImage.onerror = reject
+        bgImage.src = backgroundImage
+      })
+
+      // 배경 이미지 그리기
+      ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height)
+
+      // 오버레이 그리기
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+      // HTML 요소를 이미지로 변환
       const dataUrl = await toPng(previewElement, {
         quality: 1.0,
         pixelRatio: 3,
-        cacheBust: true,
-        includeQueryParams: true,
-        style: {
-          transform: 'none',
-        },
-        filter: node => {
-          // 배경 이미지를 포함하도록 모든 노드를 캡처
-          return true
-        },
       })
 
-      const blob = await fetch(dataUrl).then(r => r.blob())
+      // 오버레이 이미지 로드
+      const overlayImage = new Image()
+      overlayImage.crossOrigin = 'anonymous'
+
+      await new Promise((resolve, reject) => {
+        overlayImage.onload = resolve
+        overlayImage.onerror = reject
+        overlayImage.src = dataUrl
+      })
+
+      // 오버레이 이미지 그리기
+      ctx.drawImage(overlayImage, 0, 0, canvas.width, canvas.height)
+
+      // Canvas를 Blob으로 변환
+      const blob = await new Promise<Blob>(resolve => {
+        canvas.toBlob(
+          blob => {
+            resolve(blob as Blob)
+          },
+          'image/png',
+          1.0
+        )
+      })
+
       const file = new File([blob], 'strank-share.png', { type: 'image/png' })
 
       if (navigator.share && navigator.canShare({ files: [file] })) {
