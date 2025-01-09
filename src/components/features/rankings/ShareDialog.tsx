@@ -58,6 +58,11 @@ export default function ShareDialog({
       const dataUrl = await toPng(previewElement, {
         quality: 1.0,
         pixelRatio: 3,
+        cacheBust: true,
+        includeQueryParams: true,
+        style: {
+          transform: 'none',
+        },
       })
 
       const blob = await fetch(dataUrl).then(r => r.blob())
