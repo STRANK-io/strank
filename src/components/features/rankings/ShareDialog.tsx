@@ -55,56 +55,37 @@ export default function ShareDialog({
 
       const dataUrl = await toPng(previewElement)
 
-      // 이미지를 Blob으로 변환
+      // base64 데이터를 Blob으로 변환
       const response = await fetch(dataUrl)
       const blob = await response.blob()
+      const file = new File([blob], 'strank-share.png', { type: 'image/png' })
 
-      // 타임스탬프를 포함한 파일명 생성
-      const timestamp = new Date().getTime()
-      const filename = `strank-share-${timestamp}.png`
+      // 이미지를 앨범에 저장
+      const imageUrl = URL.createObjectURL(file)
+      const a = document.createElement('a')
+      a.href = imageUrl
+      a.download = file.name
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(imageUrl)
 
-      // iOS Safari에서 이미지 저장
-      if (navigator.userAgent.match(/iphone|ipod|ipad/i)) {
-        const reader = new FileReader()
-        reader.onloadend = function () {
-          const image = document.createElement('img')
-          image.src = reader.result as string
+      // 플랫폼별 인스타그램 공유 URL
+      const instagramUrl = navigator.userAgent.match(/iphone|ipod|ipad/i)
+        ? 'instagram://share-sheet?source_application=strank'
+        : 'intent:#Intent;type=image/*;package=com.instagram.android;action=com.instagram.share.ADD_TO_FEED;end'
 
-          const link = document.createElement('a')
-          link.href = image.src
-          link.download = filename
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-
-          // 잠시 대기 후 인스타그램 앱으로 이동
-          setTimeout(() => {
-            window.location.href = 'instagram://library'
-          }, 500)
-        }
-        reader.readAsDataURL(blob)
-      }
-      // Android에서 이미지 저장
-      else {
-        const file = new File([blob], filename, { type: 'image/png' })
-        const link = document.createElement('a')
-        link.href = URL.createObjectURL(file)
-        link.download = filename
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(link.href)
-
-        // 잠시 대기 후 인스타그램 앱으로 이동
-        setTimeout(() => {
-          window.location.href = 'instagram://library'
-        }, 500)
-      }
+      // 잠시 대기 후 인스타그램 공유 화면으로 이동
+      setTimeout(() => {
+        window.location.href = instagramUrl
+      }, 1500)
 
       // 인스타그램 앱이 없는 경우를 위한 타임아웃
       setTimeout(() => {
         window.location.href = 'https://www.instagram.com'
-      }, 2000)
+      }, 3000)
+
+      toast(<ToastContent text="이미지가 갤러리에 저장되었습니다." />)
     } catch (error) {
       console.error('Error sharing to Instagram:', error)
       toast(<ToastContent text="이미지 공유 중 오류가 발생했습니다." />)
