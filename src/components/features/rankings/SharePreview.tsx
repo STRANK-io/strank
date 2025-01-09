@@ -40,6 +40,7 @@ export default function SharePreview({
 
   return (
     <div
+      data-preview="true"
       ref={previewRef}
       className="relative h-full max-h-[305px] w-full max-w-[305px] overflow-hidden"
     >

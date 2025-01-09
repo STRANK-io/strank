@@ -105,13 +105,11 @@ export default function ShareDialog({
             <VisuallyHidden>나의 랭킹 공유</VisuallyHidden>
           </DialogTitle>
 
-          <div data-preview="true">
-            <SharePreview
-              backgroundImage={backgroundImage}
-              myRankingActivity={myRankingActivity}
-              criteria={criteria}
-            />
-          </div>
+          <SharePreview
+            backgroundImage={backgroundImage}
+            myRankingActivity={myRankingActivity}
+            criteria={criteria}
+          />
 
           <div className="flex gap-4">
             <OutlineButton text="Instagram 공유" onClick={handleShare} />
