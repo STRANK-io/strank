@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { ToastContent } from '@/components/common/ToastContent'
 import { useRankingFilters } from '@/stores/rankingFilters'
 
-const DEFAULT_SHARE_IMAGE = '/images/strank-vertical-logo.png'
+const DEFAULT_SHARE_IMAGE = '/images/strank-vertical-white.png'
 
 export default function MyRanking() {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
