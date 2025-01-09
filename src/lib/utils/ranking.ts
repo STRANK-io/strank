@@ -2,6 +2,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { RankingFilters } from '@/lib/types/ranking'
 import { UsersType } from '@/lib/types/auth'
 import { Database } from '@/lib/supabase/supabase'
+import { STRAVA_VISIBILITY } from '@/lib/constants/strava'
 
 export function createRankingQuery(
   supabase: SupabaseClient<Database>,
@@ -26,7 +27,7 @@ export function createRankingQuery(
     `
     )
     .is('deleted_at', null)
-    // .eq('visibility', 'followers_only') // TODO: 이거 활성화해서 배포해야함
+    .eq('visibility', STRAVA_VISIBILITY.EVERYONE)
     .is('users.deleted_at', null)
     .not('users.strava_connected_at', 'is', null)
 
