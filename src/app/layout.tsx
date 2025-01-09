@@ -4,13 +4,9 @@ import { pretendardFont } from '@/lib/fonts'
 import { Metadata } from 'next'
 import { Toaster } from 'sonner'
 
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : 'http://localhost:3000'
-
 // TODO: 메타데이터에 필요한 데이터 요청
 export const metadata: Metadata = {
-  metadataBase: new URL(defaultUrl),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: {
     template: 'Strank',
     default: 'Strank',

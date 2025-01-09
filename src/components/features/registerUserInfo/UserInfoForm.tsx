@@ -6,11 +6,11 @@ import { NicknameInput } from '@/components/common/userInfo/NicknameInput'
 import { RegionSelect } from '@/components/common/userInfo/RegionSelect'
 import { User } from '@supabase/supabase-js'
 import { useGetUserInfoQuery } from '@/hooks/user/api/useGetUserInfoQuery'
-import { processImage } from '@/lib/utils/processImage'
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants/error'
 import { ToastContent } from '@/components/common/ToastContent'
 import { toast } from 'sonner'
 import { ProfileImage } from '@/components/common/userInfo/ProfileImage'
+import { convertAndCreatePreview } from '@/lib/utils/image'
 
 export const UserInfoForm = ({ user }: { user: User }) => {
   const { data: userInfo } = useGetUserInfoQuery(user.id)
@@ -35,7 +35,7 @@ export const UserInfoForm = ({ user }: { user: User }) => {
 
   const handleImageChange = async (file: File) => {
     try {
-      const result = await processImage(file)
+      const result = await convertAndCreatePreview(file)
       setProfileImage(result.processedFile)
       setImagePreviewUrl(result.previewUrl)
     } catch (error) {

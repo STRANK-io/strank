@@ -35,7 +35,7 @@ export default function PrivatePageNav() {
 
   return (
     <nav
-      className="flex w-[369px] items-center justify-between rounded-[32px] p-4 pb-6"
+      className="flex w-[369px] items-center justify-between rounded-[32px] bg-white p-4 pb-6"
       style={{ boxShadow: '0px 8px 16px 0px #00000017' }}
     >
       {NAV_ITEMS.map(({ path, icon: Icon, label }) => {
