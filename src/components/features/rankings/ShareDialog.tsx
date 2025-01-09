@@ -62,20 +62,44 @@ export default function ShareDialog({
       // 타임스탬프를 포함한 파일명 생성
       const timestamp = new Date().getTime()
       const filename = `strank-share-${timestamp}.png`
-      const file = new File([blob], filename, { type: 'image/png' })
 
-      // 이미지 저장
-      const link = document.createElement('a')
-      link.href = URL.createObjectURL(file)
-      link.download = file.name
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      // iOS Safari에서 이미지 저장
+      if (navigator.userAgent.match(/iphone|ipod|ipad/i)) {
+        const reader = new FileReader()
+        reader.onloadend = function () {
+          const image = document.createElement('img')
+          image.src = reader.result as string
 
-      // 잠시 대기 후 인스타그램 앱으로 이동 (최근 저장된 이미지로)
-      setTimeout(() => {
-        window.location.href = `instagram://library?LocalIdentifier=${filename}`
-      }, 500)
+          const link = document.createElement('a')
+          link.href = image.src
+          link.download = filename
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+
+          // 잠시 대기 후 인스타그램 앱으로 이동
+          setTimeout(() => {
+            window.location.href = 'instagram://library'
+          }, 500)
+        }
+        reader.readAsDataURL(blob)
+      }
+      // Android에서 이미지 저장
+      else {
+        const file = new File([blob], filename, { type: 'image/png' })
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(file)
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(link.href)
+
+        // 잠시 대기 후 인스타그램 앱으로 이동
+        setTimeout(() => {
+          window.location.href = 'instagram://library'
+        }, 500)
+      }
 
       // 인스타그램 앱이 없는 경우를 위한 타임아웃
       setTimeout(() => {
