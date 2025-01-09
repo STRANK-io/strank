@@ -1,4 +1,4 @@
-import { SwitchButton } from '@/components/features/rankings/SwitchButton'
+import { SwitchButton } from '@/components/features/rankings/filter/SwitchButton'
 import { RankingFilters } from '@/lib/types/ranking'
 import { useRankingFilters } from '@/stores/rankingFilters'
 

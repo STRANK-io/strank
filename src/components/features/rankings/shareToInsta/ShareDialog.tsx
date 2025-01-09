@@ -3,7 +3,6 @@
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { ActivityWithRanking, RankingFilters } from '@/lib/types/ranking'
 import { useState, useRef } from 'react'
-import SharePreview from './SharePreview'
 import { toPng } from 'html-to-image'
 import { toast } from 'sonner'
 import { ToastContent } from '@/components/common/ToastContent'
@@ -11,6 +10,7 @@ import OutlineButton from '@/components/features/rankings/shareToInsta/OutlineBu
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { convertAndCropToSquare } from '@/lib/utils/image'
 import { X } from 'lucide-react'
+import SharePreview from '@/components/features/rankings/shareToInsta/SharePreview'
 
 interface ShareDialogProps {
   isOpen: boolean

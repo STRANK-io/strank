@@ -1,6 +1,6 @@
 import { useMyRanking } from '@/hooks/activities/api/useMyRanking'
 import { RankingCard } from '@/components/features/rankings/RankingCard'
-import ShareDialog from '@/components/features/rankings/ShareDialog'
+import ShareDialog from '@/components/features/rankings/shareToInsta/ShareDialog'
 import { useState, useRef } from 'react'
 import { isMobile } from 'react-device-detect'
 import OutlineButton from '@/components/features/rankings/shareToInsta/OutlineButton'

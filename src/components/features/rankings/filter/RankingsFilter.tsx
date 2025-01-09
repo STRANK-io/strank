@@ -1,6 +1,6 @@
 'use client'
 
-import FilterSwitch from '@/components/features/rankings/FilterSwitch'
+import FilterSwitch from '@/components/features/rankings/filter/FilterSwitch'
 
 export default function RankingsFilter() {
   return (
