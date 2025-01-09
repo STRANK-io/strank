@@ -51,7 +51,7 @@ export default function SharePreview({
           alt="Background"
           width={305}
           height={305}
-          className="object-contain"
+          className="h-full w-full object-cover"
           priority
         />
       </div>

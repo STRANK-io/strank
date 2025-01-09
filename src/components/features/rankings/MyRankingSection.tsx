@@ -19,7 +19,7 @@ export function MyRankingSection() {
 const MyRankingLoading = () => {
   return (
     <div className="space-y-4">
-      <Skeleton className="h-[64px] w-full rounded-2xl" />
+      <Skeleton className="h-[72px] w-full rounded-2xl" />
       <div className="flex gap-2">
         <OutlineButton text="Instagram 공유" onClick={() => {}} />
         <OutlineButton text="이미지 업로드" onClick={() => {}} />
