@@ -59,21 +59,28 @@ export default function ShareDialog({
       const response = await fetch(dataUrl)
       const blob = await response.blob()
 
+      // 타임스탬프를 포함한 파일명 생성
+      const timestamp = new Date().getTime()
+      const filename = `strank-share-${timestamp}.png`
+      const file = new File([blob], filename, { type: 'image/png' })
+
       // 이미지 저장
       const link = document.createElement('a')
-      link.href = window.URL.createObjectURL(blob)
-      link.download = 'strank-share.png'
+      link.href = URL.createObjectURL(file)
+      link.download = file.name
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
 
-      // Instagram 앱으로 이동
-      window.location.href = 'instagram://library'
+      // 잠시 대기 후 인스타그램 앱으로 이동 (최근 저장된 이미지로)
+      setTimeout(() => {
+        window.location.href = `instagram://library?LocalIdentifier=${filename}`
+      }, 500)
 
-      // Instagram이 설치되어 있지 않은 경우를 위한 타임아웃
+      // 인스타그램 앱이 없는 경우를 위한 타임아웃
       setTimeout(() => {
         window.location.href = 'https://www.instagram.com'
-      }, 1000)
+      }, 2000)
     } catch (error) {
       console.error('Error sharing to Instagram:', error)
       toast(<ToastContent text="이미지 공유 중 오류가 발생했습니다." />)
