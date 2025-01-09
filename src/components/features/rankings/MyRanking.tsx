@@ -1,7 +1,5 @@
-import { useSearchParams } from 'next/navigation'
 import { useMyRanking } from '@/hooks/activities/api/useMyRanking'
 import { RankingCard } from '@/components/features/rankings/RankingCard'
-import { RankingFilters } from '@/lib/types/ranking'
 import ShareDialog from '@/components/features/rankings/ShareDialog'
 import { useState, useRef } from 'react'
 import { isMobile } from 'react-device-detect'
@@ -9,20 +7,15 @@ import OutlineButton from '@/components/features/rankings/shareToInsta/OutlineBu
 import { convertAndCropToSquare } from '@/lib/utils/image'
 import { toast } from 'sonner'
 import { ToastContent } from '@/components/common/ToastContent'
+import { useRankingFilters } from '@/stores/rankingFilters'
 
 const DEFAULT_SHARE_IMAGE = '/images/strank-vertical-logo.png'
 
 export default function MyRanking() {
-  const searchParams = useSearchParams()
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [shareInitialImage, setShareInitialImage] = useState<string>(DEFAULT_SHARE_IMAGE)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const filters: RankingFilters = {
-    criteria: (searchParams.get('criteria') as RankingFilters['criteria']) || 'distance',
-    district: (searchParams.get('district') as RankingFilters['district']) || 'all',
-    period: (searchParams.get('period') as RankingFilters['period']) || 'lastweek',
-  }
+  const { filters } = useRankingFilters()
 
   const { data: myRankingActivity } = useMyRanking(filters)
 

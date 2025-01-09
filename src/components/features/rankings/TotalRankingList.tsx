@@ -1,17 +1,9 @@
-import { useSearchParams } from 'next/navigation'
-import { useTotalRankings } from '@/hooks/activities/api/useTotalRankings'
 import { RankingCard } from '@/components/features/rankings/RankingCard'
-import { RankingFilters } from '@/lib/types/ranking'
+import { useTotalRankings } from '@/hooks/activities/api/useTotalRankings'
+import { useRankingFilters } from '@/stores/rankingFilters'
 
 export default function TotalRankingList() {
-  const searchParams = useSearchParams()
-
-  const filters: RankingFilters = {
-    criteria: (searchParams.get('criteria') as RankingFilters['criteria']) || 'distance',
-    district: (searchParams.get('district') as RankingFilters['district']) || 'all',
-    period: (searchParams.get('period') as RankingFilters['period']) || 'lastweek',
-  }
-
+  const { filters } = useRankingFilters()
   const { data } = useTotalRankings(filters)
 
   if (!data.rankings.length) {

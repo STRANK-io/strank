@@ -1,6 +1,6 @@
 'use client'
 
-import { useUserInfoStore } from '@/store/userInfoStore'
+import { useUserInfoStore } from '@/stores/userInfoStore'
 import { PrimaryButton } from '@/components/common/PrimaryButton'
 import { validateNickname } from '@/lib/utils/validation'
 import useUpdateUserInfo from '@/hooks/user/api/useUpdateUserInfo'

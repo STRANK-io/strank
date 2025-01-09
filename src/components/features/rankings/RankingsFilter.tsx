@@ -14,9 +14,9 @@ export default function RankingsFilter() {
       <p className="mt-4 px-2 text-base font-medium leading-[20.8px] text-brand-dark">
         Everyone으로 설정한 데이터만 조회됩니다.
         <br />
-        랭킹에 표함되는 기록은 최초 스트라바에
+        랭킹에 포함되는 기록은 최초 스트라바에
         <br />
-        Everyone으로 설정한 기록만 표함됩니다.
+        Everyone으로 설정한 기록만 포함됩니다.
       </p>
     </div>
   )

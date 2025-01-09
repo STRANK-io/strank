@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useUserInfoStore } from '@/store/userInfoStore'
+import { useUserInfoStore } from '@/stores/userInfoStore'
 import { NicknameInput } from '@/components/common/userInfo/NicknameInput'
 import { RegionSelect } from '@/components/common/userInfo/RegionSelect'
 import { User } from '@supabase/supabase-js'
