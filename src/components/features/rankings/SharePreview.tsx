@@ -40,9 +40,9 @@ export default function SharePreview({
 
   return (
     <div
-      data-preview="true"
+      data-share-preview="true"
       ref={previewRef}
-      className="relative h-full max-h-[305px] w-full max-w-[305px] overflow-hidden"
+      className="relative h-[305px] w-[305px] overflow-hidden"
     >
       {/* 배경 이미지 */}
       <div className="h-full w-full bg-white">

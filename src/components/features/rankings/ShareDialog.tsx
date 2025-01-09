@@ -49,7 +49,7 @@ export default function ShareDialog({
 
   const handleShare = async () => {
     try {
-      const previewElement = document.querySelector('[data-preview="true"]') as HTMLElement
+      const previewElement = document.querySelector('[data-share-preview="true"]') as HTMLElement
       if (!previewElement) {
         toast(<ToastContent text="공유할 이미지를 생성할 수 없습니다." />)
         return
