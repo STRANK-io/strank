@@ -63,6 +63,10 @@ export default function ShareDialog({
         style: {
           transform: 'none',
         },
+        filter: node => {
+          // 배경 이미지를 포함하도록 모든 노드를 캡처
+          return true
+        },
       })
 
       const blob = await fetch(dataUrl).then(r => r.blob())
