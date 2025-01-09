@@ -45,7 +45,7 @@ export default function SharePreview({
       className="relative h-[305px] w-[305px] overflow-hidden"
     >
       {/* 배경 이미지 */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 bg-white">
         <Image
           src={backgroundImage}
           alt="Background"
