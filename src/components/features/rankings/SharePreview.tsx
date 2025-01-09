@@ -42,23 +42,16 @@ export default function SharePreview({
     <div
       data-share-preview="true"
       ref={previewRef}
-      className="relative h-[305px] w-[305px] overflow-hidden"
+      className="h-[305px] w-[305px] overflow-hidden"
+      style={{
+        backgroundImage: `url(${backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundColor: 'white',
+      }}
     >
-      {/* 배경 이미지 */}
-      <div className="absolute inset-0 bg-white">
-        <Image
-          src={backgroundImage}
-          alt="Background"
-          width={305}
-          height={305}
-          className="h-full w-full object-cover"
-          priority
-          unoptimized
-        />
-      </div>
-
       {/* 오버레이 콘텐츠 */}
-      <div className="absolute inset-0 flex flex-col justify-between bg-black/30 p-4 text-white">
+      <div className="flex h-full w-full flex-col justify-between bg-black/30 p-4 text-white">
         {/* 상단 */}
         <div className="flex flex-col gap-2 font-bold">
           <span className="line-clamp-2 text-xl leading-[26px]">{name}</span>
