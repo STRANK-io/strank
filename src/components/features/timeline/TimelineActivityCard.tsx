@@ -88,7 +88,15 @@ export default function TimelineActivityCard({ activity, isLoading }: TimelineAc
           <StravaActivityButton activityId={activity.id} />
         </div>
         <p className="text-sm leading-[18.2px]">
-          {activity.start_date ? new Date(activity.start_date).toLocaleDateString() : ''}
+          {activity.start_date
+            ? new Date(activity.start_date)
+                .toLocaleDateString('ko-KR', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                })
+                .slice(0, -1)
+            : ''}
         </p>
       </div>
 
