@@ -12,4 +12,7 @@ export const QUERY_KEYS = {
   REPORT: {
     ACTIVITIES: (dateRange: DateRange) => ['report', 'activities', dateRange] as const,
   },
+  TIMELINE: {
+    ACTIVITIES: () => ['timeline', 'activities'] as const,
+  },
 } as const

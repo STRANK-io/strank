@@ -5,6 +5,7 @@ import { DefaultUserIcon } from '@/components/common/icons/DefaultUserIcon'
 import { CrownIcon } from '@/components/common/icons/CrownIcon'
 import { cn } from '@/lib/utils/cn'
 import { RankingFilters, ActivityWithRanking } from '@/lib/types/ranking'
+import StravaActivityButton from '@/components/common/StravaActivityButton'
 
 interface RankingCardProps {
   activity: ActivityWithRanking
@@ -21,10 +22,6 @@ export function RankingCard({
   isTop1 = false,
   criteria,
 }: RankingCardProps) {
-  const handleClickStravaLogo = () => {
-    window.open(`https://www.strava.com/activities/${activity.id}`, '_blank')
-  }
-
   const displayValue =
     criteria === 'distance'
       ? `${(activity.distance / 1000).toFixed(1)}km`
@@ -93,16 +90,7 @@ export function RankingCard({
 
       <div className={cn('flex items-center gap-2', variant === 'default' ? '' : 'justify-end')}>
         <span className="text-sm font-medium leading-[18.2px] text-brand-dark">{displayValue}</span>
-        <Image
-          src="/images/strava-logo.png"
-          role="button"
-          alt="Strank Logo"
-          width={24}
-          height={24}
-          className="cursor-pointer object-contain"
-          priority
-          onClick={handleClickStravaLogo}
-        />
+        <StravaActivityButton activityId={activity.id} />
       </div>
     </div>
   )
