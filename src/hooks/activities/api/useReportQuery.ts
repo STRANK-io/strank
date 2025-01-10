@@ -10,7 +10,7 @@ const fetchReportData = async (dateRange: DateRange, user: UsersType): Promise<R
 
   // 날짜 범위 계산
   const now = new Date()
-  let startDate = new Date()
+  const startDate = new Date()
 
   switch (dateRange) {
     case '3months':

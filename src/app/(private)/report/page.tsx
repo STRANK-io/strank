@@ -20,11 +20,25 @@ export default function ReportPage() {
       </section>
 
       <section className="flex flex-col gap-3 rounded-3xl bg-white">
-        <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
+        <Suspense
+          fallback={
+            <div className="p-4 pb-0">
+              <Skeleton className="h-[174px] w-full rounded-3xl" />
+            </div>
+          }
+        >
           <ReportChartSection dateRange={filter.dateRange} activeCriteria={filter.activeCriteria} />
         </Suspense>
 
-        <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+        <Suspense
+          fallback={
+            <div className="p-4 pt-0">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <Skeleton key={index} className="mb-1 h-[25px] rounded-full" />
+              ))}
+            </div>
+          }
+        >
           <ReportTableSection dateRange={filter.dateRange} />
         </Suspense>
       </section>
