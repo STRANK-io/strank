@@ -6,11 +6,11 @@ import { useState, useRef } from 'react'
 import { toPng } from 'html-to-image'
 import { toast } from 'sonner'
 import { ToastContent } from '@/components/common/ToastContent'
-import OutlineButton from '@/components/features/rankings/shareToInsta/OutlineButton'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { convertAndCropToSquare } from '@/lib/utils/image'
 import { X } from 'lucide-react'
 import SharePreview from '@/components/features/rankings/shareToInsta/SharePreview'
+import OutlineButton from '@/components/common/OutlineButton'
 
 interface ShareDialogProps {
   isOpen: boolean

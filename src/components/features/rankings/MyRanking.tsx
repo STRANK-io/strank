@@ -3,11 +3,11 @@ import { RankingCard } from '@/components/features/rankings/RankingCard'
 import ShareDialog from '@/components/features/rankings/shareToInsta/ShareDialog'
 import { useState, useRef } from 'react'
 import { isMobile } from 'react-device-detect'
-import OutlineButton from '@/components/features/rankings/shareToInsta/OutlineButton'
 import { convertAndCropToSquare } from '@/lib/utils/image'
 import { toast } from 'sonner'
 import { ToastContent } from '@/components/common/ToastContent'
 import { useRankingFilters } from '@/stores/rankingFilters'
+import OutlineButton from '@/components/common/OutlineButton'
 
 const DEFAULT_SHARE_IMAGE = '/images/strank-vertical-white.png'
 

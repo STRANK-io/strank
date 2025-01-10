@@ -3,7 +3,7 @@
 import { Suspense } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import MyRanking from '@/components/features/rankings/MyRanking'
-import OutlineButton from '@/components/features/rankings/shareToInsta/OutlineButton'
+import OutlineButton from '@/components/common/OutlineButton'
 
 export function MyRankingSection() {
   return (
