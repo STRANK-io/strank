@@ -1,6 +1,8 @@
 'use client'
 
+import { ACTIVITY_UNITS } from '@/lib/constants/unit'
 import { ActivityWithRanking, RankingFilters } from '@/lib/types/ranking'
+import { formatActivityValue } from '@/lib/utils/activity'
 import Image from 'next/image'
 import { useRef } from 'react'
 
@@ -21,14 +23,16 @@ export default function SharePreview({
     name,
     rank,
     distance,
-    elevation,
+    total_elevation_gain,
     date,
     user: { district },
   } = myRankingActivity
 
   const criteriaText = criteria === 'distance' ? '거리' : '고도'
   const criteriaValue =
-    criteria === 'distance' ? `${(distance / 1000).toFixed(1)}km` : `${elevation}m`
+    criteria === 'distance'
+      ? `${formatActivityValue(distance, true)}${ACTIVITY_UNITS.distance}`
+      : `${formatActivityValue(total_elevation_gain)}${ACTIVITY_UNITS.elevation}`
   const formattedDate = new Date(date)
     .toLocaleDateString('ko-KR', {
       year: 'numeric',

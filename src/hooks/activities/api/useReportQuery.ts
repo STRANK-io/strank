@@ -56,7 +56,7 @@ const fetchReportData = async (dateRange: DateRange, user: UsersType): Promise<R
       id: activity.id,
       date: activity.start_date ? new Date(activity.start_date).toLocaleDateString() : '',
       distance: activity.distance || 0,
-      elevation: activity.total_elevation_gain || 0,
+      total_elevation_gain: activity.total_elevation_gain || 0,
       average_speed: activity.average_speed || 0,
       average_watts: activity.average_watts || 0,
     })),

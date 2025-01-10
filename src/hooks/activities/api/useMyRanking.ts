@@ -40,7 +40,7 @@ const fetchMyRanking = async (
     name: myBestActivity.name || '',
     rank: myBestRank,
     distance: myBestActivity.distance || 0,
-    elevation: myBestActivity.total_elevation_gain || 0,
+    total_elevation_gain: myBestActivity.total_elevation_gain || 0,
     date: myBestActivity.start_date || '',
     user: {
       nickname: myBestActivity.users.name || '이름 없음',

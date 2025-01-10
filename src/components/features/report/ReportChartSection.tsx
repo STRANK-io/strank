@@ -7,12 +7,13 @@ import { formatDateForReport } from '@/lib/utils/date'
 export default function ReportChartSection({ dateRange, activeCriteria }: ReportFilter) {
   const { data } = useReportQuery(dateRange)
 
+  // 각 값이 숫자여야하므로 formatActivityValue를 사용하지 않음
   const chartData = [...data.activities].reverse().map(activity => ({
     date: formatDateForReport(activity.date),
-    distance: activity.distance / 1000, // km로 변환
-    elevation: activity.elevation,
-    speed: activity.average_speed,
-    power: activity.average_watts,
+    distance: activity.distance ? activity.distance / 1000 : 0, // m -> km
+    elevation: activity.total_elevation_gain ?? 0,
+    speed: activity.average_speed ?? 0,
+    power: activity.average_watts ?? 0,
   }))
 
   if (!chartData.length) {

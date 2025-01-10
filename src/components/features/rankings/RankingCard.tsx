@@ -6,6 +6,8 @@ import { CrownIcon } from '@/components/common/icons/CrownIcon'
 import { cn } from '@/lib/utils/cn'
 import { RankingFilters, ActivityWithRanking } from '@/lib/types/ranking'
 import StravaActivityButton from '@/components/common/StravaActivityButton'
+import { formatActivityValue } from '@/lib/utils/activity'
+import { ACTIVITY_UNITS } from '@/lib/constants/unit'
 
 interface RankingCardProps {
   activity: ActivityWithRanking
@@ -24,8 +26,8 @@ export function RankingCard({
 }: RankingCardProps) {
   const displayValue =
     criteria === 'distance'
-      ? `${(activity.distance / 1000).toFixed(1)}km`
-      : `${activity.elevation}m`
+      ? `${formatActivityValue(activity.distance, true)}${ACTIVITY_UNITS.distance}`
+      : `${formatActivityValue(activity.total_elevation_gain)}${ACTIVITY_UNITS.elevation}`
 
   return (
     <div

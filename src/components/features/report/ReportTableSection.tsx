@@ -2,6 +2,7 @@ import ReportTableRow from '@/components/features/report/ReportTableRow'
 import { useReportQuery } from '@/hooks/activities/api/useReportQuery'
 import { ACTIVITY_UNITS } from '@/lib/constants/unit'
 import { ReportFilter } from '@/lib/types/report'
+import { formatActivityValue } from '@/lib/utils/activity'
 import { formatDateForReport } from '@/lib/utils/date'
 
 export default function ReportTableSection({ dateRange }: Pick<ReportFilter, 'dateRange'>) {
@@ -26,10 +27,10 @@ export default function ReportTableSection({ dateRange }: Pick<ReportFilter, 'da
               <ReportTableRow
                 texts={[
                   formatDateForReport(activity.date),
-                  `${(activity.distance / 1000).toFixed(1)}${ACTIVITY_UNITS.distance}`,
-                  `${activity.elevation}${ACTIVITY_UNITS.elevation}`,
-                  `${activity.average_speed.toFixed(1)}${ACTIVITY_UNITS.speed}`,
-                  `${activity.average_watts.toFixed(0)}${ACTIVITY_UNITS.power}`,
+                  `${formatActivityValue(activity.distance, true)}${ACTIVITY_UNITS.distance}`,
+                  `${formatActivityValue(activity.total_elevation_gain)}${ACTIVITY_UNITS.elevation}`,
+                  `${formatActivityValue(activity.average_speed)}${ACTIVITY_UNITS.speed}`,
+                  `${formatActivityValue(activity.average_watts)}${ACTIVITY_UNITS.power}`,
                 ]}
               />
             </div>

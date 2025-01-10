@@ -31,7 +31,7 @@ const fetchTotalRankings = async (
     name: activity.name || '',
     rank: index + 1,
     distance: activity.distance || 0,
-    elevation: activity.total_elevation_gain || 0,
+    total_elevation_gain: activity.total_elevation_gain || 0,
     date: activity.start_date || '',
     user: {
       nickname: activity.users.name || '이름 없음',
