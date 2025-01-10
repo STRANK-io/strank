@@ -38,19 +38,19 @@ export default function ReportFilterSection({ filter, onFilterChange }: Props) {
 
   return (
     <div className="flex flex-col gap-4 rounded-3xl bg-white p-4">
-      <div className="flex gap-4">
+      <div className="flex items-center justify-between gap-4">
         {DATE_RANGE_OPTIONS.map(({ value, text }) => (
           <OutlineButton
             key={`${value}-${text}`}
             text={text}
             onClick={() => handleDateRangeChange(value)}
             isActive={filter.dateRange === value}
-            className="px-[13.17px]"
+            className="px-0"
           />
         ))}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         {ACTIVITY_OPTIONS.map(({ value, text }) => (
           <ChartFilterButton
             key={`${value}-${text}`}

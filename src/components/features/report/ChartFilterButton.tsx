@@ -19,7 +19,7 @@ export default function ChartFilterButton({ text, onClick, ActiveCriteriaType, i
       variant="outline"
       size="default"
       className={cn(
-        'flex h-fit flex-1 gap-2 rounded-full p-2',
+        'flex h-fit w-fit flex-1 gap-2 rounded-full p-2',
         'text-[13px] font-medium leading-[16.9px] text-brand-dark',
         'hover:bg-white'
       )}
