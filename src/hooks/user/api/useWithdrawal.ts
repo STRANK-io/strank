@@ -12,41 +12,36 @@ const useWithdrawal = () => {
 
       const now = new Date().toISOString()
 
-      try {
-        // 활동 데이터 soft delete
-        const { error: activitiesError } = await supabase
+      // 활동 데이터 soft delete
+      const { error: activitiesError } = await supabase
+        .from('activities')
+        .update({ deleted_at: now })
+        .eq('user_id', user.id)
+
+      if (activitiesError) throw activitiesError
+
+      // 유저 데이터 soft delete
+      const { error: userError } = await supabase
+        .from('users')
+        .update({ deleted_at: now })
+        .eq('id', user.id)
+
+      if (userError) {
+        // 활동 데이터 soft delete 롤백
+        const { error: rollbackError } = await supabase
           .from('activities')
-          .update({ deleted_at: now })
+          .update({ deleted_at: null })
           .eq('user_id', user.id)
 
-        if (activitiesError) throw activitiesError
-
-        // 유저 데이터 soft delete
-        const { error: userError } = await supabase
-          .from('users')
-          .update({ deleted_at: now })
-          .eq('id', user.id)
-
-        if (userError) {
-          // 활동 데이터 soft delete 롤백
-          await supabase
-            .from('activities')
-            .update({ deleted_at: null })
-            .eq('user_id', user.id)
-            .then(({ error }) => {
-              if (error) {
-                console.error('Failed to rollback activities soft delete:', error)
-              }
-            })
-
-          throw userError
+        if (rollbackError) {
+          console.error('Failed to rollback activities soft delete:', rollbackError)
         }
 
-        // 로그아웃
-        await supabase.auth.signOut()
-      } catch (error) {
-        throw error
+        throw userError
       }
+
+      // 로그아웃
+      await supabase.auth.signOut()
     },
   })
 }
