@@ -20,7 +20,7 @@ export default function MypagePage() {
         <Link href="https://bit.ly/strank" className="underline decoration-brand-dark">
           공지사항
         </Link>
-        <p>제안 & 오류 신고 : support@strank.io</p>
+        <p className="no-underline">제안 & 오류 신고 : support@strank.io</p>
       </div>
       <div className="flex w-full flex-col items-center justify-center gap-6 text-sm font-bold leading-[18.2px]">
         <LogOutButton />
