@@ -45,7 +45,7 @@ const fetchTotalRankings = async (
   }
 }
 
-export const useTotalRankings = (filters: RankingFilters) => {
+export const useTotalRankingsQuery = (filters: RankingFilters) => {
   const user = useUser()
 
   return useSuspenseQuery({

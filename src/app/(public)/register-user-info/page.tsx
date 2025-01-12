@@ -1,6 +1,6 @@
 import StepIndicator from '@/components/common/StepIndicator'
-import { CompleteButton } from '@/components/features/registerUserInfo/CompleteButton'
-import { UserInfoForm } from '@/components/features/registerUserInfo/UserInfoForm'
+import { CompleteButton } from '@/components/common/userInfo/CompleteButton'
+import { UserInfoForm } from '@/components/common/userInfo/userInfoForm/UserInfoForm'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { ROUTES } from '@/lib/constants/routes'
 import { createClient } from '@/lib/supabase/server'
@@ -20,9 +20,9 @@ export default async function RegisterUserInfoPage() {
   return (
     <div>
       <StepIndicator />
-      <UserInfoForm user={user} />
+      <UserInfoForm userId={user.id} />
       <div className="fixed bottom-12 left-1/2 w-full max-w-[393px] -translate-x-1/2 px-5">
-        <CompleteButton user={user} />
+        <CompleteButton userId={user.id} text="입력 완료" />
       </div>
     </div>
   )

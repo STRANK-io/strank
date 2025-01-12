@@ -26,7 +26,7 @@ const useUpdateUserInfo = () => {
           const { error: uploadError } = await supabase.storage
             .from('profile-images')
             .upload(uploadedFileName, profileImage, {
-              cacheControl: '3600',
+              cacheControl: '0',
               upsert: true,
             })
 
@@ -38,7 +38,7 @@ const useUpdateUserInfo = () => {
             data: { publicUrl },
           } = supabase.storage.from('profile-images').getPublicUrl(uploadedFileName)
 
-          profileImageUrl = publicUrl
+          profileImageUrl = `${publicUrl}?v=${Date.now()}`
         }
 
         const { error: rpcError } = await supabase.rpc('update_user_info', {

@@ -1,4 +1,4 @@
-import { useMyRanking } from '@/hooks/activities/api/useMyRanking'
+import { useMyRankingQuery } from '@/hooks/activities/api/useMyRankingQuery'
 import { RankingCard } from '@/components/features/rankings/RankingCard'
 import ShareDialog from '@/components/features/rankings/shareToInsta/ShareDialog'
 import { useState, useRef } from 'react'
@@ -17,7 +17,7 @@ export default function MyRanking() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { filters } = useRankingFilters()
 
-  const { data: myRankingActivity } = useMyRanking(filters)
+  const { data: myRankingActivity } = useMyRankingQuery(filters)
 
   if (!myRankingActivity)
     return <p className="text-center text-brand-dark">나의 랭킹 데이터가 없습니다.</p>

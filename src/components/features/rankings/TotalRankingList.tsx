@@ -1,10 +1,10 @@
 import { RankingCard } from '@/components/features/rankings/RankingCard'
-import { useTotalRankings } from '@/hooks/activities/api/useTotalRankings'
+import { useTotalRankingsQuery } from '@/hooks/activities/api/useTotalRankingsQuery'
 import { useRankingFilters } from '@/stores/rankingFilters'
 
 export default function TotalRankingList() {
   const { filters } = useRankingFilters()
-  const { data } = useTotalRankings(filters)
+  const { data } = useTotalRankingsQuery(filters)
 
   if (!data.rankings.length) {
     return <p className="text-center text-brand-dark">아직 랭킹 데이터가 없습니다.</p>

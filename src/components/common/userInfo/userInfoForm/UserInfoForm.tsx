@@ -2,18 +2,17 @@
 
 import { useEffect } from 'react'
 import { useUserInfoStore } from '@/stores/userInfoStore'
-import { NicknameInput } from '@/components/common/userInfo/NicknameInput'
-import { RegionSelect } from '@/components/common/userInfo/RegionSelect'
-import { User } from '@supabase/supabase-js'
+import { NicknameInput } from '@/components/common/userInfo/userInfoForm/NicknameInput'
+import { RegionSelect } from '@/components/common/userInfo/userInfoForm/RegionSelect'
 import { useGetUserInfoQuery } from '@/hooks/user/api/useGetUserInfoQuery'
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants/error'
 import { ToastContent } from '@/components/common/ToastContent'
 import { toast } from 'sonner'
-import { ProfileImage } from '@/components/common/userInfo/ProfileImage'
+import { ProfileImage } from '@/components/common/userInfo/userInfoForm/ProfileImage'
 import { convertAndCreatePreview } from '@/lib/utils/image'
 
-export const UserInfoForm = ({ user }: { user: User }) => {
-  const { data: userInfo } = useGetUserInfoQuery(user.id)
+export const UserInfoForm = ({ userId }: { userId: string }) => {
+  const { data: userInfo } = useGetUserInfoQuery(userId)
   const {
     imagePreviewUrl,
     nickname,

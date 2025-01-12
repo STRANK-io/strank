@@ -50,7 +50,7 @@ const fetchMyRanking = async (
   }
 }
 
-export const useMyRanking = (filters: RankingFilters) => {
+export const useMyRankingQuery = (filters: RankingFilters) => {
   const user = useUser()
 
   return useSuspenseQuery({

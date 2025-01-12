@@ -3,8 +3,8 @@
 import { ChangeEvent, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
-import { User } from 'lucide-react'
 import Image from 'next/image'
+import { DefaultUserIcon } from '@/components/common/icons/DefaultUserIcon'
 
 interface ProfileImageProps {
   imageUrl: string | null
@@ -53,7 +53,7 @@ export const ProfileImage = ({ imageUrl, onImageChange, buttonText }: ProfileIma
               priority
             />
           ) : (
-            <User className={cn('h-[55px] w-[55px] fill-brand-secondary text-transparent')} />
+            <DefaultUserIcon width={94} height={94} />
           )}
         </div>
 
