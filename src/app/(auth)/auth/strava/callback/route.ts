@@ -64,6 +64,7 @@ export async function GET(request: Request) {
     const { error: tokenError } = await supabase.from('strava_user_tokens').upsert(
       {
         user_id: user.id,
+        strava_athlete_id: stravaData.athlete.id,
         access_token: stravaData.access_token,
         refresh_token: stravaData.refresh_token,
         expires_at: new Date(stravaData.expires_at * 1000).toISOString(),
