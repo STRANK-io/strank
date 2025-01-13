@@ -5,7 +5,6 @@ import {
   STRAVA_API_URL,
   STRAVA_ATHLETE_ACTIVITIES_ENDPOINT,
   SYNC_CONFIG,
-  STRAVA_VISIBILITY,
 } from '@/lib/constants/strava'
 import { StravaActivity } from '@/lib/types/strava'
 
@@ -70,14 +69,10 @@ export async function processActivities(
   userId: string,
   supabase: SupabaseClient<Database>
 ) {
-  const validActivities = activities.filter(
-    activity => activity.visibility !== STRAVA_VISIBILITY.ONLY_ME
-  )
-
-  if (validActivities.length === 0) return
+  if (activities.length === 0) return
 
   const { error } = await supabase.from('activities').upsert(
-    validActivities.map(activity => ({
+    activities.map(activity => ({
       id: activity.id.toString(),
       name: activity.name,
       distance: activity.distance,
