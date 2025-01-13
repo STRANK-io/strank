@@ -63,7 +63,7 @@ export async function GET(request: Request) {
     // strava_user_tokens 테이블에 토큰 저장/업데이트
     const { error: tokenError } = await supabase.from('strava_user_tokens').upsert(
       {
-        user_id: user.id,
+        user_id: user.id as string,
         strava_athlete_id: stravaData.athlete.id,
         access_token: stravaData.access_token,
         refresh_token: stravaData.refresh_token,
