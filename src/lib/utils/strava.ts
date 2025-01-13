@@ -76,7 +76,7 @@ export async function processActivities(
 
   const { error } = await supabase.from('activities').upsert(
     activities.map(activity => ({
-      id: activity.id.toString(),
+      id: activity.id,
       name: activity.name,
       distance: activity.distance,
       average_speed: activity.average_speed,

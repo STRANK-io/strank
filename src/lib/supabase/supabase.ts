@@ -36,7 +36,7 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           distance: number | null
-          id: string
+          id: number
           max_heartrate: number | null
           max_speed: number | null
           max_watts: number | null
@@ -54,7 +54,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           distance?: number | null
-          id: string
+          id: number
           max_heartrate?: number | null
           max_speed?: number | null
           max_watts?: number | null
@@ -72,7 +72,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           distance?: number | null
-          id?: string
+          id?: number
           max_heartrate?: number | null
           max_speed?: number | null
           max_watts?: number | null

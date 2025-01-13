@@ -1,7 +1,7 @@
 import Image from 'next/image'
 
 interface StravaActivityButtonProps {
-  activityId: string
+  activityId: number
 }
 
 export default function StravaActivityButton({ activityId }: StravaActivityButtonProps) {
