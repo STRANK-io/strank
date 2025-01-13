@@ -45,6 +45,7 @@ export async function fetchStravaActivities(
     console.error('Failed to increment API usage:', usageError)
   }
 
+  // Strava API 호출
   const response = await fetch(
     `${STRAVA_API_URL}${STRAVA_ATHLETE_ACTIVITIES_ENDPOINT}?page=${page}&per_page=${SYNC_CONFIG.FETCH_PAGE_SIZE}`,
     {
@@ -56,9 +57,11 @@ export async function fetchStravaActivities(
 
   if (!response.ok) {
     if (response.status === 429) {
+      console.error('Strava API limit exceeded')
       throw new Error(ERROR_CODES.STRAVA_API_LIMIT_EXCEEDED)
     }
-    throw new Error('Failed to fetch activities')
+    console.error('Strava connection failed')
+    throw new Error(ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED)
   }
 
   return response.json()

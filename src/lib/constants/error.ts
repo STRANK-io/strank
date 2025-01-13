@@ -34,9 +34,7 @@ export const ERROR_MESSAGES = {
   [ERROR_CODES.INTERNAL_ERROR]: '시스템 오류가 발생했습니다. 다시 시도해주세요.',
   [ERROR_CODES.AUTH.WITHDRAWAL_FAILED]: '회원탈퇴에 실패하였습니다. 다시 시도해주세요.',
   [ERROR_CODES.AUTH.LOGOUT_FAILED]: '로그아웃에 실패하였습니다. 다시 시도해주세요.',
-  // TODO: 문구 받아서 수정 필요
-  [ERROR_CODES.STRAVA_API_LIMIT_EXCEEDED]:
-    'Strava API 일일 사용량을 초과했습니다. 내일 다시 시도해주세요.',
+  [ERROR_CODES.STRAVA_API_LIMIT_EXCEEDED]: 'Strava API 일일 사용량을 초과했습니다.',
 } as const
 
 export type ErrorMessageCode = keyof typeof ERROR_MESSAGES
