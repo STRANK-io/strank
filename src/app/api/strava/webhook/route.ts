@@ -77,15 +77,24 @@ export async function POST(request: Request) {
     }
 
     // * 유저의 스트라바 엑세스 토큰 조회
-    const { data: stravaConnection } = await supabase
+    const { data: stravaConnection, error: stravaConnectionError } = await supabase
       .from('strava_user_tokens')
       .select('access_token, refresh_token, expires_at, user_id')
-      .eq('strava_athlete_id', parseInt(body.owner_id.toString(), 10))
+      .eq('strava_athlete_id', body.owner_id)
       .single()
+
+    if (stravaConnectionError) {
+      console.error('Strava Webhook: Error fetching from strava_user_tokens:', {
+        error: stravaConnectionError,
+        owner_id: body.owner_id,
+        owner_id_type: typeof body.owner_id,
+      })
+      return new NextResponse('Database query failed', { status: 500 })
+    }
 
     if (!stravaConnection) {
       console.error(
-        `Strava Webhook: strava_user_tokens table에서 데이터를 찾을 수 없습니다. (body.owner_id: ${body.owner_id})`
+        `Strava Webhook: strava_user_tokens table에서 데이터를 찾을 수 없습니다. (body.owner_id: ${body.owner_id}, type: ${typeof body.owner_id})`
       )
       return new NextResponse('User not found', { status: 404 })
     }
