@@ -2,6 +2,7 @@ import { Database } from '@/lib/supabase/supabase'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { SupabaseClient } from '@supabase/supabase-js'
 import {
+  STRAVA_ACTIVITY_BY_ID_ENDPOINT,
   STRAVA_API_URL,
   STRAVA_ATHLETE_ACTIVITIES_ENDPOINT,
   SYNC_CONFIG,
@@ -93,5 +94,43 @@ export async function processActivities(
     }))
   )
 
-  if (error) throw new Error(ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED)
+  if (error) throw new Error(ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED)
+}
+
+export async function updateStravaActivityDescription(
+  accessToken: string,
+  activity: StravaActivity,
+  newDescription: string
+): Promise<void> {
+  // 기존 설명과 새로운 설명을 결합
+  const combinedDescription = activity.description
+    ? `${activity.description}\n\n${newDescription}`
+    : newDescription
+
+  // 업데이트된 설명으로 활동 정보 업데이트
+  const updateResponse = await fetch(
+    `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(activity.id)}`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        description: combinedDescription,
+      }),
+    }
+  )
+
+  if (!updateResponse.ok) {
+    const errorText = await updateResponse.text()
+
+    if (updateResponse.status === 429) {
+      console.error('Strava API: Rate limit exceeded when updating activity description')
+      throw new Error(ERROR_CODES.STRAVA_API_LIMIT_EXCEEDED)
+    }
+
+    console.error('Strava API: Failed to update activity description:', errorText)
+    throw new Error(ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED)
+  }
 }

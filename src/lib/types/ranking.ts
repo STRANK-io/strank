@@ -25,3 +25,15 @@ export type MyRankingResponse = ActivityWithRanking
 export type TotalRankingsResponse = {
   rankings: ActivityWithRanking[]
 }
+
+export interface GetActivityRankingsResponse {
+  distanceRankCity: number | null
+  distanceRankDistrict: number | null
+  elevationRankCity: number | null
+  elevationRankDistrict: number | null
+}
+
+export interface CalculateActivityRankingReturn {
+  rankings: GetActivityRankingsResponse | null
+  district: string
+}

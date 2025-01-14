@@ -236,6 +236,18 @@ export type Database = {
       }
     }
     Functions: {
+      get_activity_rankings: {
+        Args: {
+          activity_id: number
+          user_district: string
+        }
+        Returns: {
+          distance_rank_city: number
+          distance_rank_district: number
+          elevation_rank_city: number
+          elevation_rank_district: number
+        }[]
+      }
       increment_strava_api_usage: {
         Args: {
           is_upload: boolean

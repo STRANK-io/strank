@@ -15,6 +15,7 @@ export const ERROR_CODES = {
   },
   INTERNAL_ERROR: 'internal_error',
   STRAVA_API_LIMIT_EXCEEDED: 'strava_api_limit_exceeded',
+  STRAVA_ACTIVITY_UPDATE_FAILED: 'strava_activity_update_failed',
 } as const
 
 export const ERROR_MESSAGES = {
@@ -35,6 +36,7 @@ export const ERROR_MESSAGES = {
   [ERROR_CODES.AUTH.WITHDRAWAL_FAILED]: '회원탈퇴에 실패하였습니다. 다시 시도해주세요.',
   [ERROR_CODES.AUTH.LOGOUT_FAILED]: '로그아웃에 실패하였습니다. 다시 시도해주세요.',
   [ERROR_CODES.STRAVA_API_LIMIT_EXCEEDED]: 'Strava API 일일 사용량을 초과했습니다.',
+  [ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED]: '활동 업데이트에 실패했습니다. 다시 시도해주세요.',
 } as const
 
 export type ErrorMessageCode = keyof typeof ERROR_MESSAGES

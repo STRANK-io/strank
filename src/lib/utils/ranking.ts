@@ -1,8 +1,9 @@
 import { SupabaseClient } from '@supabase/supabase-js'
-import { RankingFilters } from '@/lib/types/ranking'
+import { CalculateActivityRankingReturn, RankingFilters } from '@/lib/types/ranking'
 import { UsersType } from '@/lib/types/auth'
 import { Database } from '@/lib/supabase/supabase'
 import { STRAVA_VISIBILITY } from '@/lib/constants/strava'
+import { StravaActivity } from '@/lib/types/strava'
 
 export function createRankingQuery(
   supabase: SupabaseClient<Database>,
@@ -29,7 +30,6 @@ export function createRankingQuery(
     .is('deleted_at', null)
     .eq('visibility', STRAVA_VISIBILITY.EVERYONE)
     .is('users.deleted_at', null)
-    .not('users.strava_connected_at', 'is', null)
 
   // criteria에 따른 필터링 및 정렬
   if (filters.criteria === 'distance') {
@@ -75,5 +75,52 @@ export function getLastWeekRange() {
   return {
     start: lastMonday,
     end: lastSunday,
+  }
+}
+
+export async function calculateActivityRanking(
+  activity: StravaActivity,
+  userId: string,
+  supabase: SupabaseClient<Database>
+): Promise<CalculateActivityRankingReturn | null> {
+  const { data: userProfile } = await supabase
+    .from('users')
+    .select('id, name, district, profile')
+    .eq('id', userId)
+    .single()
+
+  if (
+    !userProfile ||
+    !userProfile.district ||
+    (!activity.distance && !activity.total_elevation_gain)
+  ) {
+    console.error(
+      !userProfile || !userProfile.district
+        ? 'calculateActivityRanking Error: User profile not found'
+        : 'calculateActivityRanking Error: Both distance and elevation are null'
+    )
+    return null
+  }
+
+  const { data: rankings, error } = await supabase.rpc('get_activity_rankings', {
+    activity_id: activity.id,
+    user_district: userProfile.district,
+  })
+
+  if (error) {
+    console.error('calculateActivityRanking Error: [Failed to get_activity_rankings]', error)
+    return null
+  }
+
+  const ranking = rankings[0]
+
+  return {
+    rankings: {
+      distanceRankCity: ranking.distance_rank_city || null,
+      distanceRankDistrict: ranking.distance_rank_district || null,
+      elevationRankCity: ranking.elevation_rank_city || null,
+      elevationRankDistrict: ranking.elevation_rank_district || null,
+    },
+    district: userProfile.district,
   }
 }
