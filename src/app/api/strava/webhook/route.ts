@@ -77,6 +77,16 @@ export async function POST(request: Request) {
     }
 
     // * 유저의 스트라바 엑세스 토큰 조회
+    // 전체 테이블 데이터 확인을 위한 디버깅 쿼리
+    const { data: allTokens } = await supabase
+      .from('strava_user_tokens')
+      .select('strava_athlete_id')
+
+    console.log(
+      'All strava_athlete_ids in table:',
+      allTokens?.map(t => t.strava_athlete_id)
+    )
+
     const { data: stravaConnection } = await supabase
       .from('strava_user_tokens')
       .select('access_token, refresh_token, expires_at, user_id')
@@ -87,6 +97,7 @@ export async function POST(request: Request) {
       console.error('Strava Webhook: strava_user_tokens table에서 데이터를 찾을 수 없습니다.', {
         owner_id: body.owner_id,
         owner_id_string: body.owner_id.toString(),
+        all_athlete_ids: allTokens?.map(t => t.strava_athlete_id),
       })
       return new NextResponse('User not found', { status: 404 })
     }
