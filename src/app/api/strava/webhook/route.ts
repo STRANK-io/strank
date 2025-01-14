@@ -80,11 +80,13 @@ export async function POST(request: Request) {
     const { data: stravaConnection } = await supabase
       .from('strava_user_tokens')
       .select('access_token, refresh_token, expires_at, user_id')
-      .eq('strava_athlete_id', body.owner_id as number)
+      .eq('strava_athlete_id', parseInt(body.owner_id.toString(), 10))
       .single()
 
     if (!stravaConnection) {
-      console.error('Strava Webhook: strava_user_tokens table에서 데이터를 찾을 수 없습니다.')
+      console.error(
+        `Strava Webhook: strava_user_tokens table에서 데이터를 찾을 수 없습니다. (body.owner_id: ${body.owner_id})`
+      )
       return new NextResponse('User not found', { status: 404 })
     }
 
