@@ -99,7 +99,7 @@ export async function calculateActivityRanking(
   }
 
   const { data: rankings, error } = await supabase.rpc('get_activity_rankings', {
-    activity_id: activity.id.toString(),
+    activity_id: activity.id,
     user_district: userProfile.district,
   })
 

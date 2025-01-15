@@ -271,7 +271,7 @@ export type Database = {
     Functions: {
       get_activity_rankings: {
         Args: {
-          activity_id: string
+          activity_id: number
           user_district: string
         }
         Returns: {
