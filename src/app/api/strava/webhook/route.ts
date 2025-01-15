@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import type { NextFetchEvent } from 'next/server'
 import { processWebhookEvent } from '@/lib/utils/strava'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { StravaWebhookEventResponse } from '@/lib/types/strava'
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
 }
 
 // * 2. 활동 업데이트 시 웹훅 온 이벤트 처리
-export async function POST(request: Request) {
+export async function POST(request: Request, event: NextFetchEvent) {
   let webhookBody: StravaWebhookEventResponse
 
   try {
@@ -71,14 +72,16 @@ export async function POST(request: Request) {
     // 백그라운드에서 웹훅 이벤트 처리
     console.log('Starting webhook event processing:', { eventBody: webhookBody })
 
-    // 백그라운드에서 처리
-    processWebhookEvent(webhookBody)
-      .then(() => {
-        console.log('Successfully processed webhook event:', { eventId: webhookBody.object_id })
-      })
-      .catch(error => {
-        logError('Failed to process webhook event:', { error, eventBody: webhookBody })
-      })
+    // NextFetchEvent의 waitUntil을 사용하여 백그라운드 작업이 완료될 때까지 실행
+    event.waitUntil(
+      processWebhookEvent(webhookBody)
+        .then(() => {
+          console.log('Successfully processed webhook event:', { eventId: webhookBody.object_id })
+        })
+        .catch(error => {
+          logError('Failed to process webhook event:', { error, eventBody: webhookBody })
+        })
+    )
 
     return response
   } catch (error) {
