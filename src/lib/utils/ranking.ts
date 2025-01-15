@@ -90,18 +90,11 @@ export async function calculateActivityRanking(
     .eq('id', userId)
     .single()
 
-  if (
-    !userProfile ||
-    !userProfile.district ||
-    (!activity.distance && !activity.total_elevation_gain)
-  ) {
-    logError(
-      `calculateActivityRanking Error: ${!userProfile ? 'User profile not found' : 'Both distance and elevation are null'}`,
-      {
-        userId: userProfile?.id,
-        activityId: activity.id,
-      }
-    )
+  if (!userProfile || !userProfile.district) {
+    logError(`calculateActivityRanking Error: 'User profile not found`, {
+      userId: userProfile?.id,
+      activityId: activity.id,
+    })
     return null
   }
 
