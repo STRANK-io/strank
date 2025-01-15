@@ -77,14 +77,16 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // 비동기 작업 실행
-    processWebhookEvent(webhookBody)
-      .then(() => {
+    // 백그라운드 작업을 setTimeout을 사용하여 실행
+    setTimeout(async () => {
+      try {
+        // 비동기 처리 작업을 여기서 실행
+        await processWebhookEvent(webhookBody)
         console.log('Successfully processed webhook event:', { eventId: webhookBody.object_id })
-      })
-      .catch(error => {
+      } catch (error) {
         logError('Failed to process webhook event:', { error, eventBody: webhookBody })
-      })
+      }
+    }, 0) // 비동기적으로 처리
 
     return response
   } catch (error) {
