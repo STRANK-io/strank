@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import type { NextFetchEvent } from 'next/server'
+import type { NextRequest } from 'next/server'
 import { processWebhookEvent } from '@/lib/utils/strava'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { StravaWebhookEventResponse } from '@/lib/types/strava'
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 }
 
 // * 2. 활동 업데이트 시 웹훅 온 이벤트 처리
-export async function POST(request: Request, event: NextFetchEvent) {
+export async function POST(request: NextRequest) {
   let webhookBody: StravaWebhookEventResponse
 
   try {
@@ -66,22 +66,25 @@ export async function POST(request: Request, event: NextFetchEvent) {
       logError('Failed to record webhook event:', { error: insertError })
     }
 
-    // 응답을 먼저 보내고
-    const response = new NextResponse('Success', { status: 200 })
-
-    // 백그라운드에서 웹훅 이벤트 처리
+    // 백그라운드 작업 시작
     console.log('Starting webhook event processing:', { eventBody: webhookBody })
 
-    // NextFetchEvent의 waitUntil을 사용하여 백그라운드 작업이 완료될 때까지 실행
-    event.waitUntil(
-      processWebhookEvent(webhookBody)
-        .then(() => {
-          console.log('Successfully processed webhook event:', { eventId: webhookBody.object_id })
-        })
-        .catch(error => {
-          logError('Failed to process webhook event:', { error, eventBody: webhookBody })
-        })
-    )
+    // NextResponse의 headers에 커스텀 헤더를 추가하여 Edge runtime이 연결을 유지하도록 함
+    const response = new NextResponse('Success', {
+      status: 200,
+      headers: {
+        Connection: 'keep-alive',
+      },
+    })
+
+    // 비동기 작업 실행
+    processWebhookEvent(webhookBody)
+      .then(() => {
+        console.log('Successfully processed webhook event:', { eventId: webhookBody.object_id })
+      })
+      .catch(error => {
+        logError('Failed to process webhook event:', { error, eventBody: webhookBody })
+      })
 
     return response
   } catch (error) {
