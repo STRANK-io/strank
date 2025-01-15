@@ -106,7 +106,7 @@ export async function calculateActivityRanking(
   }
 
   const { data: rankings, error } = await supabase.rpc('get_activity_rankings', {
-    activity_id: activity.id,
+    activity_id: activity.id.toString(),
     user_district: userProfile.district,
   })
 
@@ -123,10 +123,10 @@ export async function calculateActivityRanking(
 
   return {
     rankings: {
-      distanceRankCity: ranking.distance_rank_city || null,
-      distanceRankDistrict: ranking.distance_rank_district || null,
-      elevationRankCity: ranking.elevation_rank_city || null,
-      elevationRankDistrict: ranking.elevation_rank_district || null,
+      distanceRankCity: ranking.city_distance_rank || null,
+      distanceRankDistrict: ranking.district_distance_rank || null,
+      elevationRankCity: ranking.city_elevation_rank || null,
+      elevationRankDistrict: ranking.district_elevation_rank || null,
     },
     district: userProfile.district,
   }
