@@ -271,5 +271,6 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
     }
   } catch (error) {
     logError('Background webhook processing error:', { error })
+    throw Error(ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED)
   }
 }

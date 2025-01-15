@@ -6,8 +6,6 @@ import { StravaWebhookEventResponse } from '@/lib/types/strava'
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants/error'
 import { logError } from '@/lib/utils/log'
 
-export const runtime = 'edge'
-
 // * 1. 웹훅 검증을 위한 GET 요청 처리
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -66,29 +64,11 @@ export async function POST(request: NextRequest) {
       logError('Failed to record webhook event:', { error: insertError })
     }
 
-    // 백그라운드 작업 시작
-    console.log('Starting webhook event processing:', { eventBody: webhookBody })
+    await processWebhookEvent(webhookBody)
 
-    // NextResponse의 headers에 커스텀 헤더를 추가하여 Edge runtime이 연결을 유지하도록 함
-    const response = new NextResponse('Success', {
+    return new NextResponse('Success', {
       status: 200,
-      headers: {
-        Connection: 'keep-alive',
-      },
     })
-
-    // 백그라운드 작업을 setTimeout을 사용하여 실행
-    setTimeout(async () => {
-      try {
-        // 비동기 처리 작업을 여기서 실행
-        await processWebhookEvent(webhookBody)
-        console.log('Successfully processed webhook event:', { eventId: webhookBody.object_id })
-      } catch (error) {
-        logError('Failed to process webhook event:', { error, eventBody: webhookBody })
-      }
-    }, 0) // 비동기적으로 처리
-
-    return response
   } catch (error) {
     logError('Webhook request parsing error:', { error })
     return new NextResponse(ERROR_MESSAGES[ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED], {
