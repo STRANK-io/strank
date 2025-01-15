@@ -88,8 +88,7 @@ export default function ShareDialog({
         )
       })
     } catch (error) {
-      showToastError('이미지 생성 중 오류가 발생했습니다.', error)
-      throw error // 에러 재전파
+      throw error
     }
   }
 
@@ -108,7 +107,7 @@ export default function ShareDialog({
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
     if (!ctx) {
-      throw new Error('캔버스 컨텍스트를 생성할 수 없습니다.')
+      throw new Error()
     }
 
     // Canvas 크기 설정 (고해상도를 위해 3배 크기)
@@ -127,7 +126,7 @@ export default function ShareDialog({
           files: [file],
           title: '나의 라이딩 기록',
         })
-        toast(<ToastContent text="이미지가 공유되었습니다." />)
+        toast(<ToastContent text="이미지가 저장되었습니다." />)
       } catch (error) {
         // AbortError는 사용자가 공유를 취소한 경우이므로 에러 처리하지 않음
         if ((error as Error).name !== 'AbortError') {
@@ -149,7 +148,7 @@ export default function ShareDialog({
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-    toast(<ToastContent text="이미지가 다운로드되었습니다." />)
+    toast(<ToastContent text="이미지가 저장되었습니다." />)
   }
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
