@@ -160,6 +160,39 @@ export type Database = {
           },
         ]
       }
+      strava_webhook_events: {
+        Row: {
+          aspect_type: string
+          created_at: string | null
+          event_time: number
+          id: number
+          object_id: number
+          object_type: string
+          owner_id: number
+          processed_at: string | null
+        }
+        Insert: {
+          aspect_type: string
+          created_at?: string | null
+          event_time: number
+          id?: never
+          object_id: number
+          object_type: string
+          owner_id: number
+          processed_at?: string | null
+        }
+        Update: {
+          aspect_type?: string
+          created_at?: string | null
+          event_time?: number
+          id?: never
+          object_id?: number
+          object_type?: string
+          owner_id?: number
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
       user_capacity: {
         Row: {
           id: string

@@ -12,6 +12,7 @@ import {
 } from '@/lib/constants/strava'
 import { CalculateActivityRankingReturn } from '@/lib/types/ranking'
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants/error'
+import { logError } from '@/lib/utils/log'
 
 // * 1. 웹훅 검증을 위한 GET 요청 처리
 export async function GET(request: Request) {
@@ -68,13 +69,59 @@ async function refreshStravaToken(supabase: any, userId: string, refreshToken: s
 // * 2. 활동 업데이트 시 웹훅 온 이벤트 처리
 export async function POST(request: Request) {
   try {
-    const supabase = await createServiceRoleClient()
     const body: StravaWebhookEventResponse = await request.json()
 
     // * 활동 생성 이벤트만 처리
     if (body.aspect_type !== 'create' || body.object_type !== 'activity') {
       return new NextResponse('Not a new activity', { status: 200 })
     }
+
+    const supabase = await createServiceRoleClient()
+
+    // * 중복 체크를 위해 웹훅 이벤트 기록
+    const { error: insertError } = await supabase.from('strava_webhook_events').insert({
+      event_time: body.event_time,
+      object_id: body.object_id,
+      object_type: body.object_type,
+      aspect_type: body.aspect_type,
+      owner_id: body.owner_id,
+    })
+
+    // * 중복 이벤트인 경우 처리 (유니크 제약조건 위반)
+    if (insertError?.code === '23505') {
+      logError('Duplicate webhook event:', {
+        event_time: body.event_time,
+        object_id: body.object_id,
+        error: insertError,
+      })
+      return new NextResponse('Duplicate event', { status: 200 })
+    }
+
+    // * 다른 에러가 발생한 경우
+    if (insertError) {
+      // 웹훅 이벤트 기록에 실패하더라도 처리는 진행
+      logError('Failed to record webhook event:', { error: insertError })
+    }
+
+    // 백그라운드에서 웹훅 이벤트 처리
+    processWebhookEvent(body).catch(error => {
+      logError('Failed to process webhook event in background:', { error })
+    })
+
+    // 즉시 200 응답 반환
+    return new NextResponse('Success', { status: 200 })
+  } catch (error) {
+    logError('Webhook request parsing error:', { error })
+    return new NextResponse(ERROR_MESSAGES[ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED], {
+      status: 500,
+    })
+  }
+}
+
+// * 백그라운드에서 실행될 작업(스트라바 액세스 토큰 조회&갱신 / 활동 상세 정보 조회 / 활동 데이터 DB에 저장 / 랭킹 정보 계산 / 디스크립션 생성 / 스트라바 활동 업데이트)
+async function processWebhookEvent(body: StravaWebhookEventResponse) {
+  try {
+    const supabase = await createServiceRoleClient()
 
     // * 유저의 스트라바 엑세스 토큰 조회
     const { data: stravaConnection } = await supabase
@@ -84,11 +131,11 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     if (!stravaConnection) {
-      console.error('Strava Webhook: strava_user_tokens table에서 데이터를 찾을 수 없습니다.', {
+      logError('Strava Webhook: strava_user_tokens table에서 데이터를 찾을 수 없습니다.', {
         owner_id: body.owner_id,
         owner_id_string: body.owner_id.toString(),
       })
-      return new NextResponse('User not found', { status: 404 })
+      return
     }
 
     // * 엑세스 토큰 만료 확인 및 만료 시 갱신
@@ -128,10 +175,10 @@ export async function POST(request: Request) {
     if (!response.ok) {
       if (response.status === 429) {
         console.error('Strava Webhook: API rate limit exceeded')
-        return new NextResponse('API rate limit exceeded', { status: 429 })
+        return
       }
       console.error('Strava Webhook: Failed to fetch activity:', await response.text())
-      return new NextResponse('Failed to fetch activity', { status: response.status })
+      return
     }
 
     const activity: StravaActivity = await response.json()
@@ -163,14 +210,9 @@ export async function POST(request: Request) {
     })
 
     if (incrementPutAPIUsageError) {
-      console.error('Strava Webhook: Failed to increment API usage:', incrementPutAPIUsageError)
+      logError('Strava Webhook: Failed to increment API usage:', incrementPutAPIUsageError)
     }
-
-    return new NextResponse('Success', { status: 200 })
   } catch (error) {
-    console.error('Webhook processing error:', error)
-    return new NextResponse(ERROR_MESSAGES[ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED], {
-      status: 500,
-    })
+    logError('Background webhook processing error:', { error })
   }
 }

@@ -4,6 +4,7 @@ import { UsersType } from '@/lib/types/auth'
 import { Database } from '@/lib/supabase/supabase'
 import { STRAVA_VISIBILITY } from '@/lib/constants/strava'
 import { StravaActivity } from '@/lib/types/strava'
+import { logError } from '@/lib/utils/log'
 
 export function createRankingQuery(
   supabase: SupabaseClient<Database>,
@@ -94,10 +95,12 @@ export async function calculateActivityRanking(
     !userProfile.district ||
     (!activity.distance && !activity.total_elevation_gain)
   ) {
-    console.error(
-      !userProfile || !userProfile.district
-        ? 'calculateActivityRanking Error: User profile not found'
-        : 'calculateActivityRanking Error: Both distance and elevation are null'
+    logError(
+      `calculateActivityRanking Error: ${!userProfile ? 'User profile not found' : 'Both distance and elevation are null'}`,
+      {
+        userId: userProfile?.id,
+        activityId: activity.id,
+      }
     )
     return null
   }
@@ -108,7 +111,11 @@ export async function calculateActivityRanking(
   })
 
   if (error) {
-    console.error('calculateActivityRanking Error: [Failed to get_activity_rankings]', error)
+    logError('calculateActivityRanking Error: Failed to get_activity_rankings', {
+      userId: userProfile?.id,
+      activityId: activity.id,
+      error,
+    })
     return null
   }
 
