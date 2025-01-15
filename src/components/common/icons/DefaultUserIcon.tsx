@@ -11,6 +11,7 @@ export function DefaultUserIcon({ width = 94, height = 94 }: DefaultUserIconProp
       viewBox="0 0 95 94"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      className="aspect-square"
     >
       <g clipPath="url(#clip0_967_312)">
         <path

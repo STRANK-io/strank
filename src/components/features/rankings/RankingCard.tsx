@@ -70,6 +70,7 @@ export function RankingCard({
                 alt="User Image"
                 width={variant === 'ranker' ? 94 : 40}
                 height={variant === 'ranker' ? 94 : 40}
+                className="aspect-square"
               />
             ) : (
               <DefaultUserIcon
