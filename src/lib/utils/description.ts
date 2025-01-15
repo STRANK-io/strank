@@ -69,6 +69,7 @@ export function generateActivityDescription(
 최고심박수 : ${formatActivityValue(max_heartrate)}${ACTIVITY_UNITS.heart_rate}
 평균케이던스 : ${formatActivityValue(average_cadence)}${ACTIVITY_UNITS.cadence}
 🔗 Powered by STRANK.io
+\n
 `
 
   return description
