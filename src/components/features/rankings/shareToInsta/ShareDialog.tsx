@@ -11,6 +11,9 @@ import { convertAndCropToSquare } from '@/lib/utils/image'
 import { X } from 'lucide-react'
 import SharePreview from '@/components/features/rankings/shareToInsta/SharePreview'
 import OutlineButton from '@/components/common/OutlineButton'
+import { Caption } from '@/components/common/Caption'
+import { logError } from '@/lib/utils/log'
+import { isMobile } from 'react-device-detect'
 
 interface ShareDialogProps {
   isOpen: boolean
@@ -30,54 +33,37 @@ export default function ShareDialog({
   const [backgroundImage, setBackgroundImage] = useState(initialImage)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handleDownload = async () => {
+    const previewElement = document.querySelector('[data-share-preview="true"]') as HTMLElement
+    if (!previewElement) {
+      showToastError('공유할 이미지를 생성할 수 없습니다.')
+      return
+    }
 
     try {
-      const processedImage = await convertAndCropToSquare(file)
-      setBackgroundImage(processedImage)
+      const blob = await generateShareImage(previewElement)
+      if (isMobile) {
+        await handleMobileDownload(blob)
+      } else {
+        await handleDefaultDownload(blob)
+      }
+      onClose()
     } catch (error) {
-      console.error('Error processing image:', error)
-      toast(<ToastContent text="이미지 처리 중 오류가 발생했습니다." />)
+      showToastError('이미지 저장에 실패했습니다.', error)
     }
   }
 
-  const handleImageChange = () => {
-    fileInputRef.current?.click()
+  const showToastError = (message: string, error?: unknown) => {
+    if (error) logError(message, { error })
+    toast(<ToastContent text={message} />)
   }
 
-  const handleShare = async () => {
+  const generateShareImage = async (previewElement: HTMLElement) => {
     try {
-      const previewElement = document.querySelector('[data-share-preview="true"]') as HTMLElement
-      if (!previewElement) {
-        toast(<ToastContent text="공유할 이미지를 생성할 수 없습니다." />)
-        return
-      }
+      const { canvas, ctx } = createCanvas()
 
-      // Canvas 생성
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        toast(<ToastContent text="이미지 생성에 실패했습니다." />)
-        return
-      }
-
-      // Canvas 크기 설정
-      canvas.width = 305 * 3 // 고해상도를 위해 3배 크기
-      canvas.height = 305 * 3
-
-      // 배경 이미지 로드
-      const bgImage = new Image()
-      bgImage.crossOrigin = 'anonymous'
-
-      await new Promise((resolve, reject) => {
-        bgImage.onload = resolve
-        bgImage.onerror = reject
-        bgImage.src = backgroundImage
-      })
-
-      // 배경 이미지 그리기
+      // 배경 이미지 로드 및 그리기
+      const bgImage = await loadImage(backgroundImage)
       ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height)
 
       // 오버레이 그리기
@@ -85,26 +71,14 @@ export default function ShareDialog({
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
       // HTML 요소를 이미지로 변환
-      const dataUrl = await toPng(previewElement, {
-        quality: 1.0,
-        pixelRatio: 3,
-      })
+      const dataUrl = await toPng(previewElement, { quality: 1.0, pixelRatio: 3 })
 
-      // 오버레이 이미지 로드
-      const overlayImage = new Image()
-      overlayImage.crossOrigin = 'anonymous'
-
-      await new Promise((resolve, reject) => {
-        overlayImage.onload = resolve
-        overlayImage.onerror = reject
-        overlayImage.src = dataUrl
-      })
-
-      // 오버레이 이미지 그리기
+      // 오버레이 이미지 로드 및 그리기
+      const overlayImage = await loadImage(dataUrl)
       ctx.drawImage(overlayImage, 0, 0, canvas.width, canvas.height)
 
       // Canvas를 Blob으로 변환
-      const blob = await new Promise<Blob>(resolve => {
+      return new Promise<Blob>(resolve => {
         canvas.toBlob(
           blob => {
             resolve(blob as Blob)
@@ -113,29 +87,83 @@ export default function ShareDialog({
           1.0
         )
       })
-
-      const file = new File([blob], 'strank-share.png', { type: 'image/png' })
-
-      if (navigator.share && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            files: [file],
-            title: '나의 라이딩 기록',
-          })
-          onClose()
-        } catch (err) {
-          if ((err as Error).name !== 'AbortError') {
-            console.error('Share failed:', err)
-            toast(<ToastContent text="이미지 공유에 실패했습니다." />)
-          }
-        }
-      } else {
-        toast(<ToastContent text="이 브라우저에서는 이미지 공유가 지원되지 않습니다." />)
-      }
     } catch (error) {
-      console.error('Error generating or sharing image:', error)
-      toast(<ToastContent text="이미지 공유 중 오류가 발생했습니다." />)
+      showToastError('이미지 생성 중 오류가 발생했습니다.', error)
+      throw error // 에러 재전파
     }
+  }
+
+  const loadImage = async (src: string): Promise<HTMLImageElement> => {
+    const image = new Image()
+    image.crossOrigin = 'anonymous'
+
+    return new Promise((resolve, reject) => {
+      image.onload = () => resolve(image)
+      image.onerror = reject
+      image.src = src
+    })
+  }
+
+  const createCanvas = () => {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      throw new Error('캔버스 컨텍스트를 생성할 수 없습니다.')
+    }
+
+    // Canvas 크기 설정 (고해상도를 위해 3배 크기)
+    canvas.width = 305 * 3
+    canvas.height = 305 * 3
+
+    return { canvas, ctx }
+  }
+
+  const handleMobileDownload = async (blob: Blob) => {
+    if ('showSaveFilePicker' in window) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'strank-share.png',
+        types: [
+          {
+            description: 'Strank 공유 이미지',
+            accept: { 'image/png': ['.png'] },
+          },
+        ],
+      })
+      const writable = await handle.createWritable()
+      await writable.write(blob)
+      await writable.close()
+      toast(<ToastContent text="이미지가 저장되었습니다." />)
+    } else {
+      await handleDefaultDownload(blob)
+    }
+  }
+
+  const handleDefaultDownload = async (blob: Blob) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'strank-share.png'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    toast(<ToastContent text="이미지가 다운로드되었습니다." />)
+  }
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      const processedImage = await convertAndCropToSquare(file)
+      setBackgroundImage(processedImage)
+    } catch (error) {
+      showToastError('이미지 처리 중 오류가 발생했습니다.', error)
+    }
+  }
+
+  const handleImageChange = () => {
+    fileInputRef.current?.click()
   }
 
   return (
@@ -150,7 +178,7 @@ export default function ShareDialog({
 
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className="flex h-fit w-full max-w-[353px] flex-col gap-6 rounded-3xl bg-white p-6"
+          className="flex h-fit w-full max-w-[353px] flex-col gap-[16px] rounded-3xl bg-white p-6"
           hideCloseButton
           aria-describedby={undefined}
         >
@@ -164,9 +192,12 @@ export default function ShareDialog({
             criteria={criteria}
           />
 
-          <div className="flex gap-4">
-            <OutlineButton text="Instagram 공유" onClick={handleShare} />
-            <OutlineButton text="이미지 변경" onClick={handleImageChange} />
+          <div className="flex flex-col gap-[7px]">
+            <div className="flex gap-4">
+              <OutlineButton text="배경 이미지 변경" onClick={handleImageChange} />
+              <OutlineButton text="이미지 다운로드" onClick={handleDownload} />
+            </div>
+            <Caption text="* 이미지를 다운로드 후, 여러 SNS에 공유해보세요!" />
           </div>
         </DialogContent>
       </Dialog>

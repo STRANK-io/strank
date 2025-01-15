@@ -1,20 +1,15 @@
 import { useMyRankingQuery } from '@/hooks/activities/api/useMyRankingQuery'
 import { RankingCard } from '@/components/features/rankings/RankingCard'
 import ShareDialog from '@/components/features/rankings/shareToInsta/ShareDialog'
-import { useState, useRef } from 'react'
-import { isMobile } from 'react-device-detect'
-import { convertAndCropToSquare } from '@/lib/utils/image'
-import { toast } from 'sonner'
-import { ToastContent } from '@/components/common/ToastContent'
+import { useState } from 'react'
 import { useRankingFilters } from '@/stores/rankingFilters'
 import OutlineButton from '@/components/common/OutlineButton'
+import { Caption } from '@/components/common/Caption'
 
 const DEFAULT_SHARE_IMAGE = '/images/strank-vertical-white.png'
 
 export default function MyRanking() {
-  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
-  const [shareInitialImage, setShareInitialImage] = useState<string>(DEFAULT_SHARE_IMAGE)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const { filters } = useRankingFilters()
 
   const { data: myRankingActivity } = useMyRankingQuery(filters)
@@ -22,52 +17,12 @@ export default function MyRanking() {
   if (!myRankingActivity)
     return <p className="text-center text-brand-dark">나의 랭킹 데이터가 없습니다.</p>
 
-  const handleOpenShareDialog = (initialImage: string) => {
-    setShareInitialImage(initialImage)
-    setIsShareDialogOpen(true)
-  }
-
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    try {
-      const processedImage = await convertAndCropToSquare(file)
-      handleOpenShareDialog(processedImage)
-    } catch (error) {
-      console.error('Error ranking page processing image:', error)
-      toast(<ToastContent text="이미지 처리 중 오류가 발생했습니다." />)
-    }
-  }
-
-  const handleShareToInsta = () => {
-    if (!isMobile) {
-      toast(<ToastContent text="해당 기능은 모바일에서만 사용 가능합니다." />)
-      return
-    }
-
-    handleOpenShareDialog(DEFAULT_SHARE_IMAGE)
-  }
-
-  const handleImageUpload = () => {
-    if (!isMobile) {
-      toast(<ToastContent text="해당 기능은 모바일에서만 사용 가능합니다." />)
-      return
-    }
-
-    fileInputRef.current?.click()
+  const handleOpenShareDialog = () => {
+    setIsDialogOpen(true)
   }
 
   return (
     <div className="space-y-4">
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        accept="image/*,.heic,.heif"
-        onChange={handleImageSelect}
-      />
-
       <RankingCard
         activity={myRankingActivity}
         isMine
@@ -75,16 +30,16 @@ export default function MyRanking() {
         criteria={filters.criteria}
       />
 
-      <div className="flex gap-2">
-        <OutlineButton text="Instagram 공유" onClick={handleShareToInsta} />
-        <OutlineButton text="이미지 업로드" onClick={handleImageUpload} />
+      <div className="flex flex-col gap-[7px]">
+        <OutlineButton text="랭킹 이미지 생성" onClick={handleOpenShareDialog} />
+        <Caption text="* 이미지를 다운로드 후, 여러 SNS에 공유해보세요!" />
       </div>
 
-      {isShareDialogOpen && (
+      {isDialogOpen && (
         <ShareDialog
-          isOpen={isShareDialogOpen}
-          onClose={() => setIsShareDialogOpen(false)}
-          initialImage={shareInitialImage}
+          isOpen={isDialogOpen}
+          onClose={() => setIsDialogOpen(false)}
+          initialImage={DEFAULT_SHARE_IMAGE}
           myRankingActivity={myRankingActivity}
           criteria={filters.criteria}
         />

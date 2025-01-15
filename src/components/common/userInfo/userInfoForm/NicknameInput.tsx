@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils/cn'
 import { useDebounce } from '@/hooks/common/useDebounce'
+import { Caption } from '@/components/common/Caption'
 
 interface NicknameInputProps {
   initialValue: string
@@ -43,9 +44,7 @@ export const NicknameInput = ({ initialValue, onChange }: NicknameInputProps) =>
           'border-0 outline-none focus-visible:ring-0 focus-visible:ring-offset-0'
         )}
       />
-      <p className="text-[13px] font-normal leading-[16.9px] text-[#B1B1B1]">
-        * 한글, 영문 포함 2~10자 이내 / 특수문자, 숫자, 공백 제외
-      </p>
+      <Caption text="* 한글, 영문 포함 2~10자 이내 / 특수문자, 숫자, 공백 제외" />
     </div>
   )
 }
