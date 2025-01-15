@@ -10,14 +10,14 @@ export function generateActivityDescription(
   const { rankings, district } = rankingsWithDistrict || {}
   const {
     start_date,
-    distance,
-    total_elevation_gain,
-    average_speed,
-    max_speed,
-    average_watts,
-    max_watts,
-    max_heartrate,
-    average_cadence,
+    distance = 0,
+    total_elevation_gain = 0,
+    average_speed = 0,
+    max_speed = 0,
+    average_watts = 0,
+    max_watts = 0,
+    max_heartrate = 0,
+    average_cadence = 0,
   } = activity
 
   const date = new Date(start_date)
@@ -68,7 +68,8 @@ export function generateActivityDescription(
 최대파워 : ${formatActivityValue(max_watts)}${ACTIVITY_UNITS.power}
 최고심박수 : ${formatActivityValue(max_heartrate)}${ACTIVITY_UNITS.heart_rate}
 평균케이던스 : ${formatActivityValue(average_cadence)}${ACTIVITY_UNITS.cadence}
-🔗 Powered by STRANK.io`
+🔗 Powered by STRANK.io
+`
 
   return description
 }

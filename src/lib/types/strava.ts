@@ -36,14 +36,14 @@ export interface StravaTokenResponse {
 export interface StravaActivity {
   id: number
   name: string
-  distance: number
-  average_speed: number
-  max_speed: number
+  distance: number | null
+  average_speed: number | null
+  max_speed: number | null
   average_watts: number | null
   max_watts: number | null
   average_cadence: number | null
   max_heartrate: number | null
-  total_elevation_gain: number
+  total_elevation_gain: number | null
   start_date: string
   visibility: StravaVisibility
   [key: string]: any

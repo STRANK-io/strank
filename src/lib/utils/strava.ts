@@ -8,6 +8,7 @@ import {
   SYNC_CONFIG,
 } from '@/lib/constants/strava'
 import { StravaActivity } from '@/lib/types/strava'
+import { convertUTCToKoreanTime } from '@/lib/utils/date'
 
 // 진행률 계산 헬퍼 함수
 export function calculateProgress(
@@ -87,7 +88,7 @@ export async function processActivities(
       average_cadence: activity.average_cadence,
       max_heartrate: activity.max_heartrate,
       total_elevation_gain: activity.total_elevation_gain,
-      start_date: activity.start_date,
+      start_date: convertUTCToKoreanTime(activity.start_date),
       visibility: activity.visibility,
       user_id: userId,
       raw_data: activity,
