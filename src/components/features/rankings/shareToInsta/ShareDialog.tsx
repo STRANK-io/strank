@@ -119,21 +119,23 @@ export default function ShareDialog({
   }
 
   const handleMobileDownload = async (blob: Blob) => {
-    if ('showSaveFilePicker' in window) {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: 'strank-share.png',
-        types: [
-          {
-            description: 'Strank 공유 이미지',
-            accept: { 'image/png': ['.png'] },
-          },
-        ],
-      })
-      const writable = await handle.createWritable()
-      await writable.write(blob)
-      await writable.close()
-      toast(<ToastContent text="이미지가 저장되었습니다." />)
+    const file = new File([blob], 'strank-share.png', { type: 'image/png' })
+
+    if (navigator.share && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: '나의 라이딩 기록',
+        })
+        toast(<ToastContent text="이미지가 공유되었습니다." />)
+      } catch (error) {
+        // AbortError는 사용자가 공유를 취소한 경우이므로 에러 처리하지 않음
+        if ((error as Error).name !== 'AbortError') {
+          throw error
+        }
+      }
     } else {
+      // Web Share API를 지원하지 않는 경우 일반 다운로드
       await handleDefaultDownload(blob)
     }
   }
