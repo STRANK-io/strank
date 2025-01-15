@@ -59,37 +59,33 @@ export default function ShareDialog({
   }
 
   const generateShareImage = async (previewElement: HTMLElement) => {
-    try {
-      const { canvas, ctx } = createCanvas()
+    const { canvas, ctx } = createCanvas()
 
-      // 배경 이미지 로드 및 그리기
-      const bgImage = await loadImage(backgroundImage)
-      ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height)
+    // 배경 이미지 로드 및 그리기
+    const bgImage = await loadImage(backgroundImage)
+    ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height)
 
-      // 오버레이 그리기
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
+    // 오버레이 그리기
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      // HTML 요소를 이미지로 변환
-      const dataUrl = await toPng(previewElement, { quality: 1.0, pixelRatio: 3 })
+    // HTML 요소를 이미지로 변환
+    const dataUrl = await toPng(previewElement, { quality: 1.0, pixelRatio: 3 })
 
-      // 오버레이 이미지 로드 및 그리기
-      const overlayImage = await loadImage(dataUrl)
-      ctx.drawImage(overlayImage, 0, 0, canvas.width, canvas.height)
+    // 오버레이 이미지 로드 및 그리기
+    const overlayImage = await loadImage(dataUrl)
+    ctx.drawImage(overlayImage, 0, 0, canvas.width, canvas.height)
 
-      // Canvas를 Blob으로 변환
-      return new Promise<Blob>(resolve => {
-        canvas.toBlob(
-          blob => {
-            resolve(blob as Blob)
-          },
-          'image/png',
-          1.0
-        )
-      })
-    } catch (error) {
-      throw error
-    }
+    // Canvas를 Blob으로 변환
+    return new Promise<Blob>(resolve => {
+      canvas.toBlob(
+        blob => {
+          resolve(blob as Blob)
+        },
+        'image/png',
+        1.0
+      )
+    })
   }
 
   const loadImage = async (src: string): Promise<HTMLImageElement> => {
