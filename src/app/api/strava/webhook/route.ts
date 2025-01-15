@@ -1,18 +1,11 @@
 import { NextResponse } from 'next/server'
-import { processActivities } from '@/lib/utils/strava'
-import { calculateActivityRanking } from '@/lib/utils/ranking'
-import { updateStravaActivityDescription } from '@/lib/utils/strava'
+import { processWebhookEvent } from '@/lib/utils/strava'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { generateActivityDescription } from '@/lib/utils/description'
-import { StravaActivity, StravaWebhookEventResponse } from '@/lib/types/strava'
-import {
-  STRAVA_ACTIVITY_BY_ID_ENDPOINT,
-  STRAVA_API_URL,
-  STRAVA_VISIBILITY,
-} from '@/lib/constants/strava'
-import { CalculateActivityRankingReturn } from '@/lib/types/ranking'
+import { StravaWebhookEventResponse } from '@/lib/types/strava'
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants/error'
 import { logError } from '@/lib/utils/log'
+
+export const runtime = 'edge'
 
 // * 1. 웹훅 검증을 위한 GET 요청 처리
 export async function GET(request: Request) {
@@ -33,46 +26,18 @@ export async function GET(request: Request) {
   return new NextResponse('OK', { status: 200 })
 }
 
-async function refreshStravaToken(supabase: any, userId: string, refreshToken: string) {
-  const response = await fetch('https://www.strava.com/oauth/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      client_id: process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID,
-      client_secret: process.env.STRAVA_CLIENT_SECRET,
-      grant_type: 'refresh_token',
-      refresh_token: refreshToken,
-    }),
-  })
-
-  if (!response.ok) {
-    throw new Error('Failed to refresh token')
-  }
-
-  const data = await response.json()
-
-  // 새로운 토큰으로 업데이트
-  await supabase
-    .from('strava_user_tokens')
-    .update({
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
-      expires_at: new Date(data.expires_at * 1000).toISOString(),
-    })
-    .eq('user_id', userId)
-
-  return data.access_token
-}
-
 // * 2. 활동 업데이트 시 웹훅 온 이벤트 처리
-export async function POST(request: Request) {
+export async function POST(
+  request: Request,
+  context: { waitUntil: (promise: Promise<any>) => void }
+) {
+  let webhookBody: StravaWebhookEventResponse
+
   try {
-    const body: StravaWebhookEventResponse = await request.json()
+    webhookBody = await request.json()
 
     // * 활동 생성 이벤트만 처리
-    if (body.aspect_type !== 'create' || body.object_type !== 'activity') {
+    if (webhookBody.aspect_type !== 'create' || webhookBody.object_type !== 'activity') {
       return new NextResponse('Not a new activity', { status: 200 })
     }
 
@@ -80,18 +45,18 @@ export async function POST(request: Request) {
 
     // * 중복 체크를 위해 웹훅 이벤트 기록
     const { error: insertError } = await supabase.from('strava_webhook_events').insert({
-      event_time: body.event_time,
-      object_id: body.object_id,
-      object_type: body.object_type,
-      aspect_type: body.aspect_type,
-      owner_id: body.owner_id,
+      event_time: webhookBody.event_time,
+      object_id: webhookBody.object_id,
+      object_type: webhookBody.object_type,
+      aspect_type: webhookBody.aspect_type,
+      owner_id: webhookBody.owner_id,
     })
 
     // * 중복 이벤트인 경우 처리 (유니크 제약조건 위반)
     if (insertError?.code === '23505') {
       logError('Duplicate webhook event:', {
-        event_time: body.event_time,
-        object_id: body.object_id,
+        event_time: webhookBody.event_time,
+        object_id: webhookBody.object_id,
         error: insertError,
       })
       return new NextResponse('Duplicate event', { status: 200 })
@@ -103,116 +68,28 @@ export async function POST(request: Request) {
       logError('Failed to record webhook event:', { error: insertError })
     }
 
-    // 백그라운드에서 웹훅 이벤트 처리
-    processWebhookEvent(body).catch(error => {
-      logError('Failed to process webhook event in background:', { error })
-    })
+    // 응답을 먼저 보내고
+    const response = new NextResponse('Success', { status: 200 })
 
-    // 즉시 200 응답 반환
-    return new NextResponse('Success', { status: 200 })
+    // 백그라운드에서 웹훅 이벤트 처리
+    console.log('Starting webhook event processing:', { eventBody: webhookBody })
+
+    // waitUntil을 사용하여 백그라운드 작업이 계속되도록 함
+    context.waitUntil(
+      processWebhookEvent(webhookBody)
+        .then(() => {
+          console.log('Successfully processed webhook event:', { eventId: webhookBody.object_id })
+        })
+        .catch(error => {
+          logError('Failed to process webhook event:', { error, eventBody: webhookBody })
+        })
+    )
+
+    return response
   } catch (error) {
     logError('Webhook request parsing error:', { error })
     return new NextResponse(ERROR_MESSAGES[ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED], {
       status: 500,
     })
-  }
-}
-
-// * 백그라운드에서 실행될 작업(스트라바 액세스 토큰 조회&갱신 / 활동 상세 정보 조회 / 활동 데이터 DB에 저장 / 랭킹 정보 계산 / 디스크립션 생성 / 스트라바 활동 업데이트)
-async function processWebhookEvent(body: StravaWebhookEventResponse) {
-  try {
-    const supabase = await createServiceRoleClient()
-
-    // * 유저의 스트라바 엑세스 토큰 조회
-    const { data: stravaConnection } = await supabase
-      .from('strava_user_tokens')
-      .select('access_token, refresh_token, expires_at, user_id')
-      .eq('strava_athlete_id', body.owner_id.toString())
-      .maybeSingle()
-
-    if (!stravaConnection) {
-      logError('Strava Webhook: strava_user_tokens table에서 데이터를 찾을 수 없습니다.', {
-        owner_id: body.owner_id,
-        owner_id_string: body.owner_id.toString(),
-      })
-      return
-    }
-
-    // * 엑세스 토큰 만료 확인 및 만료 시 갱신
-    let accessToken = stravaConnection.access_token
-    const expiresAt = new Date(stravaConnection.expires_at).getTime()
-    const now = Date.now()
-    const oneHourInMs = 3600 * 1000 // 1시간을 밀리초로 변환
-
-    // 만료되었거나 만료까지 1시간 이내로 남은 경우 토큰 갱신
-    if (expiresAt - now <= oneHourInMs) {
-      accessToken = await refreshStravaToken(
-        supabase,
-        stravaConnection.user_id,
-        stravaConnection.refresh_token
-      )
-    }
-
-    // * 활동 상세 정보 조회
-    const response = await fetch(
-      `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(body.object_id)}`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    )
-
-    // * 스트라바 API 호출 카운트 추가
-    const { error: incrementGetAPIUsageError } = await supabase.rpc('increment_strava_api_usage', {
-      is_upload: false,
-    })
-
-    if (incrementGetAPIUsageError) {
-      console.error('Strava Webhook: Failed to increment API usage:', incrementGetAPIUsageError)
-    }
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        console.error('Strava Webhook: API rate limit exceeded')
-        return
-      }
-      console.error('Strava Webhook: Failed to fetch activity:', await response.text())
-      return
-    }
-
-    const activity: StravaActivity = await response.json()
-
-    // * 활동 데이터 DB에 저장
-    await processActivities([activity], stravaConnection.user_id, supabase)
-
-    let rankingsWithDistrict: CalculateActivityRankingReturn | null = null
-
-    // * 랭킹 정보 계산
-    // * activity.visibility가 everyone이 아닌 경우는 랭킹 데이터 계산 생략 및 디스크립션에 넣지 않음
-    if (activity.visibility === STRAVA_VISIBILITY.EVERYONE) {
-      rankingsWithDistrict = await calculateActivityRanking(
-        activity,
-        stravaConnection.user_id,
-        supabase
-      )
-    }
-
-    // * 디스크립션 생성
-    const description = generateActivityDescription(activity, rankingsWithDistrict)
-
-    // * 스트라바 활동 업데이트
-    await updateStravaActivityDescription(accessToken, activity, description)
-
-    // * 스트라바 API 호출 카운트 추가
-    const { error: incrementPutAPIUsageError } = await supabase.rpc('increment_strava_api_usage', {
-      is_upload: true,
-    })
-
-    if (incrementPutAPIUsageError) {
-      logError('Strava Webhook: Failed to increment API usage:', incrementPutAPIUsageError)
-    }
-  } catch (error) {
-    logError('Background webhook processing error:', { error })
   }
 }
