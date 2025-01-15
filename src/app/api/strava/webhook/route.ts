@@ -27,10 +27,7 @@ export async function GET(request: Request) {
 }
 
 // * 2. 활동 업데이트 시 웹훅 온 이벤트 처리
-export async function POST(
-  request: Request,
-  context: { waitUntil: (promise: Promise<any>) => void }
-) {
+export async function POST(request: Request) {
   let webhookBody: StravaWebhookEventResponse
 
   try {
@@ -74,16 +71,14 @@ export async function POST(
     // 백그라운드에서 웹훅 이벤트 처리
     console.log('Starting webhook event processing:', { eventBody: webhookBody })
 
-    // waitUntil을 사용하여 백그라운드 작업이 계속되도록 함
-    context.waitUntil(
-      processWebhookEvent(webhookBody)
-        .then(() => {
-          console.log('Successfully processed webhook event:', { eventId: webhookBody.object_id })
-        })
-        .catch(error => {
-          logError('Failed to process webhook event:', { error, eventBody: webhookBody })
-        })
-    )
+    // 백그라운드에서 처리
+    processWebhookEvent(webhookBody)
+      .then(() => {
+        console.log('Successfully processed webhook event:', { eventId: webhookBody.object_id })
+      })
+      .catch(error => {
+        logError('Failed to process webhook event:', { error, eventBody: webhookBody })
+      })
 
     return response
   } catch (error) {
