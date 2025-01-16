@@ -2,5 +2,5 @@ import { Database } from '@/lib/supabase/supabase'
 
 export type UsersType = Pick<
   Database['public']['Tables']['users']['Row'],
-  'id' | 'name' | 'profile' | 'district'
+  'name' | 'profile' | 'district' | 'last_activity_sync_at'
 >

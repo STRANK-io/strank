@@ -217,6 +217,7 @@ export type Database = {
           deleted_at: string | null
           district: string | null
           id: string
+          last_activity_sync_at: string | null
           name: string | null
           profile: string | null
           role: Database['public']['Enums']['user_role'] | null
@@ -228,6 +229,7 @@ export type Database = {
           deleted_at?: string | null
           district?: string | null
           id: string
+          last_activity_sync_at?: string | null
           name?: string | null
           profile?: string | null
           role?: Database['public']['Enums']['user_role'] | null
@@ -239,6 +241,7 @@ export type Database = {
           deleted_at?: string | null
           district?: string | null
           id?: string
+          last_activity_sync_at?: string | null
           name?: string | null
           profile?: string | null
           role?: Database['public']['Enums']['user_role'] | null

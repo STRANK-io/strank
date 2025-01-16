@@ -16,6 +16,7 @@ export const ERROR_CODES = {
   INTERNAL_ERROR: 'internal_error',
   STRAVA_API_LIMIT_EXCEEDED: 'strava_api_limit_exceeded',
   STRAVA_ACTIVITY_UPDATE_FAILED: 'strava_activity_update_failed',
+  STRAVA_ACTIVITY_SYNC_FAILED: 'strava_activity_sync_failed',
 } as const
 
 export const ERROR_MESSAGES = {
@@ -31,12 +32,13 @@ export const ERROR_MESSAGES = {
     '프로필 이미지 처리에 실패했습니다. 다시 시도해주세요.',
   [ERROR_CODES.AUTH.STRAVA_CONNECTION_REQUIRED]: 'Strava 계정 연동이 필요합니다.',
   [ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED]:
-    '연결에 문제가 발생하였습니다. 다시 한번 시도해주세요.',
+    '스트라바 계정 연결에 문제가 발생하였습니다. 다시 한번 시도해주세요.',
   [ERROR_CODES.INTERNAL_ERROR]: '시스템 오류가 발생했습니다. 다시 시도해주세요.',
   [ERROR_CODES.AUTH.WITHDRAWAL_FAILED]: '회원탈퇴에 실패하였습니다. 다시 시도해주세요.',
   [ERROR_CODES.AUTH.LOGOUT_FAILED]: '로그아웃에 실패하였습니다. 다시 시도해주세요.',
   [ERROR_CODES.STRAVA_API_LIMIT_EXCEEDED]: 'Strava API 일일 사용량을 초과했습니다.',
   [ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED]: '활동 업데이트에 실패했습니다. 다시 시도해주세요.',
+  [ERROR_CODES.STRAVA_ACTIVITY_SYNC_FAILED]: '활동 동기화에 실패했습니다. 다시 시도해주세요.',
 } as const
 
 export type ErrorMessageCode = keyof typeof ERROR_MESSAGES

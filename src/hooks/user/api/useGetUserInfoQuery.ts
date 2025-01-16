@@ -10,7 +10,7 @@ export const useGetUserInfoQuery = (userId: string) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('users')
-        .select('profile, name, district')
+        .select('profile, name, district, last_activity_sync_at')
         .eq('id', userId)
         .maybeSingle()
 

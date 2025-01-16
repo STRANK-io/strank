@@ -1,11 +1,10 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { QUERY_KEYS } from '@/lib/constants/queryKeys'
 import { createClient } from '@/lib/supabase/client'
-import { useUser } from '@/contexts/UserContext'
+import { useUserId } from '@/contexts/UserContext'
 import { DateRange, ReportResponse } from '@/lib/types/report'
-import { UsersType } from '@/lib/types/auth'
 
-const fetchReportData = async (dateRange: DateRange, user: UsersType): Promise<ReportResponse> => {
+const fetchReportData = async (dateRange: DateRange, userId: string): Promise<ReportResponse> => {
   const supabase = createClient()
 
   // 날짜 범위 계산
@@ -36,7 +35,7 @@ const fetchReportData = async (dateRange: DateRange, user: UsersType): Promise<R
       average_watts
     `
     )
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .is('deleted_at', null)
     .gte('start_date', startDate.toISOString())
     .lte('start_date', now.toISOString())
@@ -64,10 +63,10 @@ const fetchReportData = async (dateRange: DateRange, user: UsersType): Promise<R
 }
 
 export const useReportQuery = (dateRange: DateRange) => {
-  const user = useUser()
+  const userId = useUserId()
 
   return useSuspenseQuery({
     queryKey: QUERY_KEYS.REPORT.ACTIVITIES(dateRange),
-    queryFn: () => fetchReportData(dateRange, user),
+    queryFn: () => fetchReportData(dateRange, userId),
   })
 }

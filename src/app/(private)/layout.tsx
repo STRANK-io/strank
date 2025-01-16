@@ -31,15 +31,8 @@ export default async function Layout({ children }: { children: React.ReactNode }
     return redirectWithError(origin, ROUTES.PUBLIC.HOME, ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED)
   }
 
-  const userResult = {
-    id: userData.id,
-    name: userData.name,
-    profile: userData.profile,
-    district: userData.district,
-  }
-
   return (
-    <UserProvider user={userResult}>
+    <UserProvider userId={userData.id}>
       <main className="min-h-screen bg-[#FFF9FA]">
         <div className="mx-auto min-h-screen w-full max-w-[393px] pt-11">
           <PrivatePageHeader />

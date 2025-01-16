@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { QUERY_KEYS } from '@/lib/constants/queryKeys'
 import { createClient } from '@/lib/supabase/client'
-import { useUser } from '@/contexts/UserContext'
+import { useUserId } from '@/contexts/UserContext'
 import { TimelineResponse } from '@/lib/types/timeline'
 
 const PAGE_SIZE = 15
@@ -55,11 +55,11 @@ const fetchTimelineData = async (
 }
 
 export const useTimelineQuery = () => {
-  const user = useUser()
+  const userId = useUserId()
 
   return useInfiniteQuery({
     queryKey: QUERY_KEYS.TIMELINE.ACTIVITIES(),
-    queryFn: ({ pageParam }) => fetchTimelineData(user.id, pageParam),
+    queryFn: ({ pageParam }) => fetchTimelineData(userId, pageParam),
     initialPageParam: null as string | null,
     getNextPageParam: lastPage => lastPage.nextCursor,
   })

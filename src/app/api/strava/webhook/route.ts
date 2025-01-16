@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { processWebhookEvent } from '@/lib/utils/strava'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { StravaWebhookEventResponse } from '@/lib/types/strava'
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants/error'
 import { logError } from '@/lib/utils/log'
+import { processWebhookEvent } from '@/lib/utils/webhook'
 
 // * 1. 웹훅 검증을 위한 GET 요청 처리
 export async function GET(request: Request) {
