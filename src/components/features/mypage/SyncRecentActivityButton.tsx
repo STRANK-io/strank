@@ -45,7 +45,7 @@ export default function SyncRecentActivityButton() {
         onSuccess: async message => {
           // 3. 마지막 동기화 시간 업데이트
           await updateLastActivitySync(userId)
-          toast(<ToastContent text="최신화가 완료되었습니다." />)
+          toast(<ToastContent text="동기화가 완료되었습니다." />)
         },
         onError: error => {
           if (error instanceof Error) {
