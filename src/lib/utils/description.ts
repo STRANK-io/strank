@@ -60,7 +60,7 @@ export function generateActivityDescription(
   // 분석 정보 섹션
   description += `
 \n■ 라이딩 분석 정보 ■
-총거리 : ${formatActivityValue(distance, true)}${ACTIVITY_UNITS.distance}
+총거리 : ${formatActivityValue(distance)}${ACTIVITY_UNITS.distance}
 총고도 : ${formatActivityValue(total_elevation_gain)}${ACTIVITY_UNITS.elevation}
 평균속도 : ${formatActivityValue(average_speed)}${ACTIVITY_UNITS.speed}
 최고속도 : ${formatActivityValue(max_speed)}${ACTIVITY_UNITS.speed}

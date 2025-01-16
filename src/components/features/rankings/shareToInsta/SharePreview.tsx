@@ -31,7 +31,7 @@ export default function SharePreview({
   const criteriaText = criteria === 'distance' ? '거리' : '고도'
   const criteriaValue =
     criteria === 'distance'
-      ? `${formatActivityValue(distance, true)}${ACTIVITY_UNITS.distance}`
+      ? `${formatActivityValue(distance)}${ACTIVITY_UNITS.distance}`
       : `${formatActivityValue(total_elevation_gain)}${ACTIVITY_UNITS.elevation}`
   const formattedDate = new Date(date)
     .toLocaleDateString('ko-KR', {

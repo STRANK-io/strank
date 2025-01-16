@@ -1,5 +1,5 @@
 export const ACTIVITY_UNITS = {
-  distance: 'km',
+  distance: 'm',
   elevation: 'm',
   speed: 'm/s',
   power: 'w',

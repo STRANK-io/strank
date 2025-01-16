@@ -35,7 +35,7 @@ export default function TimelineActivityCard({ activity, isLoading }: TimelineAc
   const activityFields = [
     {
       label: '총 이동거리',
-      value: formatActivityValue(activity.distance, true),
+      value: formatActivityValue(activity.distance),
       unit: ACTIVITY_UNITS.distance,
     },
     {
