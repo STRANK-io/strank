@@ -1,3 +1,5 @@
+'use client'
+
 import heic2any from 'heic2any'
 
 export const convertHeicToJpeg = async (file: File): Promise<File> => {
