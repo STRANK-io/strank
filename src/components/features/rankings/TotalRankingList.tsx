@@ -6,7 +6,7 @@ export default function TotalRankingList() {
   const { filters } = useRankingFilters()
   const { data } = useTotalRankingsQuery(filters)
 
-  if (!data.rankings.length) {
+  if (!data || !data.rankings.length) {
     return <p className="text-center text-brand-dark">아직 랭킹 데이터가 없습니다.</p>
   }
 

@@ -1,62 +1,8 @@
 import { SupabaseClient } from '@supabase/supabase-js'
-import { CalculateActivityRankingReturn, RankingFilters } from '@/lib/types/ranking'
-import { UsersType } from '@/lib/types/auth'
+import { CalculateActivityRankingReturn } from '@/lib/types/ranking'
 import { Database } from '@/lib/supabase/supabase'
-import { STRAVA_VISIBILITY } from '@/lib/constants/strava'
 import { StravaActivity } from '@/lib/types/strava'
 import { logError } from '@/lib/utils/log'
-
-export function createRankingQuery(
-  supabase: SupabaseClient<Database>,
-  filters: RankingFilters,
-  user: UsersType
-) {
-  let query = supabase
-    .from('activities')
-    .select(
-      `
-      id,
-      name,
-      distance,
-      total_elevation_gain,
-      start_date,
-      users!inner (
-        id,
-        name,
-        district,
-        profile
-      )
-    `
-    )
-    .is('deleted_at', null)
-    .eq('visibility', STRAVA_VISIBILITY.EVERYONE)
-    .is('users.deleted_at', null)
-
-  // criteria에 따른 필터링 및 정렬
-  if (filters.criteria === 'distance') {
-    query = query.not('distance', 'is', null).order('distance', { ascending: false })
-  } else {
-    query = query
-      .not('total_elevation_gain', 'is', null)
-      .order('total_elevation_gain', { ascending: false })
-  }
-
-  // 기간 필터 적용
-  if (filters.period === 'lastweek') {
-    const { start, end } = getLastWeekRange()
-    query = query.gte('start_date', start.toISOString()).lte('start_date', end.toISOString())
-  }
-
-  // 지역 필터 적용
-  if (filters.district === 'users') {
-    const userDistrict = user.district
-    if (userDistrict) {
-      query = query.eq('users.district', userDistrict)
-    }
-  }
-
-  return query
-}
 
 export function getLastWeekRange() {
   // 현재 시간을 KST로 구하기

@@ -6,13 +6,19 @@ export const QUERY_KEYS = {
     INFO: (userId: string) => ['user', 'info', userId] as const,
   },
   RANKINGS: {
-    MY_RANKING: (filters: RankingFilters) => ['rankings', 'my', filters] as const,
-    TOTAL_RANKINGS: (filters: RankingFilters) => ['rankings', 'total', filters] as const,
+    DEFAULT: ['rankings'] as const,
+    MY_RANKING: (filters: RankingFilters) =>
+      [...QUERY_KEYS.RANKINGS.DEFAULT, 'my', filters] as const,
+    TOTAL_RANKINGS: (filters: RankingFilters) =>
+      [...QUERY_KEYS.RANKINGS.DEFAULT, 'total', filters] as const,
   },
   REPORT: {
-    ACTIVITIES: (dateRange: DateRange) => ['report', 'activities', dateRange] as const,
+    DEFAULT: ['report'] as const,
+    ACTIVITIES: (dateRange: DateRange) =>
+      [...QUERY_KEYS.REPORT.DEFAULT, 'activities', dateRange] as const,
   },
   TIMELINE: {
-    ACTIVITIES: () => ['timeline', 'activities'] as const,
+    DEFAULT: ['timeline'] as const,
+    ACTIVITIES: () => [...QUERY_KEYS.TIMELINE.DEFAULT, 'activities'] as const,
   },
 } as const

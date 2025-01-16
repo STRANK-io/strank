@@ -1,55 +1,53 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { QUERY_KEYS } from '@/lib/constants/queryKeys'
 import { createClient } from '@/lib/supabase/client'
-import { useUser } from '@/contexts/UserContext'
-import { ActivityWithUser, RankingFilters, TotalRankingsResponse } from '@/lib/types/ranking'
-import { createRankingQuery } from '@/lib/utils/ranking'
-import { UsersType } from '@/lib/types/auth'
+import { useUserId } from '@/contexts/UserContext'
+import { RankingFilters, TotalRankingsResponse } from '@/lib/types/ranking'
 
 const fetchTotalRankings = async (
   filters: RankingFilters,
-  user: UsersType
+  userId: string
 ): Promise<TotalRankingsResponse> => {
   const supabase = createClient()
-  let query = createRankingQuery(supabase, filters, user)
 
-  // 상위 10개만 조회
-  query = query.limit(10)
-
-  const { data: activities, error } = await query
+  const { data: activities, error } = await supabase.rpc('get_total_rankings', {
+    p_user_id: userId,
+    p_criteria: filters.criteria,
+    p_period: filters.period,
+    p_district: filters.district,
+  })
 
   if (error) {
     console.error(error)
     return { rankings: [] }
   }
+
   if (!activities || activities.length === 0) {
     return { rankings: [] }
   }
 
-  const rankings = (activities as ActivityWithUser[]).map((activity, index) => ({
-    id: activity.id,
-    name: activity.name || '',
-    rank: index + 1,
-    distance: activity.distance || 0,
-    total_elevation_gain: activity.total_elevation_gain || 0,
-    date: activity.start_date || '',
+  const rankings = activities.map(activity => ({
+    id: activity.result_activity_id,
+    name: activity.result_activity_name || '',
+    rank: activity.result_rank,
+    distance: activity.result_distance || 0,
+    total_elevation_gain: activity.result_elevation || 0,
+    date: activity.result_start_date || '',
     user: {
-      nickname: activity.users.name || '이름 없음',
-      imageUrl: activity.users.profile || undefined,
-      district: activity.users.district || '지역 없음',
+      nickname: activity.result_user_name || '이름 없음',
+      imageUrl: activity.result_user_profile || undefined,
+      district: activity.result_user_district || '지역 없음',
     },
   }))
 
-  return {
-    rankings,
-  }
+  return { rankings }
 }
 
 export const useTotalRankingsQuery = (filters: RankingFilters) => {
-  const user = useUser()
+  const userId = useUserId()
 
   return useSuspenseQuery({
     queryKey: QUERY_KEYS.RANKINGS.TOTAL_RANKINGS(filters),
-    queryFn: () => fetchTotalRankings(filters, user),
+    queryFn: () => fetchTotalRankings(filters, userId),
   })
 }

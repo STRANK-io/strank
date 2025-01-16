@@ -1,5 +1,6 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ERROR_CODES } from '@/lib/constants/error'
+import { QUERY_KEYS } from '@/lib/constants/queryKeys'
 
 interface SyncResponse {
   message: string
@@ -24,10 +25,20 @@ const syncStravaActivities = async (userId: string): Promise<string> => {
 }
 
 export const useSyncStravaActivities = () => {
+  const queryClient = useQueryClient()
+
   return useMutation<string, Error, string>({
     mutationFn: syncStravaActivities,
     onSuccess: (_, userId) => {
-      // TODO: 랭킹, 리포트, 타임라인 데이터 쿼리 무효화
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.RANKINGS.DEFAULT,
+      })
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.REPORT.DEFAULT,
+      })
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.TIMELINE.ACTIVITIES(),
+      })
     },
   })
 }

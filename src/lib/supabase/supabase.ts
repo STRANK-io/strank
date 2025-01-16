@@ -284,6 +284,44 @@ export type Database = {
           district_elevation_rank: number
         }[]
       }
+      get_my_best_ranking: {
+        Args: {
+          p_user_id: string
+          p_criteria: string
+          p_period: string
+          p_district: string
+        }
+        Returns: {
+          result_activity_id: number
+          result_activity_name: string
+          result_rank: number
+          result_distance: number
+          result_elevation: number
+          result_start_date: string
+          result_user_name: string
+          result_user_profile: string
+          result_user_district: string
+        }[]
+      }
+      get_total_rankings: {
+        Args: {
+          p_user_id: string
+          p_criteria: string
+          p_period: string
+          p_district: string
+        }
+        Returns: {
+          result_activity_id: number
+          result_activity_name: string
+          result_rank: number
+          result_distance: number
+          result_elevation: number
+          result_start_date: string
+          result_user_name: string
+          result_user_profile: string
+          result_user_district: string
+        }[]
+      }
       increment_strava_api_usage: {
         Args: {
           is_upload: boolean
