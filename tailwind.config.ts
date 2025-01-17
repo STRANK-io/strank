@@ -20,11 +20,11 @@ const config = {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         brand: {
-          primary: '#FF6A39', // PANTONE 1645C
-          secondary: '#FF9E1B', // PANTONE 1375C
-          tertiary: '#FED141', // PANTONE 122C
-          dark: '#414042', // Dark gray
-          disabled: '#E0E3E0', // Light gray
+          primary: 'hsl(var(--brand-primary))',
+          secondary: 'hsl(var(--brand-secondary))',
+          tertiary: 'hsl(var(--brand-tertiary))',
+          dark: 'hsl(var(--brand-dark))',
+          disabled: 'hsl(var(--brand-disabled))',
         },
         primary: {
           DEFAULT: 'hsl(var(--primary))',
