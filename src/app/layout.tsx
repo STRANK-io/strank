@@ -5,12 +5,16 @@ import { Metadata } from 'next'
 import { Toaster } from 'sonner'
 import { GoogleTagManager } from '@next/third-parties/google'
 
-// TODO: 메타데이터에 필요한 데이터 요청
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://strank.io'),
   title: {
     template: 'Strank',
     default: 'Strank',
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    minimumScale: 1,
   },
 }
 
