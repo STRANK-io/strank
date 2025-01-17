@@ -4,6 +4,7 @@ import { pretendardFont } from '@/lib/fonts'
 import { Metadata } from 'next'
 import { Toaster } from 'sonner'
 import { GoogleTagManager } from '@next/third-parties/google'
+import type { Viewport } from 'next'
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://strank.io'),
@@ -11,11 +12,12 @@ export const metadata: Metadata = {
     template: 'Strank',
     default: 'Strank',
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    minimumScale: 1,
-  },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 }
 
 export default function RootLayout({
