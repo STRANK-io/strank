@@ -67,7 +67,7 @@ export async function POST(request: Request) {
         error,
       })
       return NextResponse.json(
-        { error: ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED },
+        { error: ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED },
         { status: 500 }
       )
     }
@@ -76,6 +76,6 @@ export async function POST(request: Request) {
       endpoint: '/api/strava/activities/sync',
       error,
     })
-    return NextResponse.json({ error: ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED }, { status: 500 })
+    return NextResponse.json({ error: ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED }, { status: 500 })
   }
 }

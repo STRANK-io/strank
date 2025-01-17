@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUserId } from '@/contexts/UserContext'
+import { logError } from '@/lib/utils/log'
 
 const useWithdrawal = () => {
   const supabase = createClient()
@@ -32,7 +33,10 @@ const useWithdrawal = () => {
           .eq('user_id', userId)
 
         if (rollbackError) {
-          console.error('Failed to rollback activities soft delete:', rollbackError)
+          logError('Failed to rollback activities:', {
+            functionName: 'useWithdrawal',
+            error: rollbackError,
+          })
         }
 
         throw userError

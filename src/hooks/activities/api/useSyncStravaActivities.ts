@@ -17,7 +17,7 @@ const syncStravaActivities = async (userId: string): Promise<string> => {
 
   if (!response.ok) {
     const { error } = await response.json()
-    throw new Error(error || ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED)
+    throw new Error(error || ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
   }
 
   const { message } = (await response.json()) as SyncResponse
@@ -29,7 +29,7 @@ export const useSyncStravaActivities = () => {
 
   return useMutation<string, Error, string>({
     mutationFn: syncStravaActivities,
-    onSuccess: (_, userId) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.RANKINGS.DEFAULT,
       })

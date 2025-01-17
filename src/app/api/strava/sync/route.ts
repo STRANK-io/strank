@@ -4,6 +4,7 @@ import { User } from '@supabase/supabase-js'
 import { SYNC_CONFIG } from '@/lib/constants/strava'
 import { calculateProgress, fetchStravaActivities, processActivities } from '@/lib/utils/strava'
 import { StravaActivity } from '@/lib/types/strava'
+import { logError } from '@/lib/utils/log'
 
 export async function GET() {
   const supabase = await createClient()
@@ -20,7 +21,10 @@ export async function GET() {
             const data = JSON.stringify({ progress, status })
             controller.enqueue(encoder.encode(`data: ${data}\n\n`))
           } catch (error) {
-            console.error('Failed to send data:', error)
+            logError('Failed to send data:', {
+              error,
+              endpoint: 'api/strava/sync',
+            })
           }
         }
       }
@@ -38,13 +42,15 @@ export async function GET() {
             ) {
               return
             }
-            console.error('Failed to close controller:', error)
+            logError('Failed to close controller:', {
+              error,
+              endpoint: 'api/strava/sync',
+            })
           }
         }
       }
 
       try {
-        // 현재 로그인한 유저 정보 가져오기
         const {
           data: { user },
           error: userError,
@@ -119,28 +125,35 @@ export async function GET() {
         }
 
         if (userUpdateError && retryCount > MAX_RETRIES) {
-          console.error('Failed to update strava_connected_at after retries:', userUpdateError)
+          logError('Failed to update strava_connected_at after retries:', {
+            error: userUpdateError,
+            endpoint: 'api/strava/sync',
+          })
           throw new Error(ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED)
         }
 
         send(100, 'completed')
         closeController()
       } catch (error) {
-        console.error('Sync error:', error)
+        logError('Sync error:', {
+          error,
+          endpoint: 'api/strava/sync',
+        })
 
         // 에러 발생 시 토큰 삭제 및 strava_connected_at 초기화
         if (currentUser) {
           try {
-            // 토큰 삭제
             await supabase.from('strava_user_tokens').delete().eq('user_id', currentUser.id)
 
-            // strava_connected_at 초기화
             await supabase
               .from('users')
               .update({ strava_connected_at: null })
               .eq('id', currentUser.id)
           } catch (cleanupError) {
-            console.error('Cleanup error:', cleanupError)
+            logError('Cleanup error:', {
+              error: cleanupError,
+              endpoint: 'api/strava/sync',
+            })
           }
         }
 
@@ -150,7 +163,10 @@ export async function GET() {
             error instanceof Error ? error.message : ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED
           )
         } catch (sendError) {
-          console.error('Failed to send error to client:', sendError)
+          logError('Failed to send error to client:', {
+            error: sendError,
+            endpoint: 'api/strava/sync',
+          })
         } finally {
           closeController()
         }

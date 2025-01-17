@@ -7,13 +7,34 @@ import {
 import { StravaActivity, StravaWebhookEventResponse } from '@/lib/types/strava'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { CalculateActivityRankingReturn } from '@/lib/types/ranking'
-import { calculateActivityRanking } from '@/lib/utils/ranking'
-import { generateActivityDescription } from '@/lib/utils/description'
+import {
+  generateActivityDescription,
+  updateStravaActivityDescription,
+} from '@/lib/utils/description'
 import { logError } from '@/lib/utils/log'
-import { processActivities, updateStravaActivityDescription } from '@/lib/utils/strava'
+import { processActivities } from '@/lib/utils/strava'
 import { isTokenExpiringSoon, refreshStravaTokenAndUpdate } from '@/lib/utils/stravaToken'
+import { SupabaseClient } from '@supabase/supabase-js'
+import { Database } from '@/lib/supabase/supabase'
 
-// * 백그라운드에서 실행될 작업(스트라바 액세스 토큰 조회&갱신 / 활동 상세 정보 조회 / 활동 데이터 DB에 저장 / 랭킹 정보 계산 / 디스크립션 생성 / 스트라바 활동 업데이트)
+/**
+ * 스트라바 웹훅 이벤트를 처리하는 백그라운드 작업을 수행하는 함수
+ *
+ * @description
+ * 다음과 같은 순차적인 작업을 수행합니다:
+ * 1. 스트라바 액세스 토큰 조회 및 필요시 갱신
+ * 2. 스트라바 API를 통한 활동 상세 정보 조회
+ * 3. 활동 데이터를 데이터베이스에 저장
+ * 4. 활동이 visibility:everyone인 경우 랭킹 정보 계산
+ * 5. 활동 디스크립션 생성 및 스트라바 활동 데이터 업데이트(PUT) 처리
+ *
+ * @param body - 스트라바 웹훅 이벤트 응답 객체
+ *
+ * @remarks
+ * - 액세스 토큰이 만료 예정인 경우 자동으로 갱신합니다
+ * - API 사용량을 추적하기 위해 호출 횟수를 카운트합니다
+ * - 활동의 공개 범위가 'everyone'이 아닌 경우 랭킹 계산을 생략합니다
+ */
 export async function processWebhookEvent(body: StravaWebhookEventResponse) {
   try {
     const supabase = await createServiceRoleClient()
@@ -101,6 +122,68 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
     }
   } catch (error) {
     logError('Background webhook processing error:', { error })
-    throw Error(ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED)
+    throw Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
+  }
+}
+
+/**
+ * 스트라바 활동에 대한 랭킹을 계산하는 함수 (웹훅 이벤트 발생 후 디스크립션 생성 시 표기될 랭킹)
+ *
+ * @description
+ * 사용자의 활동에 대해 서울시/유저의 거주 지역 단위의 거리 및 고도 랭킹을 계산합니다
+ *
+ * @param activity - 랭킹을 계산할 스트라바 활동 정보
+ * @param userId - 사용자 ID
+ * @param supabase - Supabase 클라이언트 인스턴스
+ * @returns {Promise<CalculateActivityRankingReturn | null>} 계산된 랭킹 정보 또는 실패 시 null
+ *
+ * @remarks
+ * - usre 데이터가 없거나 지역 정보가 없는 경우 null 반환
+ * - 시/구 단위의 거리 및 고도 랭킹을 모두 포함
+ * - 랭킹 계산에 실패한 경우 에러 로깅 후 null 반환
+ */
+export async function calculateActivityRanking(
+  activity: StravaActivity,
+  userId: string,
+  supabase: SupabaseClient<Database>
+): Promise<CalculateActivityRankingReturn | null> {
+  const { data: user } = await supabase
+    .from('users')
+    .select('id, name, district, profile')
+    .eq('id', userId)
+    .single()
+
+  if (!user || !user.district) {
+    logError(`calculateActivityRanking Error: 'User profile not found`, {
+      userId: user?.id,
+      activityId: activity.id,
+    })
+    return null
+  }
+
+  const { data: rankings, error } = await supabase.rpc('get_activity_rankings', {
+    activity_id: activity.id,
+    user_district: user.district,
+  })
+
+  if (error) {
+    logError('calculateActivityRanking Error: Failed to get_activity_rankings', {
+      userId: user?.id,
+      activityId: activity.id,
+      error,
+    })
+    return null
+  }
+
+  const ranking = rankings[0]
+
+  return {
+    rankings: {
+      distanceRankCity: ranking.city_distance_rank || null,
+      distanceRankDistrict: ranking.district_distance_rank || null,
+      elevationRankCity: ranking.city_elevation_rank || null,
+      elevationRankDistrict: ranking.district_elevation_rank || null,
+    },
+    district: user.district,
   }
 }

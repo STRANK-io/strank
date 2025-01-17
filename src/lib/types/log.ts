@@ -21,6 +21,7 @@ export interface LogContext {
   debugInfo?: Record<string, any> // 임의의 디버깅 정보
   stackTrace?: string // 스택 트레이스 (자동 생성 가능)
   additionalInfo?: Record<string, any> // 기타 추가 정보
+  functionName?: string // 함수 이름
 
   // 확장 가능성을 위한 필드
   [key: string]: any // 기타 임의의 필드

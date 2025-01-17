@@ -3,6 +3,7 @@ import { QUERY_KEYS } from '@/lib/constants/queryKeys'
 import { createClient } from '@/lib/supabase/client'
 import { useUserId } from '@/contexts/UserContext'
 import { RankingFilters, TotalRankingsResponse } from '@/lib/types/ranking'
+import { logError } from '@/lib/utils/log'
 
 const fetchTotalRankings = async (
   filters: RankingFilters,
@@ -18,7 +19,10 @@ const fetchTotalRankings = async (
   })
 
   if (error) {
-    console.error(error)
+    logError('Error fetching total rankings:', {
+      error,
+      functionName: 'fetchTotalRankings',
+    })
     return { rankings: [] }
   }
 

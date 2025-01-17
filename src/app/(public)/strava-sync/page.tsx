@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { ROUTES } from '@/lib/constants/routes'
 import { cn } from '@/lib/utils/cn'
+import { logError } from '@/lib/utils/log'
 
 export default function StravaSyncPage() {
   const [progress, setProgress] = useState(0)
@@ -78,13 +79,19 @@ export default function StravaSyncPage() {
 
           setProgress(data.progress)
         } catch (error) {
-          console.error('Failed to parse message:', error)
+          logError('Failed to parse message:', {
+            error,
+            endpoint: 'strava-sync',
+          })
           // JSON 파싱 에러는 무시하고 계속 진행
         }
       }
 
       eventSource.onerror = error => {
-        console.error('EventSource error:', error)
+        logError('EventSource error:', {
+          error,
+          endpoint: 'strava-sync',
+        })
         clearTimeout(timeoutId)
         eventSource.close()
 
@@ -93,7 +100,9 @@ export default function StravaSyncPage() {
           // 지수 백오프를 적용한 재시도 간격
           setTimeout(connectEventSource, RETRY_DELAY * Math.pow(2, connectionAttempts))
         } else {
-          console.error('Max retries reached, redirecting to error page')
+          logError('Max retries reached, redirecting to error page', {
+            endpoint: 'strava-sync',
+          })
           handleError()
         }
       }

@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     logError('Webhook request parsing error:', { error })
-    return new NextResponse(ERROR_MESSAGES[ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED], {
+    return new NextResponse(ERROR_MESSAGES[ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED], {
       status: 500,
     })
   }

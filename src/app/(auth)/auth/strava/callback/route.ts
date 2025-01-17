@@ -5,6 +5,7 @@ import { ROUTES } from '@/lib/constants/routes'
 import { redirectWithError } from '@/lib/utils/auth'
 import { StravaTokenResponse } from '@/lib/types/strava'
 import { STRAVA_TOKEN_URL } from '@/lib/constants/strava'
+import { logError } from '@/lib/utils/log'
 
 export async function GET(request: Request) {
   try {
@@ -12,8 +13,9 @@ export async function GET(request: Request) {
     const code = searchParams.get('code')
 
     if (!code) {
-      // 연동 페이지로 리다이렉트 -> 다시 계정 연동하게 만들기
-      console.error('Strava callback: Authorization code not found')
+      logError('Authorization code not found', {
+        endpoint: 'auth/strava/callback',
+      })
       return redirectWithError(
         origin,
         ROUTES.PUBLIC.STRAVA_CONNECT,
@@ -21,7 +23,6 @@ export async function GET(request: Request) {
       )
     }
 
-    // Strava API 토큰 교환
     const tokenResponse = await fetch(STRAVA_TOKEN_URL, {
       method: 'POST',
       headers: {
@@ -36,8 +37,10 @@ export async function GET(request: Request) {
     })
 
     if (!tokenResponse.ok) {
-      // 연동 페이지로 리다이렉트 -> 다시 계정 연동하게 만들기
-      console.error('Strava callback: Failed to exchange token with Strava')
+      logError('Failed to exchange token with Strava', {
+        error: tokenResponse,
+        endpoint: 'auth/strava/callback',
+      })
       return redirectWithError(
         origin,
         ROUTES.PUBLIC.STRAVA_CONNECT,
@@ -46,21 +49,22 @@ export async function GET(request: Request) {
     }
 
     const stravaData: StravaTokenResponse = await tokenResponse.json()
-    // Supabase 클라이언트 초기화
     const supabase = await createClient()
 
-    // 현재 로그인한 유저 정보 가져오기
     const {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      console.error('Strava callback: User not authenticated')
+      logError('User not authenticated', {
+        error: userError,
+        endpoint: 'auth/strava/callback',
+      })
       return redirectWithError(origin, ROUTES.PUBLIC.HOME, ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED)
     }
 
-    // strava_user_tokens 테이블에 토큰 저장/업데이트
+    // 스트라바 토큰 저장
     const { error: tokenError } = await supabase.from('strava_user_tokens').upsert(
       {
         user_id: user.id,
@@ -75,7 +79,10 @@ export async function GET(request: Request) {
     )
 
     if (tokenError) {
-      console.error('Strava callback: Failed to save token to database')
+      logError('Failed to save token to database', {
+        error: tokenError,
+        endpoint: 'auth/strava/callback',
+      })
       return redirectWithError(
         origin,
         ROUTES.PUBLIC.STRAVA_CONNECT,
@@ -83,10 +90,13 @@ export async function GET(request: Request) {
       )
     }
 
-    // 성공 시 strava-sync 페이지로 리다이렉트
+    // 성공 시 strava-sync 페이지로 이동
     return NextResponse.redirect(`${origin}${ROUTES.PUBLIC.STRAVA_SYNC}`)
   } catch (error) {
-    console.error('Strava callback error:', error)
+    logError('Strava callback error:', {
+      error,
+      endpoint: 'auth/strava/callback',
+    })
     return redirectWithError(
       origin,
       ROUTES.PUBLIC.STRAVA_CONNECT,

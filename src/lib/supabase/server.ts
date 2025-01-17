@@ -1,4 +1,5 @@
 import { Database } from '@/lib/supabase/supabase'
+import { logError } from '@/lib/utils/log'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
@@ -19,7 +20,10 @@ export const createClient = async () => {
               cookieStore.set(name, value, options)
             })
           } catch (error) {
-            console.error('Failed to set cookies:', { error })
+            logError('Failed to set cookies:', {
+              error,
+              functionName: 'createClient',
+            })
           }
         },
       },

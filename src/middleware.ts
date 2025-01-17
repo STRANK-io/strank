@@ -1,5 +1,6 @@
 import { ERROR_CODES } from '@/lib/constants/error'
 import { handleAuthAndRouting } from '@/lib/supabase/middleware'
+import { logError } from '@/lib/utils/log'
 import { type NextRequest, NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest) {
@@ -7,7 +8,10 @@ export async function middleware(request: NextRequest) {
     const res = await handleAuthAndRouting(request)
     return res
   } catch (error) {
-    console.error('Middleware Error:', error)
+    logError('Middleware Error:', {
+      error,
+      functionName: 'middleware',
+    })
     return NextResponse.redirect(new URL(`/?error=${ERROR_CODES.INTERNAL_ERROR}`, request.url))
   }
 }

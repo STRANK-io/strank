@@ -9,6 +9,7 @@ import { useUpdateLastActivitySync } from '@/hooks/user/api/useUpdateLastActivit
 import { useGetUserInfoQuery } from '@/hooks/user/api/useGetUserInfoQuery'
 import { useSyncStravaActivities } from '@/hooks/activities/api/useSyncStravaActivities'
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants/error'
+import { logError } from '@/lib/utils/log'
 
 export default function SyncRecentActivityButton() {
   const userId = useUserId()
@@ -42,7 +43,7 @@ export default function SyncRecentActivityButton() {
 
       // 2. 활동 데이터 동기화
       syncActivities(userId, {
-        onSuccess: async message => {
+        onSuccess: async () => {
           // 3. 마지막 동기화 시간 업데이트
           await updateLastActivitySync(userId)
           toast(<ToastContent text="동기화가 완료되었습니다." />)
@@ -54,10 +55,10 @@ export default function SyncRecentActivityButton() {
                 <ToastContent text={ERROR_MESSAGES[ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED]} />
               )
             } else {
-              toast(<ToastContent text={ERROR_MESSAGES[ERROR_CODES.STRAVA_ACTIVITY_SYNC_FAILED]} />)
+              toast(<ToastContent text={ERROR_MESSAGES[ERROR_CODES.STRAVA.ACTIVITY_SYNC_FAILED]} />)
             }
           } else {
-            toast(<ToastContent text={ERROR_MESSAGES[ERROR_CODES.STRAVA_ACTIVITY_SYNC_FAILED]} />)
+            toast(<ToastContent text={ERROR_MESSAGES[ERROR_CODES.STRAVA.ACTIVITY_SYNC_FAILED]} />)
           }
         },
         onSettled: () => {
@@ -65,7 +66,11 @@ export default function SyncRecentActivityButton() {
         },
       })
     } catch (error) {
-      toast(<ToastContent text={ERROR_MESSAGES[ERROR_CODES.STRAVA_ACTIVITY_SYNC_FAILED]} />)
+      toast(<ToastContent text={ERROR_MESSAGES[ERROR_CODES.STRAVA.ACTIVITY_SYNC_FAILED]} />)
+      logError('Failed to sync recent activities', {
+        error,
+        functionName: 'handleSyncRecentActivity',
+      })
       setIsPending(false)
     }
   }

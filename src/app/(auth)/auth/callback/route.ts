@@ -5,12 +5,17 @@ import { ROUTES } from '@/lib/constants/routes'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/lib/supabase/supabase'
 import { redirectWithError } from '@/lib/utils/auth'
+import { logError } from '@/lib/utils/log'
 
+/**
+ * 현재 활성화된 유저 수(userCountData)와 수용 가능한 유저 수(userCapacityData)를 확인하여 가입 가능 여부를 반환하는 함수
+ */
 const checkUserCapacity = async (supabase: SupabaseClient<Database>) => {
   const { data: userCountData, error: userCountError } = await supabase
     .from('user_count')
     .select('total_users')
     .single()
+
   const { data: userCapacityData, error: userCapacityError } = await supabase
     .from('user_capacity')
     .select('max_users')
@@ -18,11 +23,15 @@ const checkUserCapacity = async (supabase: SupabaseClient<Database>) => {
 
   if (userCountError || userCapacityError || !userCountData || !userCapacityData) {
     if (userCountError) {
-      console.error('Failed to check user count:', { userCountError })
+      logError('Failed to check user count:', { userCountError, functionName: 'checkUserCapacity' })
     }
     if (userCapacityError) {
-      console.error('Failed to check user capacity:', { userCapacityError })
+      logError('Failed to check user capacity:', {
+        userCapacityError,
+        functionName: 'checkUserCapacity',
+      })
     }
+
     return { error: true }
   }
 

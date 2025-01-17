@@ -3,6 +3,7 @@ import { QUERY_KEYS } from '@/lib/constants/queryKeys'
 import { createClient } from '@/lib/supabase/client'
 import { useUserId } from '@/contexts/UserContext'
 import { DateRange, ReportResponse } from '@/lib/types/report'
+import { logError } from '@/lib/utils/log'
 
 const fetchReportData = async (dateRange: DateRange, userId: string): Promise<ReportResponse> => {
   const supabase = createClient()
@@ -42,7 +43,10 @@ const fetchReportData = async (dateRange: DateRange, userId: string): Promise<Re
     .order('start_date', { ascending: false })
 
   if (error) {
-    console.error(error)
+    logError('Error fetching report data:', {
+      error,
+      functionName: 'fetchReportData',
+    })
     return { activities: [] }
   }
 

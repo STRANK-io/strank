@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { ERROR_CODES, ErrorMessageCode } from '@/lib/constants/error'
 import { QUERY_KEYS } from '@/lib/constants/queryKeys'
+import { logError } from '@/lib/utils/log'
 
 interface UpdateUserInfoParams {
   user_id: string
@@ -53,14 +54,10 @@ const useUpdateUserInfo = () => {
 
         return
       } catch (error) {
-        if (uploadedFileName) {
-          await supabase.storage
-            .from('profile-images')
-            .remove([uploadedFileName])
-            .catch(e => console.error('Failed to remove uploaded image:', e))
-        }
-
-        console.error('Error in updateUserInfo:', error)
+        logError('Error in updateUserInfo:', {
+          functionName: 'useUpdateUserInfo',
+          error,
+        })
         throw new Error(ERROR_CODES.INTERNAL_ERROR)
       }
     },

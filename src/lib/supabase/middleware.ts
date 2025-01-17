@@ -5,6 +5,7 @@ import { isPrivatePath, isPublicPath, ROUTES } from '@/lib/constants/routes'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { Database, Tables } from '@/lib/supabase/supabase'
 import { redirectWithError } from '@/lib/utils/auth'
+import { logError } from '@/lib/utils/log'
 
 // TODO: 로그인 기능 전체 구현 후 하나씩 테스트 필요
 export async function createClient(request: NextRequest) {
@@ -159,7 +160,10 @@ export async function handleAuthAndRouting(request: NextRequest) {
 
     return response
   } catch (error) {
-    console.error('Middleware Error:', error)
+    logError('Middleware Error:', {
+      error,
+      functionName: 'handleAuthAndRouting',
+    })
     return redirectWithError(request.nextUrl.origin, ROUTES.PUBLIC.HOME, ERROR_CODES.INTERNAL_ERROR)
   }
 }

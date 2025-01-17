@@ -2,7 +2,6 @@ import { Database } from '@/lib/supabase/supabase'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { SupabaseClient } from '@supabase/supabase-js'
 import {
-  STRAVA_ACTIVITY_BY_ID_ENDPOINT,
   STRAVA_API_URL,
   STRAVA_ATHLETE_ACTIVITIES_ENDPOINT,
   SYNC_CONFIG,
@@ -11,7 +10,18 @@ import { StravaActivity } from '@/lib/types/strava'
 import { convertUTCToKoreanTime } from '@/lib/utils/date'
 import { logError } from '@/lib/utils/log'
 
-// 진행률 계산 헬퍼 함수
+/**
+ * 스트라바 데이터 동기화 진행률을 계산하는 함수
+ *
+ * @description
+ * 데이터 가져오기(40%)와 처리(60%)의 두 단계로 나누어 전체 진행률을 계산합니다
+ *
+ * @param fetchedPages - 현재까지 가져온 페이지 수
+ * @param totalPages - 전체 페이지 수 (아직 알 수 없는 경우 null)
+ * @param processedActivities - 처리 완료된 활동 수
+ * @param totalActivities - 전체 활동 수 (아직 알 수 없는 경우 null)
+ * @returns {number} 0-100 사이의 진행률 퍼센트
+ */
 export function calculateProgress(
   fetchedPages: number,
   totalPages: number | null,
@@ -34,6 +44,24 @@ export function calculateProgress(
   return Math.min(100, fetchProgress + processProgress)
 }
 
+/**
+ * 스트라바 API를 통해 사용자의 활동 데이터를 조회하는 함수
+ *
+ * @description
+ * 페이지네이션을 지원하며 설정된 페이지 크기만큼 활동 데이터를 조회합니다
+ *
+ * @param accessToken - 스트라바 액세스 토큰
+ * @param page - 조회할 페이지 번호 (기본값: 1)
+ * @param supabase - Supabase 클라이언트 인스턴스
+ * @returns {Promise<StravaActivity[]>} 스트라바 활동 데이터 배열
+ *
+ * @throws {Error} API_LIMIT_EXCEEDED - API 호출 한도 초과 시
+ * @throws {Error} AUTH.STRAVA_CONNECTION_FAILED - API 연결 실패 시
+ *
+ * @remarks
+ * - API 호출마다 사용량을 카운트합니다
+ * - Rate limit 초과 시 별도의 에러를 발생시킵니다
+ */
 export async function fetchStravaActivities(
   accessToken: string,
   page = 1,
@@ -64,7 +92,7 @@ export async function fetchStravaActivities(
         status: response.status,
         statusText: response.statusText,
       })
-      throw new Error(ERROR_CODES.STRAVA_API_LIMIT_EXCEEDED)
+      throw new Error(ERROR_CODES.STRAVA.API_LIMIT_EXCEEDED)
     }
     logError('Strava connection failed', {
       status: response.status,
@@ -76,6 +104,20 @@ export async function fetchStravaActivities(
   return response.json()
 }
 
+/**
+ * 스트라바 활동 데이터를 DB에 저장하는 함수
+ *
+ * @description
+ * 활동 데이터를 가공하여 데이터베이스에 upsert합니다
+ *
+ * @param activities - 저장할 활동 데이터 배열
+ * @param userId - 사용자 ID
+ * @param supabase - Supabase 클라이언트 인스턴스
+ * @throws {Error} ACTIVITY_UPDATE_FAILED - DB 저장 실패 시
+ *
+ * @remarks
+ * - UTC 시간을 한국 시간으로 변환하여 저장합니다
+ */
 export async function processActivities(
   activities: StravaActivity[],
   userId: string,
@@ -102,43 +144,5 @@ export async function processActivities(
     }))
   )
 
-  if (error) throw new Error(ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED)
-}
-
-export async function updateStravaActivityDescription(
-  accessToken: string,
-  activity: StravaActivity,
-  newDescription: string
-): Promise<void> {
-  // 기존 설명과 새로운 설명을 결합
-  const combinedDescription = activity.description
-    ? `${activity.description}\n\n${newDescription}`
-    : newDescription
-
-  // 업데이트된 설명으로 활동 정보 업데이트
-  const updateResponse = await fetch(
-    `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(activity.id)}`,
-    {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        description: combinedDescription,
-      }),
-    }
-  )
-
-  if (!updateResponse.ok) {
-    const errorText = await updateResponse.text()
-
-    if (updateResponse.status === 429) {
-      logError('Strava API: Rate limit exceeded when updating activity description')
-      throw new Error(ERROR_CODES.STRAVA_API_LIMIT_EXCEEDED)
-    }
-
-    logError('Strava API: Failed to update activity description:', { error: errorText })
-    throw new Error(ERROR_CODES.STRAVA_ACTIVITY_UPDATE_FAILED)
-  }
+  if (error) throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
 }

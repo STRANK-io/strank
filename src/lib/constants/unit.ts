@@ -1,8 +1,8 @@
-export const ACTIVITY_UNITS = {
-  distance: 'm',
-  elevation: 'm',
-  speed: 'm/s',
-  power: 'w',
-  cadence: 'rpm',
-  heart_rate: 'bpm',
+export enum ACTIVITY_UNITS {
+  DISTANCE = 'm',
+  ELEVATION = 'm',
+  SPEED = 'm/s',
+  POWER = 'w',
+  CADENCE = 'rpm',
+  HEART_RATE = 'bpm',
 }

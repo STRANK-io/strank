@@ -10,6 +10,7 @@ import { ToastContent } from '@/components/common/ToastContent'
 import { toast } from 'sonner'
 import { ProfileImage } from '@/components/common/userInfo/userInfoForm/ProfileImage'
 import { convertAndCreatePreview } from '@/lib/utils/image'
+import { logError } from '@/lib/utils/log'
 
 export const UserInfoForm = ({ userId }: { userId: string }) => {
   const { data: userInfo } = useGetUserInfoQuery(userId)
@@ -23,7 +24,6 @@ export const UserInfoForm = ({ userId }: { userId: string }) => {
     setDistrict,
   } = useUserInfoStore()
 
-  // 초기 유저 정보 설정
   useEffect(() => {
     if (userInfo) {
       if (userInfo.profile) setImagePreviewUrl(userInfo.profile)
@@ -38,7 +38,10 @@ export const UserInfoForm = ({ userId }: { userId: string }) => {
       setProfileImage(result.processedFile)
       setImagePreviewUrl(result.previewUrl)
     } catch (error) {
-      console.error('Image processing error:', error)
+      logError('Failed to change profile image', {
+        error,
+        functionName: 'handleImageChange',
+      })
       toast(<ToastContent text={ERROR_MESSAGES[ERROR_CODES.AUTH.IMAGE_PROCESSING_FAILED]} />)
     }
   }
