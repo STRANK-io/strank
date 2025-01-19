@@ -23,7 +23,8 @@ export const ERROR_CODES = {
 
 export const ERROR_MESSAGES = {
   // AUTH
-  [ERROR_CODES.AUTH.EXITED_USER]: '탈퇴한 회원입니다.',
+  [ERROR_CODES.AUTH.EXITED_USER]:
+    '탈퇴한 회원이라 사용이 불가합니다.\n필요한 경우, support@strank.io로 문의주세요!',
   [ERROR_CODES.AUTH.WITHDRAWAL_FAILED]: '회원탈퇴에 실패하였습니다. 다시 시도해주세요.',
   [ERROR_CODES.AUTH.LOGOUT_FAILED]: '로그아웃에 실패하였습니다. 다시 시도해주세요.',
   [ERROR_CODES.AUTH.SESSION_EXPIRED]: '세션이 만료되었습니다. 다시 로그인해주세요.',
