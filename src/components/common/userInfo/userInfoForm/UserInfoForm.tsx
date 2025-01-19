@@ -47,7 +47,7 @@ export const UserInfoForm = ({ userId }: { userId: string }) => {
   }
 
   return (
-    <section className="mt-[48px] px-5">
+    <div className="mt-[48px] w-full px-5">
       <ProfileImage
         imageUrl={imagePreviewUrl}
         onImageChange={handleImageChange}
@@ -62,6 +62,6 @@ export const UserInfoForm = ({ userId }: { userId: string }) => {
         />
       </div>
       <RegionSelect value={district} onChange={setDistrict} />
-    </section>
+    </div>
   )
 }

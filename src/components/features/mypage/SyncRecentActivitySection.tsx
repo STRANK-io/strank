@@ -10,8 +10,9 @@ import { useGetUserInfoQuery } from '@/hooks/user/api/useGetUserInfoQuery'
 import { useSyncStravaActivities } from '@/hooks/activities/api/useSyncStravaActivities'
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants/error'
 import { logError } from '@/lib/utils/log'
+import { PrimaryButton } from '@/components/common/PrimaryButton'
 
-export default function SyncRecentActivityButton() {
+export default function SyncRecentActivitySection() {
   const userId = useUserId()
   const [isPending, setIsPending] = useState(false)
   const { data: user } = useGetUserInfoQuery(userId)
@@ -76,12 +77,18 @@ export default function SyncRecentActivityButton() {
   }
 
   return (
-    <button
-      className="cursor-pointer text-sm font-bold leading-[18.2px] text-brand-dark underline decoration-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
-      onClick={handleSyncRecentActivity}
-      disabled={isPending}
-    >
-      {isPending ? '동기화 중...' : '최근 활동 동기화'}
-    </button>
+    <>
+      <div className="flex items-end gap-5">
+        <p className="text-base font-bold leading-[20.8px] text-brand-dark">동기화</p>
+        <p className="text-sm font-normal leading-[16.9px] text-[#818181]">
+          (하루에 1회만 가능해요.)
+        </p>
+      </div>
+      <PrimaryButton
+        onClick={handleSyncRecentActivity}
+        disabled={isPending}
+        text={isPending ? '동기화 중...' : '최근 활동 동기화'}
+      />
+    </>
   )
 }

@@ -34,7 +34,7 @@ export const WithdrawalButton = () => {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <button className="cursor-pointer text-brand-primary underline decoration-brand-primary">
+        <button className="cursor-pointer text-[#0000004D] underline decoration-[#0000004D]">
           회원탈퇴
         </button>
       </AlertDialogTrigger>
