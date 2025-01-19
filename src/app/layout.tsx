@@ -9,9 +9,11 @@ import type { Viewport } from 'next'
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://strank.io'),
   title: {
-    template: 'Strank',
-    default: 'Strank',
+    template: 'STRANK',
+    default: 'STRANK',
   },
+  description:
+    '지역별 랭킹으로 더 가까워진 라이딩 커뮤니티 / 자전거 기록도, 랭킹도 이제 하이퍼 로컬하게',
 }
 
 export const viewport: Viewport = {
@@ -28,7 +30,6 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${pretendardFont.variable} font-sans`} suppressHydrationWarning>
       <body suppressHydrationWarning>
-        {/* TODO: 393px screen 스타일 적용해서 싹 바꾸기 */}
         {process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_GA_ID && (
           <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GA_ID} />
         )}
