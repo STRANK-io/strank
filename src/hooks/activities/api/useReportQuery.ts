@@ -8,9 +8,8 @@ import { logError } from '@/lib/utils/log'
 const fetchReportData = async (dateRange: DateRange, userId: string): Promise<ReportResponse> => {
   const supabase = createClient()
 
-  // 날짜 범위 계산
   const now = new Date()
-  const startDate = new Date()
+  const startDate = new Date(now)
 
   switch (dateRange) {
     case '3months':
