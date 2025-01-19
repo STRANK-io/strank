@@ -1,31 +1,6 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          operationName?: string
-          query?: string
-          variables?: Json
-          extensions?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       activities: {
@@ -88,13 +63,6 @@ export type Database = {
             foreignKeyName: 'activities_user_id_fkey'
             columns: ['user_id']
             isOneToOne: false
-            referencedRelation: 'admin_users'
-            referencedColumns: ['id']
-          },
-          {
-            foreignKeyName: 'activities_user_id_fkey'
-            columns: ['user_id']
-            isOneToOne: false
             referencedRelation: 'users'
             referencedColumns: ['id']
           },
@@ -144,13 +112,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: 'strava_user_tokens_user_id_fkey'
-            columns: ['user_id']
-            isOneToOne: true
-            referencedRelation: 'admin_users'
-            referencedColumns: ['id']
-          },
           {
             foreignKeyName: 'strava_user_tokens_user_id_fkey'
             columns: ['user_id']
@@ -220,7 +181,6 @@ export type Database = {
           last_activity_sync_at: string | null
           name: string | null
           profile: string | null
-          role: Database['public']['Enums']['user_role'] | null
           strava_connected_at: string | null
           updated_at: string | null
         }
@@ -232,7 +192,6 @@ export type Database = {
           last_activity_sync_at?: string | null
           name?: string | null
           profile?: string | null
-          role?: Database['public']['Enums']['user_role'] | null
           strava_connected_at?: string | null
           updated_at?: string | null
         }
@@ -244,7 +203,6 @@ export type Database = {
           last_activity_sync_at?: string | null
           name?: string | null
           profile?: string | null
-          role?: Database['public']['Enums']['user_role'] | null
           strava_connected_at?: string | null
           updated_at?: string | null
         }
@@ -252,18 +210,6 @@ export type Database = {
       }
     }
     Views: {
-      admin_users: {
-        Row: {
-          id: string | null
-        }
-        Insert: {
-          id?: string | null
-        }
-        Update: {
-          id?: string | null
-        }
-        Relationships: []
-      }
       user_count: {
         Row: {
           total_users: number | null
@@ -338,7 +284,7 @@ export type Database = {
       }
     }
     Enums: {
-      user_role: 'user' | 'admin'
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
