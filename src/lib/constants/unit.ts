@@ -1,8 +1,8 @@
 export enum ACTIVITY_UNITS {
-  DISTANCE = 'm',
+  DISTANCE = 'km',
   ELEVATION = 'm',
-  SPEED = 'm/s',
-  POWER = 'w',
+  SPEED = 'km/h',
+  POWER = 'W',
   CADENCE = 'rpm',
   HEART_RATE = 'bpm',
 }

@@ -35,43 +35,35 @@ export default function TimelineActivityCard({ activity, isLoading }: TimelineAc
   const activityFields = [
     {
       label: '총 이동거리',
-      value: formatActivityValue(activity.distance),
-      unit: ACTIVITY_UNITS.DISTANCE,
+      value: `${formatActivityValue(activity.distance, 'distance')} ${ACTIVITY_UNITS.DISTANCE}`,
     },
     {
       label: '평균 케이던스',
-      value: formatActivityValue(activity.average_cadence),
-      unit: ACTIVITY_UNITS.CADENCE,
+      value: `${formatActivityValue(activity.average_cadence)} ${ACTIVITY_UNITS.CADENCE}`,
     },
     {
       label: '총 고도상승',
-      value: formatActivityValue(activity.total_elevation_gain),
-      unit: ACTIVITY_UNITS.ELEVATION,
+      value: `${formatActivityValue(activity.total_elevation_gain)} ${ACTIVITY_UNITS.ELEVATION}`,
     },
     {
       label: '최대 심박수',
-      value: formatActivityValue(activity.max_heartrate),
-      unit: ACTIVITY_UNITS.HEART_RATE,
+      value: `${formatActivityValue(activity.max_heartrate)} ${ACTIVITY_UNITS.HEART_RATE}`,
     },
     {
       label: '평균 속도',
-      value: formatActivityValue(activity.average_speed),
-      unit: ACTIVITY_UNITS.SPEED,
+      value: `${formatActivityValue(activity.average_speed, 'speed')} ${ACTIVITY_UNITS.SPEED}`,
     },
     {
       label: '평균 파워',
-      value: formatActivityValue(activity.average_watts),
-      unit: ACTIVITY_UNITS.POWER,
+      value: `${formatActivityValue(activity.average_watts)} ${ACTIVITY_UNITS.POWER}`,
     },
     {
       label: '최고 속도',
-      value: formatActivityValue(activity.max_speed),
-      unit: ACTIVITY_UNITS.SPEED,
+      value: `${formatActivityValue(activity.max_speed, 'speed')} ${ACTIVITY_UNITS.SPEED}`,
     },
     {
       label: '최고 파워',
-      value: formatActivityValue(activity.max_watts),
-      unit: ACTIVITY_UNITS.POWER,
+      value: `${formatActivityValue(activity.max_watts)} ${ACTIVITY_UNITS.POWER}`,
     },
   ]
 
@@ -115,10 +107,7 @@ export default function TimelineActivityCard({ activity, isLoading }: TimelineAc
                     <div className="rounded-lg bg-[#FFF8E9] px-2 py-[6px] text-[9px] leading-[10.74px] text-[#CCA672]">
                       {field.label}
                     </div>
-                    <p className="text-sm leading-[18.2px]">
-                      {field.value}
-                      {field.unit}
-                    </p>
+                    <p className="text-sm leading-[18.2px]">{field.value}</p>
                   </div>
                 )
             )}

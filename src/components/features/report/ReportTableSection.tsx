@@ -5,13 +5,15 @@ import { ReportFilter } from '@/lib/types/report'
 import { formatActivityValue } from '@/lib/utils/activity'
 import { formatDateForReport } from '@/lib/utils/date'
 
+const ACTIVITY_TABLE_HEADERS = ['날짜', '거리', '고도', '평균속도', '평균파워']
+
 export default function ReportTableSection({ dateRange }: Pick<ReportFilter, 'dateRange'>) {
   const { data } = useReportQuery(dateRange)
 
   if (!data.activities.length) {
     return (
       <div className="p-4 pt-0">
-        <ReportTableRow texts={['날짜', '거리', '고도', '속도', '파워']} />
+        <ReportTableRow texts={ACTIVITY_TABLE_HEADERS} />
         <div className="flex items-center justify-center py-4">데이터가 없습니다</div>
       </div>
     )
@@ -20,17 +22,17 @@ export default function ReportTableSection({ dateRange }: Pick<ReportFilter, 'da
   return (
     <div className="w-full overflow-x-auto p-4 pt-0">
       <div className="w-full">
-        <ReportTableRow texts={['날짜', '거리', '고도', '속도', '파워']} />
+        <ReportTableRow texts={ACTIVITY_TABLE_HEADERS} />
         <div>
           {data.activities.map(activity => (
             <div key={activity.id}>
               <ReportTableRow
                 texts={[
                   formatDateForReport(activity.date),
-                  `${formatActivityValue(activity.distance)}${ACTIVITY_UNITS.DISTANCE}`,
-                  `${formatActivityValue(activity.total_elevation_gain)}${ACTIVITY_UNITS.ELEVATION}`,
-                  `${formatActivityValue(activity.average_speed)}${ACTIVITY_UNITS.SPEED}`,
-                  `${formatActivityValue(activity.average_watts)}${ACTIVITY_UNITS.POWER}`,
+                  `${formatActivityValue(activity.distance, 'distance')} ${ACTIVITY_UNITS.DISTANCE}`,
+                  `${formatActivityValue(activity.total_elevation_gain)} ${ACTIVITY_UNITS.ELEVATION}`,
+                  `${formatActivityValue(activity.average_speed, 'speed')} ${ACTIVITY_UNITS.SPEED}`,
+                  `${formatActivityValue(activity.average_watts)} ${ACTIVITY_UNITS.POWER}`,
                 ]}
               />
             </div>

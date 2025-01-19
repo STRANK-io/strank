@@ -26,8 +26,8 @@ export function RankingCard({
 }: RankingCardProps) {
   const displayValue =
     criteria === 'distance'
-      ? `${formatActivityValue(activity.distance)}${ACTIVITY_UNITS.DISTANCE}`
-      : `${formatActivityValue(activity.total_elevation_gain)}${ACTIVITY_UNITS.ELEVATION}`
+      ? `${formatActivityValue(activity.distance, 'distance')} ${ACTIVITY_UNITS.DISTANCE}`
+      : `${formatActivityValue(activity.total_elevation_gain)} ${ACTIVITY_UNITS.ELEVATION}`
 
   return (
     <div

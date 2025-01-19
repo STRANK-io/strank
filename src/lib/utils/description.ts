@@ -72,14 +72,14 @@ export function generateActivityDescription(
   // 분석 정보 섹션
   description += `
 \n■ 라이딩 분석 정보 ■
-총거리 : ${formatActivityValue(distance)}${ACTIVITY_UNITS.DISTANCE}
-총고도 : ${formatActivityValue(total_elevation_gain)}${ACTIVITY_UNITS.ELEVATION}
-평균속도 : ${formatActivityValue(average_speed)}${ACTIVITY_UNITS.SPEED}
-최고속도 : ${formatActivityValue(max_speed)}${ACTIVITY_UNITS.SPEED}
-평균파워 : ${formatActivityValue(average_watts)}${ACTIVITY_UNITS.POWER}
-최대파워 : ${formatActivityValue(max_watts)}${ACTIVITY_UNITS.POWER}
-최고심박수 : ${formatActivityValue(max_heartrate)}${ACTIVITY_UNITS.HEART_RATE}
-평균케이던스 : ${formatActivityValue(average_cadence)}${ACTIVITY_UNITS.CADENCE}
+총거리 : ${formatActivityValue(distance, 'distance')} ${ACTIVITY_UNITS.DISTANCE}
+총고도 : ${formatActivityValue(total_elevation_gain)} ${ACTIVITY_UNITS.ELEVATION}
+평균속도 : ${formatActivityValue(average_speed, 'speed')} ${ACTIVITY_UNITS.SPEED}
+최고속도 : ${formatActivityValue(max_speed, 'speed')} ${ACTIVITY_UNITS.SPEED}
+평균파워 : ${formatActivityValue(average_watts)} ${ACTIVITY_UNITS.POWER}
+최대파워 : ${formatActivityValue(max_watts)} ${ACTIVITY_UNITS.POWER}
+최고심박수 : ${formatActivityValue(max_heartrate)} ${ACTIVITY_UNITS.HEART_RATE}
+평균케이던스 : ${formatActivityValue(average_cadence)} ${ACTIVITY_UNITS.CADENCE}
 🔗 Powered by STRANK
 `
 
