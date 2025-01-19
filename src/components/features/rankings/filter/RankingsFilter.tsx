@@ -4,7 +4,7 @@ import FilterSwitch from '@/components/features/rankings/filter/FilterSwitch'
 
 export default function RankingsFilter() {
   return (
-    <div className="rounded-3xl bg-white p-4" style={{ boxShadow: '0px 8px 16px 0px #00000017' }}>
+    <div className="rounded-3xl bg-white p-4 shadow-[0px_8px_16px_0px_#00000017]">
       <div className="space-y-2">
         <FilterSwitch type="criteria" />
         <FilterSwitch type="district" />

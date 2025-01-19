@@ -17,9 +17,9 @@ const getFilterValue = (type: keyof RankingFilters, value: 'left' | 'right'): st
 
 export const useRankingFilters = create<RankingFiltersState>(set => ({
   filters: {
-    criteria: 'distance',
-    district: 'all',
-    period: 'lastweek',
+    criteria: 'elevation',
+    district: 'users',
+    period: 'now',
   },
   setFilters: (type, value) =>
     set(state => ({
