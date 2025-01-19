@@ -63,6 +63,7 @@ const useUpdateUserInfo = () => {
     },
     onSuccess: (_, { user_id }) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.USER.INFO(user_id) })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.RANKINGS.DEFAULT })
     },
   })
 }
