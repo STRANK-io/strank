@@ -21,7 +21,7 @@ export default async function RegisterUserInfoPage() {
     <div>
       <StepIndicator />
       <UserInfoForm userId={user.id} />
-      <div className="fixed bottom-12 left-1/2 w-full max-w-[393px] -translate-x-1/2 px-5">
+      <div className="fixed bottom-12 left-1/2 w-full max-w-[450px] -translate-x-1/2 px-5">
         <CompleteButton userId={user.id} text="입력 완료" />
       </div>
     </div>

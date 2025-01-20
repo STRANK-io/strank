@@ -4,6 +4,7 @@ import ReportIcon from '@/components/common/icons/ReportIcon'
 import TimelineIcon from '@/components/common/icons/TimelineIcon'
 import UserIcon from '@/components/common/icons/UserIcon'
 import { ROUTES } from '@/lib/constants/routes'
+import { cn } from '@/lib/utils/cn'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -35,8 +36,10 @@ export default function PrivatePageNav() {
 
   return (
     <nav
-      className="flex w-[369px] items-center justify-between rounded-[32px] bg-white p-4 pb-6"
-      style={{ boxShadow: '0px 8px 16px 0px #00000017' }}
+      className={cn(
+        'flex w-full items-center justify-between rounded-[32px] p-4 pb-6',
+        'bg-white shadow-[0px_8px_16px_0px_#00000017]'
+      )}
     >
       {NAV_ITEMS.map(({ path, icon: Icon, label }) => {
         const isActive = pathname === path
@@ -46,7 +49,10 @@ export default function PrivatePageNav() {
               <Icon className={isActive ? 'fill-brand-primary' : 'fill-brand-dark'} />
             </div>
             <span
-              className={`text-sm font-medium leading-[16.71px] ${isActive ? 'text-brand-primary' : 'text-brand-dark'}`}
+              className={cn(
+                'text-sm font-medium leading-[16.71px]',
+                isActive ? 'text-brand-primary' : 'text-brand-dark'
+              )}
             >
               {label}
             </span>
