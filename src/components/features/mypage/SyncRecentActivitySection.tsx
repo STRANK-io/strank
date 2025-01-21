@@ -37,7 +37,7 @@ export default function SyncRecentActivitySection() {
         user.last_activity_sync_at &&
         isSameDay(new Date(user.last_activity_sync_at), new Date())
       ) {
-        toast(<ToastContent text="활동 동기화는 하루에 한 번 가능합니다." />)
+        toast(<ToastContent text="액티비티 최신화는 하루에 한 번 가능합니다." />)
         setIsPending(false)
         return
       }
@@ -47,7 +47,7 @@ export default function SyncRecentActivitySection() {
         onSuccess: async () => {
           // 3. 마지막 동기화 시간 업데이트
           await updateLastActivitySync(userId)
-          toast(<ToastContent text="동기화가 완료되었습니다." />)
+          toast(<ToastContent text="액티비티 최신화가 완료되었습니다." />)
         },
         onError: error => {
           if (error instanceof Error) {
@@ -87,7 +87,7 @@ export default function SyncRecentActivitySection() {
       <PrimaryButton
         onClick={handleSyncRecentActivity}
         disabled={isPending}
-        text={isPending ? '동기화 중...' : '최근 활동 동기화'}
+        text={isPending ? '최신화 중...' : '액티비티 최신화'}
       />
     </>
   )
