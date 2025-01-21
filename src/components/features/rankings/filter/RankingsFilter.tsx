@@ -11,12 +11,10 @@ export default function RankingsFilter() {
         <FilterSwitch type="period" />
       </div>
 
-      <p className="mt-4 px-2 text-base font-medium leading-[20.8px] text-brand-dark">
-        Everyone으로 설정한 데이터만 조회됩니다.
+      <p className="mt-4 break-keep px-2 text-base font-medium leading-[20.8px] text-brand-dark">
+        Everyone으로 설정한 액티비티만 랭킹에 포함됩니다. 공개 설정을 변경한 경우,
         <br />
-        랭킹에 포함되는 기록은 최초 스트라바에
-        <br />
-        Everyone으로 설정한 기록만 포함됩니다.
+        “마이페이지”의 “액티비티 최신화”를 통해 데이터를 최신화해주세요.
       </p>
     </div>
   )
