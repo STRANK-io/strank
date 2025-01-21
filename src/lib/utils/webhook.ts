@@ -112,9 +112,9 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
     // * 스트라바 활동 업데이트
     await updateStravaActivityDescription(accessToken, activity, description)
 
-    // * 스트라바 API 호출 카운트 추가
+    // * 스트라바 API 호출 카운트 추가 (PUT 요청도 non_upload 요청에 포함됨 - 스트라바 정책)
     const { error: incrementPutAPIUsageError } = await supabase.rpc('increment_strava_api_usage', {
-      is_upload: true,
+      is_upload: false,
     })
 
     if (incrementPutAPIUsageError) {
