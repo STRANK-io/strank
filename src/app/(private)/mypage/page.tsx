@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useUserId } from '@/contexts/UserContext'
+import { useUserContext } from '@/contexts/UserContext'
 import { UserInfoForm } from '@/components/common/userInfo/userInfoForm/UserInfoForm'
 import { CompleteButton } from '@/components/common/userInfo/CompleteButton'
 import { LogOutButton } from '@/components/features/auth/LogOutButton'
@@ -9,7 +9,7 @@ import { WithdrawalButton } from '@/components/features/auth/WithdrawalButton'
 import SyncRecentActivitySection from '@/components/features/mypage/SyncRecentActivitySection'
 
 export default function MypagePage() {
-  const userId = useUserId()
+  const { userId } = useUserContext()
 
   return (
     <div className="space-y-16 pb-[150px]">

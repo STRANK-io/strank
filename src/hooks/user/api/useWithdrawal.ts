@@ -1,11 +1,11 @@
 import { useMutation } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { useUserId } from '@/contexts/UserContext'
+import { useUserContext } from '@/contexts/UserContext'
 import { logError } from '@/lib/utils/log'
 
 const useWithdrawal = () => {
   const supabase = createClient()
-  const userId = useUserId()
+  const { userId } = useUserContext()
 
   return useMutation({
     mutationFn: async () => {

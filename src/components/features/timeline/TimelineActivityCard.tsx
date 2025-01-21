@@ -1,6 +1,6 @@
 'use client'
 
-import StravaActivityButton from '@/components/common/StravaActivityButton'
+import StravaLogoButton from '@/components/common/StravaLogoButton'
 import { cn } from '@/lib/utils/cn'
 import { useState } from 'react'
 import { ACTIVITY_UNITS } from '@/lib/constants/unit'
@@ -77,7 +77,7 @@ export default function TimelineActivityCard({ activity, isLoading }: TimelineAc
       <div className="space-y-[6px] font-bold">
         <div className="flex items-start justify-between">
           <h2 className="line-clamp-2 text-xl leading-[26px]">{activity.name}</h2>
-          <StravaActivityButton activityId={activity.id} />
+          <StravaLogoButton type="activity" id={activity.id} />
         </div>
         <p className="text-sm leading-[18.2px]">
           {activity.start_date
@@ -125,7 +125,4 @@ export default function TimelineActivityCard({ activity, isLoading }: TimelineAc
       </div>
     </div>
   )
-}
-{
-  /* TODO: 한줄할지 두줄할지 결정하고 공유할것에 적기 */
 }

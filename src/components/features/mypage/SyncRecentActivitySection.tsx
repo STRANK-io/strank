@@ -1,6 +1,6 @@
 'use client'
 
-import { useUserId } from '@/contexts/UserContext'
+import { useUserContext } from '@/contexts/UserContext'
 import { toast } from 'sonner'
 import { ToastContent } from '@/components/common/ToastContent'
 import { useState } from 'react'
@@ -13,7 +13,7 @@ import { logError } from '@/lib/utils/log'
 import { PrimaryButton } from '@/components/common/PrimaryButton'
 
 export default function SyncRecentActivitySection() {
-  const userId = useUserId()
+  const { userId } = useUserContext()
   const [isPending, setIsPending] = useState(false)
   const { data: user } = useGetUserInfoQuery(userId)
   const { mutate: syncActivities } = useSyncStravaActivities()

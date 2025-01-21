@@ -1,7 +1,7 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { QUERY_KEYS } from '@/lib/constants/queryKeys'
 import { createClient } from '@/lib/supabase/client'
-import { useUserId } from '@/contexts/UserContext'
+import { useUserContext } from '@/contexts/UserContext'
 import { DateRange, ReportResponse } from '@/lib/types/report'
 import { logError } from '@/lib/utils/log'
 
@@ -66,7 +66,7 @@ const fetchReportData = async (dateRange: DateRange, userId: string): Promise<Re
 }
 
 export const useReportQuery = (dateRange: DateRange) => {
-  const userId = useUserId()
+  const { userId } = useUserContext()
 
   return useSuspenseQuery({
     queryKey: QUERY_KEYS.REPORT.ACTIVITIES(dateRange),

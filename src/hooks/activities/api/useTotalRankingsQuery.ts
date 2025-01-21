@@ -1,7 +1,7 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { QUERY_KEYS } from '@/lib/constants/queryKeys'
 import { createClient } from '@/lib/supabase/client'
-import { useUserId } from '@/contexts/UserContext'
+import { useUserContext } from '@/contexts/UserContext'
 import { RankingFilters, TotalRankingsResponse } from '@/lib/types/ranking'
 import { logError } from '@/lib/utils/log'
 
@@ -48,7 +48,7 @@ const fetchTotalRankings = async (
 }
 
 export const useTotalRankingsQuery = (filters: RankingFilters) => {
-  const userId = useUserId()
+  const { userId } = useUserContext()
 
   return useSuspenseQuery({
     queryKey: QUERY_KEYS.RANKINGS.TOTAL_RANKINGS(filters),

@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { QUERY_KEYS } from '@/lib/constants/queryKeys'
 import { createClient } from '@/lib/supabase/client'
-import { useUserId } from '@/contexts/UserContext'
+import { useUserContext } from '@/contexts/UserContext'
 import { TimelineResponse } from '@/lib/types/timeline'
 import { logError } from '@/lib/utils/log'
 
@@ -59,7 +59,7 @@ const fetchTimelineData = async (
 }
 
 export const useTimelineQuery = () => {
-  const userId = useUserId()
+  const { userId } = useUserContext()
 
   return useInfiniteQuery({
     queryKey: QUERY_KEYS.TIMELINE.ACTIVITIES(),

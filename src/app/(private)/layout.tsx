@@ -23,16 +23,25 @@ export default async function Layout({ children }: { children: React.ReactNode }
 
   const { data: userData, error: userError } = await supabase
     .from('users')
-    .select('*')
+    .select(
+      `
+      *,
+      strava_user_tokens (
+        strava_athlete_id
+      )
+    `
+    )
     .eq('id', user.id)
     .maybeSingle()
 
-  if (userError || !userData) {
+  const athleteId = userData?.strava_user_tokens?.strava_athlete_id
+
+  if (userError || !userData || !athleteId) {
     return redirectWithError(origin, ROUTES.PUBLIC.HOME, ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED)
   }
 
   return (
-    <UserProvider userId={userData.id}>
+    <UserProvider userId={userData.id} athleteId={athleteId}>
       <main className="min-h-screen bg-gray-100">
         <div className="mx-auto min-h-screen w-full max-w-[450px] bg-[#FFF9FA] pt-11">
           <PrivatePageHeader />
