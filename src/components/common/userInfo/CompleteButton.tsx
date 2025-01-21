@@ -79,5 +79,11 @@ export const CompleteButton = ({ userId, text, isMypage }: CompleteButtonProps) 
     )
   }
 
-  return <PrimaryButton onClick={handleComplete} disabled={!isValid || isPending} text={text} />
+  return (
+    <PrimaryButton
+      onClick={handleComplete}
+      disabled={!isValid || isPending}
+      text={isPending ? '저장중...' : text}
+    />
+  )
 }

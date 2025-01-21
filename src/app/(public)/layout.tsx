@@ -17,12 +17,12 @@ const HAS_TO_SHOW_HEADER_PATHS = [
   },
   {
     path: ROUTES.PUBLIC.REGISTER_USER_INFO,
-    prevPath: ROUTES.PUBLIC.STRAVA_CONNECT,
+    prevPath: ROUTES.PUBLIC.TERMS,
     label: '기본정보 입력',
   },
   {
     path: ROUTES.PUBLIC.STRAVA_CONNECT,
-    prevPath: ROUTES.PUBLIC.TERMS,
+    prevPath: ROUTES.PUBLIC.REGISTER_USER_INFO,
     label: '스트라바 연동',
   },
 ]
