@@ -8,7 +8,7 @@ export default function AgreeButton() {
   const router = useRouter()
 
   const handleClick = () => {
-    router.push(ROUTES.PUBLIC.STRAVA_CONNECT)
+    router.push(ROUTES.PUBLIC.REGISTER_USER_INFO)
   }
 
   return <PrimaryButton text="Agree" onClick={handleClick} />
