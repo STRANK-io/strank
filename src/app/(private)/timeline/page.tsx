@@ -27,7 +27,7 @@ export default function TimelinePage() {
 
   if (!data?.pages[0].activities.length) {
     return (
-      <div className="flex h-[calc(100vh-39px)] items-center justify-center px-5 pb-[150px] text-brand-dark">
+      <div className="flex h-[calc(100dvh-39px)] items-center justify-center px-5 pb-[150px] text-brand-dark">
         데이터가 없습니다
       </div>
     )
