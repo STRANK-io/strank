@@ -33,8 +33,8 @@ export default async function Layout({ children }: { children: React.ReactNode }
 
   return (
     <UserProvider userId={userData.id}>
-      <main className="min-h-screen bg-gray-100">
-        <div className="mx-auto min-h-screen w-full max-w-[450px] bg-[#FFF9FA] pt-11">
+      <main className="min-h-[100dvh]">
+        <div className="mx-auto min-h-[100dvh] w-full max-w-[450px] bg-[#FFF9FA] pt-11">
           <PrivatePageHeader />
           {children}
           <div className="fixed bottom-3 left-1/2 flex w-full max-w-[450px] -translate-x-1/2 justify-center px-5">

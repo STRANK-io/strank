@@ -29,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className={`${pretendardFont.variable} font-sans`} suppressHydrationWarning>
-      <body suppressHydrationWarning>
+      <body suppressHydrationWarning className="bg-gray-100">
         {process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_GA_ID && (
           <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GA_ID} />
         )}
