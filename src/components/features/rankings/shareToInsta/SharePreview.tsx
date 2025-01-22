@@ -10,22 +10,22 @@ interface SharePreviewProps {
   backgroundImage: string
   myRankingActivity: ActivityWithRanking
   criteria: RankingFilters['criteria']
+  period: RankingFilters['period']
 }
 
 export default function SharePreview({
   backgroundImage,
   myRankingActivity,
   criteria,
+  period,
 }: SharePreviewProps) {
   const previewRef = useRef<HTMLDivElement>(null)
 
   const {
-    name,
     rank,
     distance,
     total_elevation_gain,
-    date,
-    user: { district },
+    user: { nickname, district },
   } = myRankingActivity
 
   const criteriaText = criteria === 'distance' ? '거리' : '고도'
@@ -33,14 +33,40 @@ export default function SharePreview({
     criteria === 'distance'
       ? `${formatActivityValue(distance, 'distance')} ${ACTIVITY_UNITS.DISTANCE}`
       : `${formatActivityValue(total_elevation_gain)} ${ACTIVITY_UNITS.ELEVATION}`
-  const formattedDate = new Date(date)
-    .toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    })
-    .replace(/\s/g, '')
-    .replace(/\./g, '. ')
+
+  const getFormattedDate = (period: RankingFilters['period']) => {
+    const today = new Date()
+
+    if (period === 'lastweek') {
+      const lastSunday = new Date(today)
+      const currentDay = today.getDay()
+      // 지난주 일요일 계산
+      const daysToLastSunday = currentDay === 0 ? -7 : -currentDay
+      lastSunday.setDate(today.getDate() + daysToLastSunday)
+
+      return lastSunday
+        .toLocaleDateString('ko-KR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        })
+        .replace(/\s/g, '')
+        .replace(/\./g, '.')
+        .slice(0, -1)
+    }
+
+    return today
+      .toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+      .replace(/\s/g, '')
+      .replace(/\./g, '.')
+      .slice(0, -1)
+  }
+
+  const formattedDate = getFormattedDate(period)
 
   return (
     <div
@@ -65,7 +91,7 @@ export default function SharePreview({
       <div className="absolute inset-0 flex flex-col justify-between bg-black/30 p-4 text-white">
         {/* 상단 */}
         <div className="flex flex-col gap-2 font-bold">
-          <span className="line-clamp-2 text-xl leading-[26px]">{name}</span>
+          <span className="line-clamp-2 text-[32px] leading-[41.6px]">{nickname}</span>
           <span className="text-sm leading-[18.2px]">{formattedDate}</span>
         </div>
 

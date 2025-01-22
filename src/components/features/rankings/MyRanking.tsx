@@ -42,6 +42,7 @@ export default function MyRanking() {
           initialImage={DEFAULT_SHARE_IMAGE}
           myRankingActivity={myRankingActivity}
           criteria={filters.criteria}
+          period={filters.period}
         />
       )}
     </div>
