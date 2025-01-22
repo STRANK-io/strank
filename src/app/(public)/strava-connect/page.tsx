@@ -7,7 +7,7 @@ import { StravaConnectErrorHandler } from '@/components/features/stravaConnect/E
 
 export default function StravaConnectPage() {
   return (
-    <div>
+    <div className="pb-[50px]">
       <Suspense>
         <StravaConnectErrorHandler />
       </Suspense>

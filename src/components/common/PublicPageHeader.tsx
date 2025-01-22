@@ -18,7 +18,7 @@ export default function PublicPageHeader({ title, href }: PublicPageHeaderProps)
   }
 
   return (
-    <header className="relative flex w-full items-center justify-center px-[10px] py-4">
+    <header className="sticky top-0 flex w-full items-center justify-center bg-white px-[10px] py-4">
       {pathname !== ROUTES.PUBLIC.HOME && (
         <button onClick={handleClick} className="absolute left-[10px]">
           <BackIcon className="text-gray-900" />
