@@ -5,7 +5,7 @@ import AgreeButton from '@/components/features/terms/AgreeButton'
 
 export default function TermsPage() {
   return (
-    <div className="pb-[130px]">
+    <div>
       <div className="max-h-[calc(100dvh-230px)] overflow-y-auto">
         <StepIndicator />
         <StrankImage />
