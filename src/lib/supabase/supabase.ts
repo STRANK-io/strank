@@ -272,6 +272,7 @@ export type Database = {
           result_user_name: string
           result_user_profile: string
           result_user_district: string
+          result_athlete_id: number
         }[]
       }
       get_total_rankings: {
@@ -291,6 +292,7 @@ export type Database = {
           result_user_name: string
           result_user_profile: string
           result_user_district: string
+          result_athlete_id: number
         }[]
       }
       increment_strava_api_usage: {

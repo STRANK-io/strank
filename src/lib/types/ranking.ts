@@ -18,7 +18,11 @@ export type ActivityWithUser = Pick<
 export type ActivityWithRanking = Pick<
   Database['public']['Tables']['activities']['Row'],
   'id' | 'distance' | 'total_elevation_gain' | 'name'
-> & { date: string; rank: number; user: { nickname: string; imageUrl?: string; district: string } }
+> & {
+  date: string
+  rank: number
+  user: { nickname: string; imageUrl?: string; district: string; athleteId: number }
+}
 
 export type MyRankingResponse = ActivityWithRanking
 
