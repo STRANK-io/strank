@@ -43,10 +43,6 @@ export default function StravaSyncPage() {
 
       eventSource.addEventListener('open', () => {
         setupTimeout()
-        logError('EventSource connected', {
-          endpoint: '/api/strava/sync',
-          connectionAttempts,
-        })
       })
 
       // 브라우저의 기본 재연결 간격을 2초로 설정
@@ -57,10 +53,6 @@ export default function StravaSyncPage() {
       // 서버로부터 데이터를 받을 때마다 실행
       eventSource.onmessage = event => {
         setupTimeout() // 메시지를 받을 때마다 타임아웃 리셋
-        logError('EventSource message received', {
-          endpoint: '/api/strava/sync',
-          data: event.data,
-        })
 
         try {
           const data = JSON.parse(event.data)
