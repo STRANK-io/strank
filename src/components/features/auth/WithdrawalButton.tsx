@@ -42,7 +42,7 @@ export const WithdrawalButton = () => {
         <AlertDialogHeader>
           <AlertDialogTitle className="font-bold text-brand-dark">회원탈퇴</AlertDialogTitle>
           <AlertDialogDescription className="whitespace-pre-line text-sm text-brand-dark">
-            {`회원탈퇴 시, 고객님의 데이터가 전부 사라집니다.\n정말로 삭제하시겠습니까?`}
+            {`회원탈퇴 시, 고객님의 데이터가 전부 사라지며,\n동일 계정으로 서비스 이용이 불가합니다.\n정말로 탈퇴하시겠습니까?`}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

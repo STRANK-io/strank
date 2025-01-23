@@ -11,6 +11,8 @@ import { useSyncStravaActivities } from '@/hooks/activities/api/useSyncStravaAct
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants/error'
 import { logError } from '@/lib/utils/log'
 import { PrimaryButton } from '@/components/common/PrimaryButton'
+import { NavigationBlockDialog } from './NavigationBlockDialog'
+import { useNavigationBlock } from '@/hooks/common/useNavigationBlock'
 
 export default function SyncRecentActivitySection() {
   const { userId } = useUserContext()
@@ -18,6 +20,10 @@ export default function SyncRecentActivitySection() {
   const { data: user } = useGetUserInfoQuery(userId)
   const { mutate: syncActivities } = useSyncStravaActivities()
   const { mutateAsync: updateLastActivitySync } = useUpdateLastActivitySync()
+
+  const { showAlert, setShowAlert, handleNavigationConfirm } = useNavigationBlock({
+    shouldBlock: isPending,
+  })
 
   const handleSyncRecentActivity = async () => {
     if (isPending) return
@@ -88,6 +94,12 @@ export default function SyncRecentActivitySection() {
         onClick={handleSyncRecentActivity}
         disabled={isPending}
         text={isPending ? '최신화 중...' : '액티비티 최신화'}
+      />
+
+      <NavigationBlockDialog
+        open={showAlert}
+        onOpenChange={setShowAlert}
+        onConfirm={handleNavigationConfirm}
       />
     </>
   )
