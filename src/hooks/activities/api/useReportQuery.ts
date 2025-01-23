@@ -9,6 +9,8 @@ const fetchReportData = async (dateRange: DateRange, userId: string): Promise<Re
   const supabase = createClient()
 
   const now = new Date()
+  const endDate = new Date(now)
+  endDate.setDate(now.getDate() + 1) // 다음날 0시까지 포함
   const startDate = new Date(now)
 
   switch (dateRange) {
@@ -39,7 +41,7 @@ const fetchReportData = async (dateRange: DateRange, userId: string): Promise<Re
     .eq('user_id', userId)
     .is('deleted_at', null)
     .gte('start_date', startDate.toISOString())
-    .lte('start_date', now.toISOString())
+    .lt('start_date', endDate.toISOString())
     .order('start_date', { ascending: false })
 
   if (error) {
