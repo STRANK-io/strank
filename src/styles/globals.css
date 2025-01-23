@@ -79,9 +79,11 @@
   /* 이메일 주소의 자동 링크 스타일 제거 */
   a[href^='mailto:'],
   span[class*='no-link-decoration'] {
-    color: inherit;
-    text-decoration: none;
-    -webkit-text-decoration: none;
-    -webkit-tap-highlight-color: transparent;
+    all: unset;
+    cursor: text !important;
+    pointer-events: none !important;
+    text-decoration: none !important;
+    -webkit-text-decoration: none !important;
+    -webkit-tap-highlight-color: transparent !important;
   }
 }
