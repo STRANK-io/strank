@@ -44,7 +44,12 @@ export default function PrivatePageNav() {
       {NAV_ITEMS.map(({ path, icon: Icon, label }) => {
         const isActive = pathname === path
         return (
-          <Link href={path} key={path} className="flex flex-col items-center gap-2">
+          <Link
+            href={path}
+            key={path}
+            className={cn('flex flex-col items-center gap-2', isActive && 'pointer-events-none')}
+            prefetch={!isActive}
+          >
             <div className="flex h-12 w-12 items-center justify-center">
               <Icon className={isActive ? 'fill-brand-primary' : 'fill-brand-dark'} />
             </div>
