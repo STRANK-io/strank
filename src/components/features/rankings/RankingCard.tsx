@@ -5,7 +5,7 @@ import { DefaultUserIcon } from '@/components/common/icons/DefaultUserIcon'
 import { CrownIcon } from '@/components/common/icons/CrownIcon'
 import { cn } from '@/lib/utils/cn'
 import { RankingFilters, ActivityWithRanking } from '@/lib/types/ranking'
-import StravaLogoButton from '@/components/common/StravaLogoButton'
+import { MoveToStravaButton } from '@/components/common/MoveToStravaButton'
 import { formatActivityValue } from '@/lib/utils/activity'
 import { ACTIVITY_UNITS } from '@/lib/constants/unit'
 
@@ -93,7 +93,7 @@ export function RankingCard({
 
       <div className={cn('flex items-center gap-2', variant === 'default' ? '' : 'justify-end')}>
         <span className="text-sm font-medium leading-[18.2px] text-brand-dark">{displayValue}</span>
-        <StravaLogoButton type="athlete" id={activity.user.athleteId} />
+        <MoveToStravaButton type="athlete" id={activity.user.athleteId} />
       </div>
     </div>
   )
