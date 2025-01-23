@@ -23,16 +23,16 @@ export default function SharePreview({
 
   const {
     rank,
-    distance,
-    total_elevation_gain,
+    totalDistance,
+    totalElevationGain,
     user: { nickname, district },
   } = myRankingActivity
 
   const criteriaText = criteria === 'distance' ? '거리' : '고도'
   const criteriaValue =
     criteria === 'distance'
-      ? `${formatActivityValue(distance, 'distance')} ${ACTIVITY_UNITS.DISTANCE}`
-      : `${formatActivityValue(total_elevation_gain)} ${ACTIVITY_UNITS.ELEVATION}`
+      ? `${formatActivityValue(totalDistance, 'distance')} ${ACTIVITY_UNITS.DISTANCE}`
+      : `${formatActivityValue(totalElevationGain)} ${ACTIVITY_UNITS.ELEVATION}`
 
   const getFormattedDate = (period: RankingFilters['period']) => {
     const today = new Date()

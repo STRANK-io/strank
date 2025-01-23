@@ -19,7 +19,7 @@ export default function TotalRankingList() {
       <div>
         {topActivity.map(activity => (
           <RankingCard
-            key={activity.id}
+            key={activity.user.id}
             activity={activity}
             isTop1
             variant="ranker"
@@ -32,7 +32,7 @@ export default function TotalRankingList() {
         <div className="grid grid-cols-2 gap-4">
           {secondThirdActivities.map(activity => (
             <RankingCard
-              key={activity.id}
+              key={activity.user.id}
               activity={activity}
               variant="ranker"
               criteria={filters.criteria}
@@ -45,7 +45,7 @@ export default function TotalRankingList() {
         <div className="space-y-4">
           {otherActivities.map(activity => (
             <RankingCard
-              key={activity.id}
+              key={activity.user.id}
               activity={activity}
               variant="default"
               criteria={filters.criteria}

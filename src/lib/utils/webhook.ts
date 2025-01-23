@@ -143,7 +143,7 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
  * - 랭킹 계산에 실패한 경우 에러 로깅 후 null 반환
  */
 export async function calculateActivityRanking(
-  activity: StravaActivity,
+  stravaActivity: StravaActivity,
   userId: string,
   supabase: SupabaseClient<Database>
 ): Promise<CalculateActivityRankingReturn | null> {
@@ -156,20 +156,20 @@ export async function calculateActivityRanking(
   if (!user || !user.district) {
     logError(`calculateActivityRanking Error: 'User profile not found`, {
       userId: user?.id,
-      activityId: activity.id,
+      activityId: stravaActivity.id,
     })
     return null
   }
 
   const { data: rankings, error } = await supabase.rpc('get_activity_rankings', {
-    activity_id: activity.id,
-    user_district: user.district,
+    p_activity_id: stravaActivity.id,
+    p_user_district: user.district,
   })
 
   if (error) {
     logError('calculateActivityRanking Error: Failed to get_activity_rankings', {
       userId: user?.id,
-      activityId: activity.id,
+      activityId: stravaActivity.id,
       error,
     })
     return null

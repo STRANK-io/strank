@@ -30,13 +30,14 @@ export type Database = {
     Tables: {
       activities: {
         Row: {
+          activity_id: number
           average_cadence: number | null
           average_speed: number | null
           average_watts: number | null
           created_at: string | null
           deleted_at: string | null
           distance: number | null
-          id: number
+          id: string
           max_heartrate: number | null
           max_speed: number | null
           max_watts: number | null
@@ -48,13 +49,14 @@ export type Database = {
           visibility: string | null
         }
         Insert: {
+          activity_id: number
           average_cadence?: number | null
           average_speed?: number | null
           average_watts?: number | null
           created_at?: string | null
           deleted_at?: string | null
           distance?: number | null
-          id: number
+          id?: string
           max_heartrate?: number | null
           max_speed?: number | null
           max_watts?: number | null
@@ -66,13 +68,14 @@ export type Database = {
           visibility?: string | null
         }
         Update: {
+          activity_id?: number
           average_cadence?: number | null
           average_speed?: number | null
           average_watts?: number | null
           created_at?: string | null
           deleted_at?: string | null
           distance?: number | null
-          id?: number
+          id?: string
           max_heartrate?: number | null
           max_speed?: number | null
           max_watts?: number | null
@@ -245,8 +248,8 @@ export type Database = {
     Functions: {
       get_activity_rankings: {
         Args: {
-          activity_id: number
-          user_district: string
+          p_activity_id: number
+          p_user_district: string
         }
         Returns: {
           city_distance_rank: number
@@ -259,16 +262,14 @@ export type Database = {
         Args: {
           p_user_id: string
           p_criteria: string
-          p_period: string
-          p_district: string
+          p_period?: string
+          p_district?: string
         }
         Returns: {
-          result_activity_id: number
-          result_activity_name: string
+          result_user_id: string
           result_rank: number
           result_distance: number
           result_elevation: number
-          result_start_date: string
           result_user_name: string
           result_user_profile: string
           result_user_district: string
@@ -279,16 +280,14 @@ export type Database = {
         Args: {
           p_user_id: string
           p_criteria: string
-          p_period: string
-          p_district: string
+          p_period?: string
+          p_district?: string
         }
         Returns: {
-          result_activity_id: number
-          result_activity_name: string
+          result_user_id: string
           result_rank: number
           result_distance: number
           result_elevation: number
-          result_start_date: string
           result_user_name: string
           result_user_profile: string
           result_user_district: string

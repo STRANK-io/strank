@@ -93,7 +93,7 @@ export function generateActivityDescription(
  * 기존 설명이 있다면 유지하고 아래에 새로운 설명을 추가합니다
  *
  * @param accessToken - 스트라바 액세스 토큰
- * @param activity - 업데이트할 활동 정보
+ * @param stravaActivity - 업데이트할 활동 정보
  * @param newDescription - 추가할 새로운 설명
  *
  * @throws {Error} API_LIMIT_EXCEEDED - API 호출 한도 초과 시
@@ -104,15 +104,15 @@ export function generateActivityDescription(
  */
 export async function updateStravaActivityDescription(
   accessToken: string,
-  activity: StravaActivity,
+  stravaActivity: StravaActivity,
   newDescription: string
 ): Promise<void> {
-  const combinedDescription = activity.description
-    ? `${activity.description}\n\n${newDescription}`
+  const combinedDescription = stravaActivity.description
+    ? `${stravaActivity.description}\n\n${newDescription}`
     : newDescription
 
   const updateResponse = await fetch(
-    `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(activity.id)}`,
+    `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
     {
       method: 'PUT',
       headers: {

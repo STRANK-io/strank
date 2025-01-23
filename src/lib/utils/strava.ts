@@ -119,15 +119,15 @@ export async function fetchStravaActivities(
  * - UTC 시간을 한국 시간으로 변환하여 저장합니다
  */
 export async function processActivities(
-  activities: StravaActivity[],
+  stravaActivities: StravaActivity[],
   userId: string,
   supabase: SupabaseClient<Database>
 ) {
-  if (activities.length === 0) return
+  if (stravaActivities.length === 0) return
 
   const { error } = await supabase.from('activities').upsert(
-    activities.map(activity => ({
-      id: activity.id,
+    stravaActivities.map(activity => ({
+      activity_id: activity.id,
       name: activity.name,
       distance: activity.distance,
       average_speed: activity.average_speed,

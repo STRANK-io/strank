@@ -3,6 +3,7 @@ import { Database } from '@/lib/supabase/supabase'
 export type TimelineActivity = Pick<
   Database['public']['Tables']['activities']['Row'],
   | 'id'
+  | 'activity_id'
   | 'name'
   | 'start_date'
   | 'distance'

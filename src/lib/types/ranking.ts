@@ -15,13 +15,11 @@ export type ActivityWithUser = Pick<
 }
 
 // 프론트엔드에서 사용할 타입
-export type ActivityWithRanking = Pick<
-  Database['public']['Tables']['activities']['Row'],
-  'id' | 'distance' | 'total_elevation_gain' | 'name'
-> & {
-  date: string
+export type ActivityWithRanking = {
   rank: number
-  user: { nickname: string; imageUrl?: string; district: string; athleteId: number }
+  totalDistance: number
+  totalElevationGain: number
+  user: { id: string; nickname: string; imageUrl?: string; district: string; athleteId: number }
 }
 
 export type MyRankingResponse = ActivityWithRanking

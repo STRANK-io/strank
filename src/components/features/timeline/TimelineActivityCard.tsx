@@ -77,7 +77,7 @@ export default function TimelineActivityCard({ activity, isLoading }: TimelineAc
       <div className="space-y-[6px] font-bold">
         <div className="flex items-start justify-between">
           <h2 className="line-clamp-2 text-xl leading-[26px]">{activity.name}</h2>
-          <StravaLogoButton type="activity" id={activity.id} />
+          <StravaLogoButton type="activity" id={activity.activity_id} />
         </div>
         <p className="text-sm leading-[18.2px]">
           {activity.start_date

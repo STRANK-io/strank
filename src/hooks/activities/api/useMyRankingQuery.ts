@@ -30,13 +30,11 @@ const fetchMyRanking = async (
 
   const activity = result[0]
   return {
-    id: activity.result_activity_id,
-    name: activity.result_activity_name || '',
     rank: activity.result_rank,
-    distance: activity.result_distance || 0,
-    total_elevation_gain: activity.result_elevation || 0,
-    date: activity.result_start_date || '',
+    totalDistance: activity.result_distance || 0,
+    totalElevationGain: activity.result_elevation || 0,
     user: {
+      id: activity.result_user_id,
       nickname: activity.result_user_name || '이름 없음',
       imageUrl: activity.result_user_profile || undefined,
       district: activity.result_user_district || '지역 없음',
