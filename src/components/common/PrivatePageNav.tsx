@@ -48,7 +48,6 @@ export default function PrivatePageNav() {
             href={path}
             key={path}
             className={cn('flex flex-col items-center gap-2', isActive && 'pointer-events-none')}
-            prefetch={!isActive}
           >
             <div className="flex h-12 w-12 items-center justify-center">
               <Icon className={isActive ? 'fill-brand-primary' : 'fill-brand-dark'} />
