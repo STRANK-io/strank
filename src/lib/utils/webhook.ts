@@ -43,13 +43,12 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
     const { data: tokenData } = await supabase
       .from('strava_user_tokens')
       .select('access_token, refresh_token, expires_at, user_id')
-      .eq('strava_athlete_id', body.owner_id.toString())
+      .eq('strava_athlete_id', body.owner_id)
       .maybeSingle()
 
     if (!tokenData) {
       logError('Strava Webhook: strava_user_tokens table에서 데이터를 찾을 수 없습니다.', {
         owner_id: body.owner_id,
-        owner_id_string: body.owner_id.toString(),
       })
       return
     }
