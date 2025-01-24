@@ -1,11 +1,19 @@
 import { ERROR_CODES } from '@/lib/constants/error'
 import { handleAuthAndRouting } from '@/lib/supabase/middleware'
+import { createClient } from '@/lib/supabase/server'
 import { logError } from '@/lib/utils/log'
 import { type NextRequest, NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   try {
-    const res = await handleAuthAndRouting(request)
+    const response = NextResponse.next()
+    const supabase = await createClient()
+
+    const {
+      data: { user: sessionUser },
+    } = await supabase.auth.getUser()
+
+    const res = await handleAuthAndRouting(request, response, supabase, sessionUser)
     return res
   } catch (error) {
     logError('Middleware Error:', {

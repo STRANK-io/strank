@@ -1,4 +1,3 @@
-import { createServerClient } from '@supabase/ssr'
 import { User, type SupabaseClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isPrivatePath, isPublicPath, ROUTES } from '@/lib/constants/routes'
@@ -7,40 +6,8 @@ import { Database, Tables } from '@/lib/supabase/supabase'
 import { redirectWithError } from '@/lib/utils/auth'
 import { logError } from '@/lib/utils/log'
 
-// TODO: 로그인 기능 전체 구현 후 하나씩 테스트 필요
-export async function createClient(request: NextRequest) {
-  const response = NextResponse.next()
-
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: cookiesToSet => {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set({ name, value, ...options })
-          })
-        },
-      },
-    }
-  )
-
-  return { supabase, response }
-}
-
-// 로그아웃 처리 함수
-async function handleLogout(request: NextRequest) {
-  const { supabase } = await createClient(request)
-  await supabase.auth.signOut()
-}
-
 // 인증 상태 확인 함수
-async function checkAuthStatus(supabase: SupabaseClient<Database>) {
-  const {
-    data: { user: sessionUser },
-  } = await supabase.auth.getUser()
-
+async function checkAuthStatus(supabase: SupabaseClient<Database>, sessionUser: User | null) {
   if (!sessionUser) {
     return {
       isValid: false,
@@ -68,6 +35,7 @@ async function checkAuthStatus(supabase: SupabaseClient<Database>) {
 // 라우팅 규칙 적용 함수
 async function handleRouting(
   request: NextRequest,
+  supabase: SupabaseClient<Database>,
   sessionUser: User | null,
   user: Tables<'users'> | null
 ) {
@@ -88,7 +56,7 @@ async function handleRouting(
 
   // 2. 탈퇴한 유저는 로그아웃 처리 후 홈으로
   if (user?.deleted_at) {
-    await handleLogout(request)
+    await supabase.auth.signOut()
     return {
       shouldRedirect: true,
       response: redirectWithError(
@@ -145,17 +113,29 @@ async function handleRouting(
   return { shouldRedirect: false }
 }
 
-export async function handleAuthAndRouting(request: NextRequest) {
+export async function handleAuthAndRouting(
+  request: NextRequest,
+  response: NextResponse,
+  supabase: SupabaseClient<Database>,
+  sessionUser: User | null
+) {
   try {
-    const { supabase, response } = await createClient(request)
-
     // 인증 상태 확인
-    const authStatus = await checkAuthStatus(supabase)
+    const authStatus = await checkAuthStatus(supabase, sessionUser)
 
     // 라우팅 규칙 적용
-    const routingResult = await handleRouting(request, authStatus.sessionUser, authStatus.user)
+    const routingResult = await handleRouting(
+      request,
+      supabase,
+      authStatus.sessionUser,
+      authStatus.user
+    )
     if (routingResult.shouldRedirect) {
       return routingResult.response
+    }
+
+    if (authStatus.user) {
+      response.headers.set('x-user-id', authStatus.user?.id)
     }
 
     return response
