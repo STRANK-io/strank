@@ -21,18 +21,8 @@ export default async function Layout({ children }: { children: React.ReactNode }
     return redirectWithError(origin, ROUTES.PUBLIC.HOME, ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED)
   }
 
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  if (userError || !userData) {
-    return redirectWithError(origin, ROUTES.PUBLIC.HOME, ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED)
-  }
-
   return (
-    <UserProvider userId={userData.id}>
+    <UserProvider userId={user.id}>
       <main className="min-h-[100dvh]">
         <div className="mx-auto min-h-[100dvh] w-full max-w-[450px] bg-[#FFF9FA] pt-11">
           <PrivatePageHeader />
