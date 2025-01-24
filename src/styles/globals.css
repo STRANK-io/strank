@@ -75,19 +75,4 @@
   body {
     @apply bg-background text-foreground;
   }
-
-  /* 이메일 주소의 자동 링크 스타일 제거 */
-  a[href^='mailto:'],
-  span[class*='no-link-decoration'] {
-    all: unset;
-    cursor: text !important;
-    pointer-events: none !important;
-    text-decoration: none !important;
-    -webkit-text-decoration: none !important;
-    -webkit-tap-highlight-color: transparent !important;
-    user-select: text !important;
-    -webkit-user-select: text !important;
-    -webkit-touch-callout: none !important;
-    -webkit-user-modify: read-only !important;
-  }
 }

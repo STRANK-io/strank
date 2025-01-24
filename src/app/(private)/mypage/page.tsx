@@ -39,7 +39,7 @@ export default function MypagePage() {
         </Link>
         <div className="flex items-center gap-1">
           <span>제안 & 오류 신고 : </span>
-          <button onClick={handleCopyEmail} className="no-link-decoration cursor-pointer">
+          <button onClick={handleCopyEmail} className="cursor-pointer">
             support@strank.io
           </button>
         </div>

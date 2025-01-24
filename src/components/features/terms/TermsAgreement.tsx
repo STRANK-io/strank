@@ -60,8 +60,7 @@ export default function TermsAgreement() {
         3. 스트랭크는 스트라바의 서비스를 활용하여 일부 콘텐츠를 제공합니다.
         <br />
         스트라바 연동을 해제 시에는 스트라바와 연동된 개인정보들은 삭제되며 별도로 계정 완전 삭제를
-        원하시는 경우 <span className="no-link-decoration">support@strank.io</span> 으로 삭제요청을
-        하시기 바랍니다.
+        원하시는 경우 support@strank.io 으로 삭제요청을 하시기 바랍니다.
         <br />
         스트라바의 개인정보보호정책을 참고하여 주시기 바랍니다. https://www.strava.com/legal/privacy
         <br />
@@ -75,7 +74,7 @@ export default function TermsAgreement() {
 
       <TermsSection title="개인정보관리책임자">
         - 이름 : 이상현
-        <br />- e-Mail : <span className="no-link-decoration">support@strank.io</span>
+        <br />- e-Mail : support@strank.io
         <br />
         <br />
         서비스를 이용하시며 발생하는 모든 개인정보보호 관련 민원을 개인정보관리책임자 혹은 담당

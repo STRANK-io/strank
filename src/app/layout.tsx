@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   },
   description:
     '지역별 랭킹으로 더 가까워진 라이딩 커뮤니티 / 자전거 기록도, 랭킹도 이제 하이퍼 로컬하게',
+  other: {
+    'format-detection': 'telephone=no, email=no',
+  },
 }
 
 export const viewport: Viewport = {
