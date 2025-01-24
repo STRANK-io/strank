@@ -1,3 +1,5 @@
+'use client'
+
 import RankingsFilter from '@/components/features/rankings/filter/RankingsFilter'
 import { MyRankingSection } from '@/components/features/rankings/MyRankingSection'
 import { TotalRankingSection } from '@/components/features/rankings/TotalRankingSection'
