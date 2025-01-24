@@ -37,7 +37,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
         <div className="mx-auto min-h-[100dvh] w-full max-w-[450px] bg-[#FFF9FA] pt-11">
           <PrivatePageHeader />
           {children}
-          <div className="fixed bottom-3 left-1/2 flex w-full max-w-[450px] -translate-x-1/2 justify-center px-5">
+          <div className="fixed bottom-0 left-1/2 flex w-full max-w-[450px] -translate-x-1/2 justify-center">
             <PrivatePageNav />
           </div>
         </div>

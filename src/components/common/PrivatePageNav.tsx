@@ -37,7 +37,7 @@ export default function PrivatePageNav() {
   return (
     <nav
       className={cn(
-        'flex w-full items-center justify-between rounded-[32px] p-4 pb-6',
+        'flex w-full items-center justify-between rounded-t-[32px] px-7 pb-6 pt-3',
         'bg-white shadow-[0px_8px_16px_0px_#00000017]'
       )}
     >
@@ -47,15 +47,15 @@ export default function PrivatePageNav() {
           <Link
             href={path}
             key={path}
-            className={cn('flex flex-col items-center gap-2', isActive && 'pointer-events-none')}
+            className={cn('flex flex-col items-center gap-1', isActive && 'pointer-events-none')}
             prefetch={true}
           >
-            <div className="flex h-12 w-12 items-center justify-center">
+            <div className="flex h-8 w-8 items-center justify-center">
               <Icon className={isActive ? 'fill-brand-primary' : 'fill-brand-dark'} />
             </div>
             <span
               className={cn(
-                'text-sm font-medium leading-[16.71px]',
+                'text-xs font-medium leading-[16.71px]',
                 isActive ? 'text-brand-primary' : 'text-brand-dark'
               )}
             >
