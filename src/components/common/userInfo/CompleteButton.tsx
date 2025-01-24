@@ -39,19 +39,26 @@ export const CompleteButton = ({ userId, text, isMypage }: CompleteButtonProps) 
     }
   }, [isMypage, profileImage, nickname, district])
 
-  const isBasicValid = validateNickname(nickname) && district !== null
+  const hasRequiredFields = nickname !== '' && district !== null && district !== ''
 
-  const isChanged =
-    !isMypage ||
-    (initialValuesRef.current &&
-      (profileImage !== initialValuesRef.current.profileImage ||
-        nickname !== initialValuesRef.current.nickname ||
-        district !== initialValuesRef.current.district))
-
-  const isValid = isBasicValid && isChanged
+  const isButtonEnabled =
+    hasRequiredFields &&
+    (isMypage
+      ? initialValuesRef.current &&
+        (profileImage !== initialValuesRef.current.profileImage ||
+          nickname !== initialValuesRef.current.nickname ||
+          district !== initialValuesRef.current.district)
+      : true)
 
   const handleComplete = async () => {
-    if (!isValid) return
+    if (!validateNickname(nickname)) {
+      toast(
+        <ToastContent text="닉네임은 특수문자, 숫자, 공백 제외한 한글, 영문 포함 2~10자 이내로 설정 가능합니다." />
+      )
+      return
+    }
+
+    if (!district) return
 
     mutate(
       {
@@ -62,13 +69,13 @@ export const CompleteButton = ({ userId, text, isMypage }: CompleteButtonProps) 
       },
       {
         onSuccess: () => {
-          initialValuesRef.current = {
-            profileImage,
-            nickname,
-            district,
-          }
-
-          if (!isMypage) {
+          if (isMypage) {
+            initialValuesRef.current = {
+              profileImage,
+              nickname,
+              district,
+            }
+          } else {
             router.push(ROUTES.PUBLIC.STRAVA_CONNECT)
           }
         },
@@ -82,7 +89,7 @@ export const CompleteButton = ({ userId, text, isMypage }: CompleteButtonProps) 
   return (
     <PrimaryButton
       onClick={handleComplete}
-      disabled={!isValid || isPending}
+      disabled={!isButtonEnabled || isPending}
       text={isPending ? '저장중...' : text}
     />
   )
