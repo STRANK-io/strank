@@ -8,24 +8,27 @@ import { headers } from 'next/headers'
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
   const headersList = await headers()
-  const origin = headersList.get('origin') || process.env.NEXT_PUBLIC_APP_URL || ''
   const userId = headersList.get('x-user-id')
 
   if (!userId) {
-    return redirectWithError(origin, ROUTES.PUBLIC.HOME, ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED)
+    return redirectWithError(
+      process.env.NEXT_PUBLIC_APP_URL || 'https://strank.io',
+      ROUTES.PUBLIC.HOME,
+      ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED
+    )
   }
 
   return (
-    <UserProvider userId={userId}>
-      <main className="min-h-[100dvh]">
-        <div className="mx-auto min-h-[100dvh] w-full max-w-[450px] bg-[#FFF9FA] pt-11">
+    <main className="min-h-[100dvh]">
+      <div className="mx-auto min-h-[100dvh] w-full max-w-[450px] bg-[#FFF9FA] pt-11">
+        <UserProvider userId={userId}>
           <PrivatePageHeader />
           {children}
           <div className="fixed bottom-0 left-1/2 flex w-full max-w-[450px] -translate-x-1/2 justify-center">
             <PrivatePageNav />
           </div>
-        </div>
-      </main>
-    </UserProvider>
+        </UserProvider>
+      </div>
+    </main>
   )
 }
