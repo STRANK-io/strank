@@ -37,18 +37,38 @@ import { Database } from '@/lib/supabase/supabase'
  */
 export async function processWebhookEvent(body: StravaWebhookEventResponse) {
   try {
+    console.log('Webhook event received:', {
+      owner_id: body.owner_id,
+      object_id: body.object_id,
+      aspect_type: body.aspect_type,
+      object_type: body.object_type,
+    })
+
     const supabase = await createServiceRoleClient()
 
     // * 유저의 스트라바 엑세스 토큰 조회
-    const { data: tokenData } = await supabase
+    const { data: tokenData, error: tokenError } = await supabase
       .from('strava_user_tokens')
       .select('access_token, refresh_token, expires_at, user_id')
       .eq('strava_athlete_id', body.owner_id)
       .maybeSingle()
 
+    if (tokenError) {
+      logError('Strava Webhook: strava_user_tokens 조회 중 에러 발생', {
+        error: tokenError,
+        owner_id: body.owner_id,
+      })
+      return
+    }
+
     if (!tokenData) {
       logError('Strava Webhook: strava_user_tokens table에서 데이터를 찾을 수 없습니다.', {
         owner_id: body.owner_id,
+        query: {
+          table: 'strava_user_tokens',
+          column: 'strava_athlete_id',
+          value: body.owner_id,
+        },
       })
       return
     }
