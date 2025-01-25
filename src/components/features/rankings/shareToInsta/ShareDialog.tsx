@@ -12,7 +12,6 @@ import { X } from 'lucide-react'
 import SharePreview from '@/components/features/rankings/shareToInsta/SharePreview'
 import OutlineButton from '@/components/common/OutlineButton'
 import { Caption } from '@/components/common/Caption'
-import { logError } from '@/lib/utils/log'
 import { isMobile } from 'react-device-detect'
 
 interface ShareDialogProps {
@@ -36,6 +35,8 @@ export default function ShareDialog({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleDownload = async () => {
+    if (typeof window === 'undefined') return // window가 없는 환경에서는 실행 안 함
+
     const previewElement = document.querySelector('[data-share-preview="true"]') as HTMLElement
     if (!previewElement) {
       showToastError('공유할 이미지를 생성할 수 없습니다.')
@@ -56,7 +57,6 @@ export default function ShareDialog({
   }
 
   const showToastError = (message: string, error?: unknown) => {
-    if (error) logError(message, { error })
     toast(<ToastContent text={message} />)
   }
 
@@ -105,7 +105,7 @@ export default function ShareDialog({
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
     if (!ctx) {
-      throw new Error()
+      throw new Error('Failed to get canvas context')
     }
 
     // Canvas 크기 설정 (고해상도를 위해 3배 크기)
@@ -126,7 +126,6 @@ export default function ShareDialog({
         })
         toast(<ToastContent text="이미지가 저장되었습니다." />)
       } catch (error) {
-        // AbortError는 사용자가 공유를 취소한 경우이므로 에러 처리하지 않음
         if ((error as Error).name !== 'AbortError') {
           throw error
         }
@@ -150,6 +149,8 @@ export default function ShareDialog({
   }
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (typeof window === 'undefined') return
+
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -202,7 +203,6 @@ export default function ShareDialog({
         </DialogContent>
       </Dialog>
 
-      {/* X 버튼 */}
       {isOpen && (
         <div className="fixed left-0 top-0 z-[51] h-full w-full">
           <button
