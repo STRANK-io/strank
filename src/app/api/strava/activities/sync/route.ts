@@ -16,6 +16,7 @@ export async function POST(request: Request) {
       .from('strava_user_tokens')
       .select('access_token, refresh_token, expires_at')
       .eq('user_id', userId)
+      .is('deleted_at', null)
       .single()
 
     if (tokenError || !tokenData) {

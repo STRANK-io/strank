@@ -30,7 +30,6 @@ const fetchReportData = async (dateRange: DateRange, userId: string): Promise<Re
     .select(
       `
       id,
-      activity_id,
       start_date,
       distance,
       total_elevation_gain,
@@ -59,7 +58,6 @@ const fetchReportData = async (dateRange: DateRange, userId: string): Promise<Re
   return {
     activities: activities.map(activity => ({
       id: activity.id,
-      activity_id: activity.activity_id,
       date: activity.start_date ? new Date(activity.start_date).toLocaleDateString() : '',
       distance: activity.distance || 0,
       total_elevation_gain: activity.total_elevation_gain || 0,

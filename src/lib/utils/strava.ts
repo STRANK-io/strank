@@ -127,7 +127,7 @@ export async function processActivities(
 
   const { error } = await supabase.from('activities').upsert(
     stravaActivities.map(activity => ({
-      activity_id: activity.id,
+      id: activity.id,
       name: activity.name,
       distance: activity.distance,
       average_speed: activity.average_speed,

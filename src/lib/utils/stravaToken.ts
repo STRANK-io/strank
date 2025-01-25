@@ -72,6 +72,7 @@ export async function refreshStravaTokenAndUpdate(
       expires_at: new Date(data.expires_at * 1000).toISOString(),
     })
     .eq('user_id', userId)
+    .is('deleted_at', null)
 
   if (updateError) {
     logError('Strava Token Update Error: 데이터베이스 업데이트 실패', {

@@ -69,6 +69,7 @@ export async function GET() {
           .from('strava_user_tokens')
           .select('access_token')
           .eq('user_id', user.id)
+          .is('deleted_at', null)
           .single()
 
         if (tokenError || !tokenData) {

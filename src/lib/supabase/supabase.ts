@@ -30,14 +30,13 @@ export type Database = {
     Tables: {
       activities: {
         Row: {
-          activity_id: number
           average_cadence: number | null
           average_speed: number | null
           average_watts: number | null
           created_at: string | null
           deleted_at: string | null
           distance: number | null
-          id: string
+          id: number
           max_heartrate: number | null
           max_speed: number | null
           max_watts: number | null
@@ -49,14 +48,13 @@ export type Database = {
           visibility: string | null
         }
         Insert: {
-          activity_id: number
           average_cadence?: number | null
           average_speed?: number | null
           average_watts?: number | null
           created_at?: string | null
           deleted_at?: string | null
           distance?: number | null
-          id?: string
+          id: number
           max_heartrate?: number | null
           max_speed?: number | null
           max_watts?: number | null
@@ -68,14 +66,13 @@ export type Database = {
           visibility?: string | null
         }
         Update: {
-          activity_id?: number
           average_cadence?: number | null
           average_speed?: number | null
           average_watts?: number | null
           created_at?: string | null
           deleted_at?: string | null
           distance?: number | null
-          id?: string
+          id?: number
           max_heartrate?: number | null
           max_speed?: number | null
           max_watts?: number | null
@@ -120,6 +117,7 @@ export type Database = {
       strava_user_tokens: {
         Row: {
           access_token: string
+          deleted_at: string | null
           expires_at: string
           refresh_token: string
           strava_athlete_id: number
@@ -127,6 +125,7 @@ export type Database = {
         }
         Insert: {
           access_token: string
+          deleted_at?: string | null
           expires_at: string
           refresh_token: string
           strava_athlete_id: number
@@ -134,6 +133,7 @@ export type Database = {
         }
         Update: {
           access_token?: string
+          deleted_at?: string | null
           expires_at?: string
           refresh_token?: string
           strava_athlete_id?: number

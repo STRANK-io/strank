@@ -18,7 +18,6 @@ const fetchTimelineData = async (
     .select(
       `
       id,
-      activity_id,
       name,
       start_date,
       distance,

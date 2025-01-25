@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useUserContext } from '@/contexts/UserContext'
 import { logError } from '@/lib/utils/log'
 
+// TODO: RPC 함수로 대체
 const useWithdrawal = () => {
   const supabase = createClient()
   const { userId } = useUserContext()
@@ -18,6 +19,16 @@ const useWithdrawal = () => {
         .eq('user_id', userId)
 
       if (activitiesError) throw activitiesError
+
+      const { error: stravaUserTokenError } = await supabase
+        .from('strava_user_tokens')
+        .update({ deleted_at: now })
+        .eq('user_id', userId)
+
+      if (stravaUserTokenError) {
+        //TODO: 활동데이터 롤백
+        throw stravaUserTokenError
+      }
 
       // 유저 데이터 soft delete
       const { error: userError } = await supabase

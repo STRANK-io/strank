@@ -51,6 +51,7 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
       .from('strava_user_tokens')
       .select('access_token, refresh_token, expires_at, user_id')
       .eq('strava_athlete_id', body.owner_id)
+      .is('deleted_at', null)
       .maybeSingle()
 
     if (tokenError) {

@@ -48,7 +48,12 @@ export async function GET(request: Request) {
       )
     }
 
-    const stravaData: StravaTokenResponse = await tokenResponse.json()
+    const {
+      athlete: { id: stravaAthleteId },
+      access_token: stravaAccessToken,
+      refresh_token: stravaRefreshToken,
+      expires_at: stravaExpiresAt,
+    }: StravaTokenResponse = await tokenResponse.json()
     const supabase = await createClient()
 
     const {
@@ -64,14 +69,29 @@ export async function GET(request: Request) {
       return redirectWithError(origin, ROUTES.PUBLIC.HOME, ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED)
     }
 
+    // 이미 연동된 스트라바 계정인지 조회
+    const { data: tokenData } = await supabase
+      .from('strava_user_tokens')
+      .select('*')
+      .eq('strava_athlete_id', stravaAthleteId)
+      .is('deleted_at', null)
+
+    if (tokenData) {
+      return redirectWithError(
+        origin,
+        ROUTES.PUBLIC.STRAVA_CONNECT,
+        ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED_ALREADY_CONNECTED
+      )
+    }
+
     // 스트라바 토큰 저장
     const { error: tokenError } = await supabase.from('strava_user_tokens').upsert(
       {
         user_id: user.id,
-        strava_athlete_id: stravaData.athlete.id as number,
-        access_token: stravaData.access_token,
-        refresh_token: stravaData.refresh_token,
-        expires_at: new Date(stravaData.expires_at * 1000).toISOString(),
+        strava_athlete_id: stravaAthleteId,
+        access_token: stravaAccessToken,
+        refresh_token: stravaRefreshToken,
+        expires_at: new Date(stravaExpiresAt * 1000).toISOString(),
       },
       {
         onConflict: 'user_id',
