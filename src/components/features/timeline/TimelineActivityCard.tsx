@@ -7,6 +7,32 @@ import { ACTIVITY_UNITS } from '@/lib/constants/unit'
 import { TimelineActivity } from '@/lib/types/timeline'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatActivityValue } from '@/lib/utils/activity'
+import { logError } from '@/lib/utils/log'
+
+const formatActivityDate = (dateString: string | null | undefined) => {
+  if (!dateString) return '-'
+
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return '-'
+
+    return date
+      .toLocaleDateString('ko-KR', {
+        month: '2-digit',
+        day: '2-digit',
+      })
+      .replace('.', '')
+      .slice(0, -1)
+  } catch (error) {
+    logError('Date parsing error:', {
+      error,
+      functionName: 'formatActivityDate',
+      dateString,
+      dateStringType: typeof dateString,
+    })
+    return '-'
+  }
+}
 
 interface TimelineActivityCardProps {
   activity?: TimelineActivity
@@ -79,17 +105,7 @@ export default function TimelineActivityCard({ activity, isLoading }: TimelineAc
           <h2 className="line-clamp-2 text-xl leading-[26px]">{activity.name}</h2>
           <MoveToStravaButton type="activity" id={activity.activity_id} />
         </div>
-        <p className="text-sm leading-[18.2px]">
-          {activity.start_date
-            ? new Date(activity.start_date)
-                .toLocaleDateString('ko-KR', {
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit',
-                })
-                .slice(0, -1)
-            : ''}
-        </p>
+        <p className="text-sm leading-[18.2px]">{formatActivityDate(activity.start_date)}</p>
       </div>
 
       <div
