@@ -18,11 +18,12 @@ const formatActivityDate = (dateString: string | null | undefined) => {
 
     return date
       .toLocaleDateString('ko-KR', {
+        year: 'numeric',
         month: '2-digit',
         day: '2-digit',
       })
-      .replace('.', '')
-      .slice(0, -1)
+      .replace(/\./g, '. ')
+      .slice(0, -2)
   } catch (error) {
     logError('Date parsing error:', {
       error,
