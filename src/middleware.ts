@@ -1,13 +1,31 @@
 import { ERROR_CODES } from '@/lib/constants/error'
 import { handleAuthAndRouting } from '@/lib/supabase/middleware'
-import { createClient } from '@/lib/supabase/server'
 import { logError } from '@/lib/utils/log'
 import { type NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { Database } from '@/lib/supabase/supabase'
+
+const createMiddlewareClient = (request: NextRequest, response: NextResponse) => {
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: cookiesToSet => {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set({ name, value, ...options })
+          })
+        },
+      },
+    }
+  )
+}
 
 export async function middleware(request: NextRequest) {
   try {
     const response = NextResponse.next()
-    const supabase = await createClient()
+    const supabase = createMiddlewareClient(request, response)
 
     const {
       data: { user: sessionUser },
