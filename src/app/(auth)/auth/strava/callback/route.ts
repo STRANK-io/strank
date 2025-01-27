@@ -76,7 +76,7 @@ export async function GET(request: Request) {
       .eq('strava_athlete_id', stravaAthleteId)
       .is('deleted_at', null)
 
-    if (tokenData) {
+    if (tokenData && tokenData[0]) {
       return redirectWithError(
         origin,
         ROUTES.PUBLIC.STRAVA_CONNECT,
