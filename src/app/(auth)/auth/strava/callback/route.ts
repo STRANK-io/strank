@@ -75,8 +75,10 @@ export async function GET(request: Request) {
       .select('*')
       .eq('strava_athlete_id', stravaAthleteId)
       .is('deleted_at', null)
+      .maybeSingle()
 
-    if (tokenData && tokenData[0]) {
+    // 있으면 이미 연동되었으니 가입 불가
+    if (tokenData) {
       return redirectWithError(
         origin,
         ROUTES.PUBLIC.STRAVA_CONNECT,
@@ -85,7 +87,7 @@ export async function GET(request: Request) {
     }
 
     // 스트라바 토큰 저장
-    const { error: tokenError } = await supabase.from('strava_user_tokens').upsert(
+    const { error: tokenSaveError } = await supabase.from('strava_user_tokens').upsert(
       {
         user_id: user.id,
         strava_athlete_id: stravaAthleteId,
@@ -98,9 +100,9 @@ export async function GET(request: Request) {
       }
     )
 
-    if (tokenError) {
+    if (tokenSaveError) {
       logError('Failed to save token to database', {
-        error: tokenError,
+        error: tokenSaveError,
         endpoint: 'auth/strava/callback',
       })
       return redirectWithError(
