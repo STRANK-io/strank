@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { ROUTES } from '@/lib/constants/routes'
 import { cn } from '@/lib/utils/cn'
 import { logError } from '@/lib/utils/log'
+import StrankVerticalLogo from '@/components/common/logos/StrankVerticalLogo'
+import CompatibleWithStravaImage from '@/components/common/CompatibleWithStravaImage'
 
 export default function StravaSyncPage() {
   const [progress, setProgress] = useState(0)
@@ -117,7 +118,7 @@ export default function StravaSyncPage() {
   }, [router, connectionAttempts])
 
   return (
-    <div className="pt-[104px]">
+    <div className="pt-[50px]">
       <div className={cn('fixed left-0 top-0 h-2 w-full', 'bg-brand-disabled')}>
         <div
           className="h-full rounded-full bg-brand-primary transition-all duration-300"
@@ -125,29 +126,22 @@ export default function StravaSyncPage() {
         />
       </div>
 
-      <div className="flex w-full flex-col gap-6 px-5">
-        <h2 className="text-[32px] font-bold leading-[41.6px]">연동중</h2>
-        <p className="whitespace-pre-line text-base font-bold leading-[20.8px] text-brand-dark">
-          {`소중한 운동정보를 가져오고 있습니다. (최근200개)\n조금만 기다려 주세요.\n자동으로 첫화면으로 이동됩니다.`}
-        </p>
-      </div>
+      <div className="flex h-full flex-col gap-4">
+        <div className="flex w-full flex-col gap-6 px-5">
+          <h2 className="text-[32px] font-bold leading-[41.6px]">연동중</h2>
+          <p className="whitespace-pre-line text-base font-bold leading-[20.8px] text-brand-dark">
+            {`소중한 운동정보를 가져오고 있습니다. (최근200개)\n조금만 기다려 주세요.\n자동으로 첫화면으로 이동됩니다.`}
+          </p>
+        </div>
 
-      <Image
-        src="/images/strank-vertical-logo.png"
-        alt="Strank Logo"
-        width={313}
-        height={313}
-        className="mx-auto mb-[146px] mt-[11px] object-contain"
-        priority
-      />
-      <Image
-        src="/images/with-strava-logo.png"
-        alt="Strank Logo"
-        width={130}
-        height={56}
-        className="mx-auto object-contain"
-        priority
-      />
+        <div className="mt-[11px] flex justify-center">
+          <StrankVerticalLogo />
+        </div>
+
+        <div className="flex w-full justify-center">
+          <CompatibleWithStravaImage />
+        </div>
+      </div>
     </div>
   )
 }
