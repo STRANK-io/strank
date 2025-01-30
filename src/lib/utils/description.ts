@@ -61,7 +61,7 @@ function generateRankingSection(
   isEveryone: boolean
 ): string {
   const { rankings, district } = rankingsWithDistrict || {}
-  let section = '■ 랭킹 정보 ■'
+  const section = '■ 랭킹 정보 ■'
 
   if (isEveryone) {
     return `${section}\n\n공개 범위를 everyone으로 설정하지 않은 데이터는 랭킹 정보가 표기되지 않습니다.`

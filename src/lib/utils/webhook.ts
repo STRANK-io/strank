@@ -37,13 +37,6 @@ import { Database } from '@/lib/supabase/supabase'
  */
 export async function processWebhookEvent(body: StravaWebhookEventResponse) {
   try {
-    console.log('Webhook event received:', {
-      owner_id: body.owner_id,
-      object_id: body.object_id,
-      aspect_type: body.aspect_type,
-      object_type: body.object_type,
-    })
-
     const supabase = await createServiceRoleClient()
 
     // * 유저의 스트라바 엑세스 토큰 조회
