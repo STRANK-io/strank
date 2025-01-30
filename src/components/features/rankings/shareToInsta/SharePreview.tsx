@@ -98,7 +98,9 @@ export default function SharePreview({
         {/* 하단: 라이딩 데이터 */}
         <div className="space-y-1">
           <div className="flex items-center gap-[6px]">
-            <div className="h-fit rounded-[8px] bg-[#FFF8E9] px-2 py-[6px] text-[9px] font-bold leading-[10.74px] text-[#CCA672]">{`${criteriaText} 기준`}</div>
+            <div className="flex items-center justify-center rounded-[8px] bg-[#FFF8E9] px-2 py-[6px] text-[9px] font-bold leading-[10.74px] text-[#CCA672]">
+              <span>{`${criteriaText} 기준`}</span>
+            </div>
             <span className="text-sm font-bold leading-[18.2px]">
               <span className="text-brand-primary"> {rank}위</span> / {criteriaValue}
             </span>
