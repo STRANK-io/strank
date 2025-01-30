@@ -7,20 +7,9 @@ import { CompleteButton } from '@/components/common/userInfo/CompleteButton'
 import { LogOutButton } from '@/components/features/auth/LogOutButton'
 import { WithdrawalButton } from '@/components/features/auth/WithdrawalButton'
 import SyncRecentActivitySection from '@/components/features/mypage/SyncRecentActivitySection'
-import { toast } from 'sonner'
-import { ToastContent } from '@/components/common/ToastContent'
 
 export default function MypagePage() {
   const { userId } = useUserContext()
-
-  const handleCopyEmail = async () => {
-    try {
-      await navigator.clipboard.writeText('support@strank.io')
-      toast(<ToastContent text="이메일 주소가 복사되었습니다." />)
-    } catch (error) {
-      toast('이메일 주소 복사에 실패했습니다.')
-    }
-  }
 
   return (
     <div className="space-y-16 pb-[150px]">
@@ -39,9 +28,9 @@ export default function MypagePage() {
         </Link>
         <div className="flex items-center gap-1">
           <span>제안 & 오류 신고 : </span>
-          <button onClick={handleCopyEmail} className="cursor-pointer">
+          <a href="mailto:support@strank.io" className="hover:underline">
             support@strank.io
-          </button>
+          </a>
         </div>
       </section>
       <section className="flex w-full flex-col items-center justify-center gap-12 text-sm font-bold leading-[18.2px]">
