@@ -37,12 +37,15 @@ export default function ReportChartSection({ dateRange, activeCriteria }: Report
             tick={{ fill: '#414042', fontSize: 13, fontWeight: 400 }}
             interval="preserveStartEnd"
           />
-          <YAxis axisLine={false} tickLine={false} tick={false} width={0} />
+          {activeCriteria.map(type => (
+            <YAxis key={`axis-${type}`} yAxisId={type} hide={true} domain={['auto', 'auto']} />
+          ))}
           {activeCriteria.map(type => (
             <Line
               key={type}
               type="monotone"
               dataKey={type}
+              yAxisId={type}
               stroke={ACTIVITY_COLORS[type]}
               strokeWidth={1}
               dot={false}
