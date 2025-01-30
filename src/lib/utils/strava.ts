@@ -102,7 +102,11 @@ export async function fetchStravaActivities(
     throw new Error(ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED)
   }
   const data: StravaActivity[] = await response.json()
-  const ridingActivities = data.filter(activity => activity.type === STRAVA_ACTIVITY_TYPE.RIDE)
+  const ridingActivities = data.filter(
+    activity =>
+      activity.type &&
+      activity.type.trim().toLowerCase() === STRAVA_ACTIVITY_TYPE.RIDE.toLowerCase()
+  )
 
   return ridingActivities
 }
