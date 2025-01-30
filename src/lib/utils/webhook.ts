@@ -120,14 +120,15 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
 
     let rankingsWithDistrict: CalculateActivityRankingReturn | null = null
 
+    const isEveryone = activity.visibility === STRAVA_VISIBILITY.EVERYONE
     // * 랭킹 정보 계산
     // * activity.visibility가 everyone이 아닌 경우는 랭킹 데이터 계산 생략 및 디스크립션에 넣지 않음
-    if (activity.visibility === STRAVA_VISIBILITY.EVERYONE) {
+    if (isEveryone) {
       rankingsWithDistrict = await calculateActivityRanking(activity, user_id, supabase)
     }
 
     // * 디스크립션 생성
-    const description = generateActivityDescription(activity, rankingsWithDistrict)
+    const description = generateActivityDescription(activity, rankingsWithDistrict, isEveryone)
 
     // * 스트라바 활동 업데이트
     await updateStravaActivityDescription(accessToken, activity, description)

@@ -17,11 +17,93 @@ import { logError } from '@/lib/utils/log'
  */
 export function generateActivityDescription(
   activity: StravaActivity,
-  rankingsWithDistrict: CalculateActivityRankingReturn | null
+  rankingsWithDistrict: CalculateActivityRankingReturn | null,
+  isEveryone: boolean
+): string {
+  const sections = [
+    generateDateSection(activity.start_date),
+    generateRankingSection(rankingsWithDistrict, isEveryone),
+    generateAnalysisSection(activity),
+  ]
+
+  return sections.join('\n\n')
+}
+
+/**
+ * 활동 날짜 섹션 생성 함수
+ *
+ * @param startDate - 활동 날짜
+ * @returns 활동 날짜 섹션
+ */
+function generateDateSection(startDate: string): string {
+  const date = new Date(startDate)
+    .toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+    .replace(/\. /g, '/')
+    .replace('.', '')
+
+  return `◎ 라이딩 리포트 ◎ 
+(${date})`
+}
+
+/**
+ * 랭킹 섹션 생성 함수
+ *
+ * @param rankingsWithDistrict - 랭킹 데이터
+ * @param isEveryone - 공개 범위가 everyone인지 여부
+ * @returns 랭킹 섹션
+ */
+function generateRankingSection(
+  rankingsWithDistrict: CalculateActivityRankingReturn | null,
+  isEveryone: boolean
 ): string {
   const { rankings, district } = rankingsWithDistrict || {}
+  let section = '■ 랭킹 정보 ■'
+
+  if (isEveryone) {
+    return `${section}\n\n공개 범위를 everyone으로 설정하지 않은 데이터는 랭킹 정보가 표기되지 않습니다.`
+  }
+
+  if (!rankings) return section
+
+  const { distanceRankCity, distanceRankDistrict, elevationRankCity, elevationRankDistrict } =
+    rankings
+  const sections = []
+
+  // 거리 랭킹 섹션
+  sections.push('\n※ 거리 랭킹 ※')
+  if (distanceRankCity && distanceRankDistrict) {
+    sections.push(`📍 서울시 (${distanceRankCity.toLocaleString()}위)
+📍 서울시 ${district} (${distanceRankDistrict.toLocaleString()}위)`)
+  } else if (!distanceRankCity && !distanceRankDistrict) {
+    sections.push(
+      '이번주 내 거리기준으로 총합 1km를 넘지 않은 경우, 랭킹 정보가 표기되지 않습니다.'
+    )
+  }
+
+  // 고도 랭킹 섹션
+  sections.push('\n※ 고도 랭킹 ※')
+  if (elevationRankCity && elevationRankDistrict) {
+    sections.push(`📍 서울시 (${elevationRankCity.toLocaleString()}위)
+📍 서울시 ${district} (${elevationRankDistrict.toLocaleString()}위)`)
+  } else if (!elevationRankCity && !elevationRankDistrict) {
+    sections.push('이번주 내 고도기준으로 총합 1m를 넘지 않은 경우, 랭킹 정보가 표기되지 않습니다.')
+  }
+
+  return sections.length ? `${section}\n${sections.join('\n')}` : section
+}
+
+/**
+ * 분석 섹션 생성 함수
+ *
+ * @param activity - 분석할 활동 데이터
+ * @returns 분석 섹션
+ */
+function generateAnalysisSection(activity: StravaActivity): string {
   const {
-    start_date,
     distance = 0,
     total_elevation_gain = 0,
     average_speed = 0,
@@ -32,58 +114,24 @@ export function generateActivityDescription(
     average_cadence = 0,
   } = activity
 
-  const date = new Date(start_date)
-    .toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    })
-    .replace(/\. /g, '/')
-    .replace('.', '')
+  const metrics = [
+    ['총거리', formatActivityValue(distance, 'distance'), ACTIVITY_UNITS.DISTANCE],
+    ['총고도', formatActivityValue(total_elevation_gain), ACTIVITY_UNITS.ELEVATION],
+    ['평균속도', formatActivityValue(average_speed, 'speed'), ACTIVITY_UNITS.SPEED],
+    ['최고속도', formatActivityValue(max_speed, 'speed'), ACTIVITY_UNITS.SPEED],
+    ['평균파워', formatActivityValue(average_watts), ACTIVITY_UNITS.POWER],
+    ['최대파워', formatActivityValue(max_watts), ACTIVITY_UNITS.POWER],
+    ['최고심박수', formatActivityValue(max_heartrate), ACTIVITY_UNITS.HEART_RATE],
+    ['평균케이던스', formatActivityValue(average_cadence), ACTIVITY_UNITS.CADENCE],
+  ]
 
-  // 기본 정보 섹션
-  let description = `◎ 라이딩 리포트 ◎
-(${date})`
+  const analysisInfo = metrics
+    .map(([label, value, unit]) => `${label} : ${value} ${unit}`)
+    .join('\n')
 
-  // rankings가 있고, null이 아닌 경우에만 랭킹 정보 섹션 추가
-  if (rankings) {
-    const { distanceRankCity, distanceRankDistrict, elevationRankCity, elevationRankDistrict } =
-      rankings
-
-    description += '\n\n■ 랭킹 정보 ■'
-
-    // 거리 랭킹이 있는 경우
-    if (distanceRankCity && distanceRankDistrict) {
-      description += `
-※ 거리 랭킹 ※
-📍 서울시 (${distanceRankCity.toLocaleString()}위)
-📍 서울시 ${district} (${distanceRankDistrict.toLocaleString()}위)`
-    }
-
-    // 고도 랭킹이 있는 경우
-    if (elevationRankCity && elevationRankDistrict) {
-      description += `
-※ 고도 랭킹 ※
-📍 서울시 (${elevationRankCity.toLocaleString()}위)
-📍 서울시 ${district} (${elevationRankDistrict.toLocaleString()}위)`
-    }
-  }
-
-  // 분석 정보 섹션
-  description += `
-\n■ 라이딩 분석 정보 ■
-총거리 : ${formatActivityValue(distance, 'distance')} ${ACTIVITY_UNITS.DISTANCE}
-총고도 : ${formatActivityValue(total_elevation_gain)} ${ACTIVITY_UNITS.ELEVATION}
-평균속도 : ${formatActivityValue(average_speed, 'speed')} ${ACTIVITY_UNITS.SPEED}
-최고속도 : ${formatActivityValue(max_speed, 'speed')} ${ACTIVITY_UNITS.SPEED}
-평균파워 : ${formatActivityValue(average_watts)} ${ACTIVITY_UNITS.POWER}
-최대파워 : ${formatActivityValue(max_watts)} ${ACTIVITY_UNITS.POWER}
-최고심박수 : ${formatActivityValue(max_heartrate)} ${ACTIVITY_UNITS.HEART_RATE}
-평균케이던스 : ${formatActivityValue(average_cadence)} ${ACTIVITY_UNITS.CADENCE}
-🔗 Powered by STRANK
-`
-
-  return description
+  return `■ 라이딩 분석 정보 ■
+${analysisInfo}
+🔗 Powered by STRANK`
 }
 
 /**
