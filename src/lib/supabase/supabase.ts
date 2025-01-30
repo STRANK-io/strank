@@ -246,6 +246,12 @@ export type Database = {
       }
     }
     Functions: {
+      check_nickname_exists: {
+        Args: {
+          p_nickname: string
+        }
+        Returns: boolean
+      }
       get_activity_rankings: {
         Args: {
           p_activity_id: number

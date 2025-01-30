@@ -3,7 +3,10 @@ import { DateRange } from '@/lib/types/report'
 
 export const QUERY_KEYS = {
   USER: {
-    INFO: (userId: string) => ['user', 'info', userId] as const,
+    DEFAULT: ['user'] as const,
+    INFO: (userId: string) => [...QUERY_KEYS.USER.DEFAULT, 'info', userId] as const,
+    CHECK_NICKNAME: (nickname: string) =>
+      [...QUERY_KEYS.USER.DEFAULT, 'check-nickname', nickname] as const,
   },
   RANKINGS: {
     DEFAULT: ['rankings'] as const,

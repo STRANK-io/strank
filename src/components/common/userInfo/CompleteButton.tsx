@@ -10,6 +10,7 @@ import { ERROR_MESSAGES } from '@/lib/constants/error'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '@/lib/constants/routes'
+import { useCheckNicknameExistQuery } from '@/hooks/user/api/useCheckNicknameExistQuery'
 
 interface CompleteButtonProps {
   userId: string
@@ -19,8 +20,11 @@ interface CompleteButtonProps {
 
 export const CompleteButton = ({ userId, text, isMypage }: CompleteButtonProps) => {
   const router = useRouter()
+
   const { profileImage, nickname, district } = useUserInfoStore()
   const { mutate, isPending } = useUpdateUserInfo()
+  const { refetch: checkNickname } = useCheckNicknameExistQuery(nickname)
+
   const initialValuesRef = useRef<{
     profileImage: File | null
     nickname: string
@@ -58,32 +62,43 @@ export const CompleteButton = ({ userId, text, isMypage }: CompleteButtonProps) 
       return
     }
 
-    if (!district) return
+    try {
+      const { data: isNicknameExists } = await checkNickname()
 
-    mutate(
-      {
-        user_id: userId,
-        nickname,
-        district,
-        profileImage,
-      },
-      {
-        onSuccess: () => {
-          if (isMypage) {
-            initialValuesRef.current = {
-              profileImage,
-              nickname,
-              district,
-            }
-          } else {
-            router.push(ROUTES.PUBLIC.STRAVA_CONNECT)
-          }
-        },
-        onError: error => {
-          toast(<ToastContent text={ERROR_MESSAGES[error.message]} />)
-        },
+      if (isNicknameExists) {
+        toast(<ToastContent text="이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요." />)
+        return
       }
-    )
+
+      if (!district) return
+
+      mutate(
+        {
+          user_id: userId,
+          nickname,
+          district,
+          profileImage,
+        },
+        {
+          onSuccess: () => {
+            if (isMypage) {
+              initialValuesRef.current = {
+                profileImage,
+                nickname,
+                district,
+              }
+            } else {
+              router.push(ROUTES.PUBLIC.STRAVA_CONNECT)
+            }
+          },
+          onError: error => {
+            toast(<ToastContent text={ERROR_MESSAGES[error.message]} />)
+          },
+        }
+      )
+    } catch (error) {
+      toast(<ToastContent text="닉네임 중복 확인 중 오류가 발생했습니다. 다시 시도해주세요." />)
+    }
   }
 
   return (
