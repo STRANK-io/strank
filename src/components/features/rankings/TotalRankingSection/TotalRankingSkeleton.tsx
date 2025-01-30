@@ -1,21 +1,6 @@
-'use client'
-
-import { Suspense } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
-import TotalRankingList from '@/components/features/rankings/TotalRankingList'
 
-export function TotalRankingSection() {
-  return (
-    <section className="space-y-4">
-      <h2 className="text-2xl font-bold leading-[31.2px] text-brand-dark">전체 랭킹</h2>
-      <Suspense fallback={<TotalRankingSkeleton />}>
-        <TotalRankingList />
-      </Suspense>
-    </section>
-  )
-}
-
-function TotalRankingSkeleton() {
+export default function TotalRankingSkeleton() {
   return (
     <>
       <Skeleton className="h-[231px] w-full rounded-2xl" />
