@@ -16,7 +16,7 @@ function TermsSection({ title, children }: TermsSectionProps) {
 
 export default function TermsAgreement() {
   return (
-    <div className="flex max-h-[calc(100dvh-500px)] flex-col gap-6 overflow-y-auto px-5 text-brand-dark">
+    <div className="flex max-h-[calc(100dvh-470px)] flex-col gap-6 overflow-y-auto px-5 text-brand-dark">
       <TermsSection title="스트랭크 이용관련 안내고지">
         <p>
           1. 스트랭크는 라이더의 모든 순간을 함께하며 라이더에게 동기부여와 즐거움을 주는 정보를

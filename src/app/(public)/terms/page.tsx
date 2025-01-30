@@ -5,13 +5,13 @@ import StrankDefaultLogo from '@/components/common/logos/StrankDefaultLogo'
 
 export default function TermsPage() {
   return (
-    <div className="pb-[130px]">
+    <div className="pb-[120px]">
       <StepIndicator />
       <div className="mb-11 mt-5 flex flex-col items-center justify-center">
         <StrankDefaultLogo />
       </div>
       <TermsAgreement />
-      <div className="fixed bottom-12 left-1/2 w-full max-w-[450px] -translate-x-1/2 px-5">
+      <div className="fixed bottom-10 left-1/2 w-full max-w-[450px] -translate-x-1/2 px-5">
         <AgreeButton />
       </div>
     </div>
