@@ -4,6 +4,7 @@ import TimelineActivityCard from '@/components/features/timeline/TimelineActivit
 import { useTimelineQuery } from '@/hooks/activities/api/useTimelineQuery'
 import { useInView } from 'react-intersection-observer'
 import { useEffect } from 'react'
+import ActivityCardSkeleton from '@/components/features/timeline/ActivityCardSkeleton'
 
 export default function TimelinePage() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useTimelineQuery()
@@ -19,7 +20,7 @@ export default function TimelinePage() {
     return (
       <div className="mt-[39px] space-y-4 px-5 pb-[150px]">
         {[...Array(3)].map((_, i) => (
-          <TimelineActivityCard key={i} isLoading />
+          <ActivityCardSkeleton key={i} />
         ))}
       </div>
     )
@@ -48,7 +49,7 @@ export default function TimelinePage() {
       {isFetchingNextPage && (
         <div className="space-y-4">
           {[...Array(2)].map((_, i) => (
-            <TimelineActivityCard key={i} isLoading />
+            <ActivityCardSkeleton key={i} />
           ))}
         </div>
       )}
