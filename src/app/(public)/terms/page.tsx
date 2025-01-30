@@ -7,7 +7,7 @@ export default function TermsPage() {
   return (
     <div className="pb-[130px]">
       <StepIndicator />
-      <div className="my-11 flex flex-col items-center justify-center">
+      <div className="mb-11 mt-5 flex flex-col items-center justify-center">
         <StrankDefaultLogo />
       </div>
       <TermsAgreement />

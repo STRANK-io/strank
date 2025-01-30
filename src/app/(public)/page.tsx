@@ -14,7 +14,7 @@ export default function HomePage() {
       </Suspense>
 
       <div className="flex flex-1 flex-col px-5">
-        <div className="mb-8 mt-12 flex flex-col gap-6">
+        <div className="mb-3 mt-10 flex flex-col gap-6">
           <StrankTitleLogo width={120} height={23} />
           <div className="flex flex-col text-base font-bold leading-[21px] text-brand-dark">
             <span>지역별 랭킹으로 더 가까워진</span>
@@ -26,7 +26,7 @@ export default function HomePage() {
           <StrankVerticalLogo />
         </div>
 
-        <div className="mb-[48px] mt-[91px] flex flex-col items-center gap-6">
+        <div className="mb-[48px] mt-[50px] flex flex-col items-center gap-6">
           <GoogleSignButton />
           <Link
             href="https://bit.ly/strank"

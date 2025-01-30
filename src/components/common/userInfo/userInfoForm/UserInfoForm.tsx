@@ -47,7 +47,7 @@ export const UserInfoForm = ({ userId }: { userId: string }) => {
   }
 
   return (
-    <div className="mt-[48px] w-full px-5">
+    <div className="mt-6 w-full px-5">
       <ProfileImage
         imageUrl={imagePreviewUrl}
         onImageChange={handleImageChange}

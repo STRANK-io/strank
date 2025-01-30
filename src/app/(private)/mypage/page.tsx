@@ -14,7 +14,9 @@ export default function MypagePage() {
   return (
     <div className="space-y-16 pb-[150px]">
       <section className="flex flex-col items-center gap-6">
-        <UserInfoForm userId={userId} />
+        <div className="mt-6">
+          <UserInfoForm userId={userId} />
+        </div>
         <div className="w-full px-5">
           <CompleteButton userId={userId} text="저장 완료" isMypage />
         </div>
