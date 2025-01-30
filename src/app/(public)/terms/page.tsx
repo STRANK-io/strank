@@ -11,7 +11,7 @@ export default function TermsPage() {
         <StrankDefaultLogo />
       </div>
       <TermsAgreement />
-      <div className="fixed bottom-10 left-1/2 w-full max-w-[450px] -translate-x-1/2 px-5">
+      <div className="fixed bottom-6 left-1/2 w-full max-w-[450px] -translate-x-1/2 px-5">
         <AgreeButton />
       </div>
     </div>
