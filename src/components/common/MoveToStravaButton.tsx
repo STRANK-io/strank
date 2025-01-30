@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { isMobile } from 'react-device-detect'
 import { logError } from '@/lib/utils/log'
 import { getStravaUrls, handleStravaDeepLink, openInNewTab } from '@/lib/utils/moveToStrava'
+import StravaLogo from '@/components/common/logos/StravaLogo'
 
 interface MoveToStravaButtonProps {
   type: 'activity' | 'athlete'
@@ -30,15 +31,8 @@ export const MoveToStravaButton = ({ type, id }: MoveToStravaButtonProps) => {
   }
 
   return (
-    <Image
-      src="/images/strava-logo.png"
-      role="button"
-      alt="Strank Logo"
-      width={24}
-      height={24}
-      className="cursor-pointer object-contain"
-      priority
-      onClick={handleClickStravaLogo}
-    />
+    <button onClick={handleClickStravaLogo} className="h-6 w-6">
+      <StravaLogo className="h-full w-full" />
+    </button>
   )
 }
