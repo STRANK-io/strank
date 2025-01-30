@@ -2,6 +2,7 @@ import { Database } from '@/lib/supabase/supabase'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { SupabaseClient } from '@supabase/supabase-js'
 import {
+  STRAVA_ACTIVITY_TYPE,
   STRAVA_API_URL,
   STRAVA_ATHLETE_ACTIVITIES_ENDPOINT,
   SYNC_CONFIG,
@@ -100,8 +101,10 @@ export async function fetchStravaActivities(
     })
     throw new Error(ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED)
   }
+  const data: StravaActivity[] = await response.json()
+  const ridingActivities = data.filter(activity => activity.type === STRAVA_ACTIVITY_TYPE.RIDE)
 
-  return response.json()
+  return ridingActivities
 }
 
 /**

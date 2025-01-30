@@ -13,3 +13,7 @@ export const STRAVA_VISIBILITY = {
   FOLLOWERS_ONLY: 'followers_only',
   ONLY_ME: 'only_me',
 } as const
+
+export const STRAVA_ACTIVITY_TYPE = {
+  RIDE: 'Ride',
+} as const
