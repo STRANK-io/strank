@@ -12,7 +12,7 @@ export default function MypagePage() {
   const { userId } = useUserContext()
 
   return (
-    <div className="space-y-16 pb-[150px]">
+    <div className="space-y-16 pb-[75px]">
       <section className="flex flex-col items-center gap-6">
         <div className="mt-6">
           <UserInfoForm userId={userId} />
