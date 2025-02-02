@@ -21,9 +21,11 @@ export default function MypagePage() {
           <CompleteButton userId={userId} text="저장 완료" isMypage />
         </div>
       </section>
+
       <section className="w-full space-y-2 px-5">
         <SyncRecentActivitySection />
       </section>
+
       <section className="flex w-full flex-col items-center justify-center gap-4 text-sm font-bold leading-[18.2px] text-brand-dark">
         <Link href="https://bit.ly/strank" className="underline decoration-brand-dark">
           공지사항
@@ -35,6 +37,7 @@ export default function MypagePage() {
           </a>
         </div>
       </section>
+
       <section className="flex w-full flex-col items-center justify-center gap-12 text-sm font-bold leading-[18.2px]">
         <LogOutButton />
         <WithdrawalButton />
