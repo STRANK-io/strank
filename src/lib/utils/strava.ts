@@ -15,34 +15,36 @@ import { logError } from '@/lib/utils/log'
  * 스트라바 데이터 동기화 진행률을 계산하는 함수
  *
  * @description
- * 데이터 가져오기(40%)와 처리(60%)의 두 단계로 나누어 전체 진행률을 계산합니다
+ * 전체 과정을 세 단계로 나누어 진행률을 계산합니다:
+ * 1. 초기 연결 및 데이터 요청 (0-20%)
+ * 2. 데이터 가져오기 (20-40%)
+ * 3. 데이터 처리 (40-100%)
  *
- * @param fetchedPages - 현재까지 가져온 페이지 수
- * @param totalPages - 전체 페이지 수 (아직 알 수 없는 경우 null)
  * @param processedActivities - 처리 완료된 활동 수
  * @param totalActivities - 전체 활동 수 (아직 알 수 없는 경우 null)
+ * @param stage - 현재 진행 단계 ('connecting' | 'fetching' | 'processing')
  * @returns {number} 0-100 사이의 진행률 퍼센트
  */
 export function calculateProgress(
-  fetchedPages: number,
-  totalPages: number | null,
   processedActivities: number,
-  totalActivities: number | null
+  totalActivities: number | null,
+  stage: 'connecting' | 'fetching' | 'processing'
 ): number {
-  if (totalPages === null) {
-    // 데이터 가져오는 중일 때는 전체의 40%를 할당
-    return Math.round((fetchedPages / 10) * 40) // 초기 10페이지 기준
+  switch (stage) {
+    case 'connecting':
+      // 초기 연결 단계 (0-20%)
+      return 10
+    case 'fetching':
+      // 데이터 가져오기 단계 (20-40%)
+      return 30
+    case 'processing':
+      if (!totalActivities) return 40
+      // 데이터 처리 단계 (40-100%)
+      const processProgress = Math.round((processedActivities / totalActivities) * 60)
+      return Math.min(100, 40 + processProgress)
+    default:
+      return 0
   }
-
-  // 데이터 가져오기: 전체의 40%
-  const fetchProgress = totalPages ? Math.round((fetchedPages / totalPages) * 40) : 40
-
-  // 데이터 처리: 전체의 60%
-  const processProgress = totalActivities
-    ? Math.round((processedActivities / totalActivities) * 60)
-    : 0
-
-  return Math.min(100, fetchProgress + processProgress)
 }
 
 /**
