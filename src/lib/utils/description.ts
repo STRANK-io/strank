@@ -142,7 +142,7 @@ ${analysisInfo}
  *
  * @param accessToken - 스트라바 액세스 토큰
  * @param stravaActivity - 업데이트할 활동 정보
- * @param newDescription - 추가할 새로운 설명
+ * @param strankDescription - 스트랭크의 디스크립션
  *
  * @throws {Error} API_LIMIT_EXCEEDED - API 호출 한도 초과 시
  * @throws {Error} ACTIVITY_UPDATE_FAILED - 활동 업데이트 실패 시
@@ -153,11 +153,11 @@ ${analysisInfo}
 export async function updateStravaActivityDescription(
   accessToken: string,
   stravaActivity: StravaActivity,
-  newDescription: string
+  strankDescription: string
 ): Promise<void> {
   const combinedDescription = stravaActivity.description
-    ? `${stravaActivity.description}\n\n${newDescription}`
-    : newDescription
+    ? `${strankDescription}\n\n${stravaActivity.description}`
+    : strankDescription
 
   const updateResponse = await fetch(
     `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
