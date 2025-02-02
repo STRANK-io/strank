@@ -6,11 +6,6 @@ import { usePathname } from 'next/navigation'
 
 const HAS_TO_SHOW_HEADER_PATHS = [
   {
-    path: ROUTES.PUBLIC.HOME,
-    prevPath: ROUTES.PUBLIC.HOME,
-    label: '로그인',
-  },
-  {
     path: ROUTES.PUBLIC.TERMS,
     prevPath: ROUTES.PUBLIC.HOME,
     label: '약관 동의',
