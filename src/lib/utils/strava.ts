@@ -11,11 +11,13 @@ import { StravaActivity } from '@/lib/types/strava'
 import { convertUTCToKoreanTime } from '@/lib/utils/date'
 import { logError } from '@/lib/utils/log'
 
+let lastProgress = 0
+
 /**
  * 스트라바 데이터 동기화 진행률을 계산하는 함수
  *
  * @description
- * 전체 과정을 세 단계로 나누어 진행률을 계산합니다:
+ * 전체 과정을 세 단계로 나누어 진행률을 계산하며, 부드러운 진행을 위해 보간법을 적용합니다:
  * 1. 초기 연결 및 데이터 요청 (0-20%)
  * 2. 데이터 가져오기 (20-40%)
  * 3. 데이터 처리 (40-100%)
@@ -30,22 +32,36 @@ export function calculateProgress(
   totalActivities: number | null,
   stage: 'connecting' | 'fetching' | 'processing'
 ): number {
+  let currentProgress: number
+
   switch (stage) {
     case 'connecting':
-      // 초기 연결 단계 (0-20%)
-      return 10
+      currentProgress = 10
+      break
     case 'fetching':
-      // 데이터 가져오기 단계 (20-40%)
-      return 30
+      currentProgress = 30
+      break
     case 'processing': {
-      if (!totalActivities) return 40
-      // 데이터 처리 단계 (40-100%)
-      const processProgress = Math.round((processedActivities / totalActivities) * 60)
-      return Math.min(100, 40 + processProgress)
+      if (!totalActivities) {
+        currentProgress = 40
+      } else {
+        const processProgress = Math.round((processedActivities / totalActivities) * 60)
+        currentProgress = Math.min(100, 40 + processProgress)
+      }
+      break
     }
     default:
-      return 0
+      currentProgress = 0
   }
+
+  // 부드러운 보간 적용 (최대 10%까지만 증가 허용)
+  const maxIncrease = 10
+  const smoothProgress = Math.min(currentProgress, lastProgress + maxIncrease)
+
+  // 진행률이 감소하는 것 방지
+  lastProgress = Math.max(lastProgress, smoothProgress)
+
+  return lastProgress
 }
 
 /**
