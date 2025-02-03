@@ -10,8 +10,8 @@ export interface ReportFilter {
 
 export type ActivityData = Pick<
   Database['public']['Tables']['activities']['Row'],
-  'id' | 'distance' | 'total_elevation_gain' | 'average_speed' | 'average_watts'
-> & { date: string }
+  'id' | 'distance' | 'total_elevation_gain' | 'average_speed' | 'average_watts' | 'start_date'
+>
 
 export interface ReportResponse {
   activities: ActivityData[]

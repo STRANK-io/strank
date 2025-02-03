@@ -58,7 +58,7 @@ const fetchReportData = async (dateRange: DateRange, userId: string): Promise<Re
   return {
     activities: activities.map(activity => ({
       id: activity.id,
-      date: activity.start_date ? new Date(activity.start_date).toLocaleDateString() : '',
+      start_date: activity.start_date || '',
       distance: activity.distance || 0,
       total_elevation_gain: activity.total_elevation_gain || 0,
       average_speed: activity.average_speed || 0,

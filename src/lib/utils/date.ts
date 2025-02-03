@@ -7,16 +7,15 @@ import { toZonedTime } from 'date-fns-tz'
  * @param date - 변환할 날짜 문자열
  * @returns 변환된 날짜 문자열
  */
-export const formatDateForReport = (date: string) => {
-  return (
-    new Date(date)
-      .toLocaleDateString('ko', {
-        month: '2-digit',
-        day: '2-digit',
-      })
-      .replace('. ', '.')
-      .slice(0, -1) || ''
-  )
+export const formatDateForReport = (date: string | null) => {
+  if (!date) return '-'
+
+  try {
+    const parsedDate = parseISO(date)
+    return format(parsedDate, 'MM.dd')
+  } catch {
+    return '-'
+  }
 }
 
 /**

@@ -9,7 +9,7 @@ export default function ReportChartSection({ dateRange, activeCriteria }: Report
 
   // chart에는 number type의 데이터가 필요해서 formatActivityValue 함수 미사용
   const chartData = [...data.activities].reverse().map(activity => ({
-    date: formatDateForReport(activity.date),
+    date: formatDateForReport(activity.start_date),
     distance: activity.distance || 0,
     elevation: activity.total_elevation_gain || 0,
     speed: activity.average_speed || 0,

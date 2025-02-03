@@ -28,7 +28,7 @@ export default function ReportTableSection({ dateRange }: Pick<ReportFilter, 'da
             <div key={activity.id}>
               <ReportTableRow
                 texts={[
-                  formatDateForReport(activity.date),
+                  formatDateForReport(activity.start_date),
                   `${formatActivityValue(activity.distance, 'distance')} ${ACTIVITY_UNITS.DISTANCE}`,
                   `${formatActivityValue(activity.total_elevation_gain)} ${ACTIVITY_UNITS.ELEVATION}`,
                   `${formatActivityValue(activity.average_speed, 'speed')} ${ACTIVITY_UNITS.SPEED}`,
