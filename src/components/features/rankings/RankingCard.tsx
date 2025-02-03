@@ -33,9 +33,9 @@ export function RankingCard({
     <div
       className={cn(
         'flex flex-1 gap-3 rounded-2xl bg-white px-3 py-4',
-        variant === 'default' ? 'items-center justify-between ' : 'flex-col'
+        variant === 'default' ? 'items-center justify-between ' : 'flex-col',
+        'shadow-[0px_8px_16px_0px_#00000017]'
       )}
-      style={{ boxShadow: '0px 8px 16px 0px #00000017' }}
     >
       <span
         className={cn(
@@ -68,9 +68,9 @@ export function RankingCard({
               <Image
                 src={activity.user.imageUrl}
                 alt="User Image"
-                width={variant === 'ranker' ? 94 : 40}
-                height={variant === 'ranker' ? 94 : 40}
-                className="aspect-square"
+                fill
+                sizes={variant === 'ranker' ? '94px' : '40px'}
+                className="object-cover"
               />
             ) : (
               <DefaultUserIcon
