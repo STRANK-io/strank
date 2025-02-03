@@ -205,6 +205,7 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           district: string | null
+          email: string
           id: string
           last_activity_sync_at: string | null
           name: string | null
@@ -216,6 +217,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           district?: string | null
+          email: string
           id: string
           last_activity_sync_at?: string | null
           name?: string | null
@@ -227,6 +229,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           district?: string | null
+          email?: string
           id?: string
           last_activity_sync_at?: string | null
           name?: string | null
@@ -234,7 +237,15 @@ export type Database = {
           strava_connected_at?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'users_email_fkey'
+            columns: ['email']
+            isOneToOne: true
+            referencedRelation: 'users'
+            referencedColumns: ['email']
+          },
+        ]
       }
     }
     Views: {
