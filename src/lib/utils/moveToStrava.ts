@@ -18,7 +18,7 @@ const handleStravaDeepLink = async (urls: StravaUrls) => {
 
   try {
     await Promise.race([timeout, tryOpenStravaApp(urls.appUrl)])
-  } catch (error) {
+  } catch (_error) {
     // 앱 실행 실패 시 웹으로 이동
     openInNewTab(urls.webUrl)
   }

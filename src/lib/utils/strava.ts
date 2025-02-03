@@ -37,11 +37,12 @@ export function calculateProgress(
     case 'fetching':
       // 데이터 가져오기 단계 (20-40%)
       return 30
-    case 'processing':
+    case 'processing': {
       if (!totalActivities) return 40
       // 데이터 처리 단계 (40-100%)
       const processProgress = Math.round((processedActivities / totalActivities) * 60)
       return Math.min(100, 40 + processProgress)
+    }
     default:
       return 0
   }

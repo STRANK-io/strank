@@ -61,7 +61,7 @@ const useUpdateUserInfo = () => {
         throw new Error(ERROR_CODES.INTERNAL_ERROR)
       }
     },
-    onSuccess: (_, { user_id }) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.USER.DEFAULT })
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.RANKINGS.DEFAULT })
     },

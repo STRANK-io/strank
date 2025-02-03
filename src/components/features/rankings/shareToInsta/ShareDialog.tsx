@@ -56,7 +56,7 @@ export default function ShareDialog({
     }
   }
 
-  const showToastError = (message: string, error?: unknown) => {
+  const showToastError = (message: string, _error?: unknown) => {
     toast(<ToastContent text={message} />)
   }
 

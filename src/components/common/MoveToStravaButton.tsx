@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { isMobile } from 'react-device-detect'
 import { logError } from '@/lib/utils/log'
 import { getStravaUrls, handleStravaDeepLink, openInNewTab } from '@/lib/utils/moveToStrava'
