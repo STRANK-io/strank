@@ -33,13 +33,13 @@ export function resetProgress() {
  *
  * @param processedActivities - 처리 완료된 활동 수
  * @param totalActivities - 전체 활동 수 (아직 알 수 없는 경우 null)
- * @param stage - 현재 진행 단계 ('connecting' | 'fetching' | 'processing')
+ * @param stage - 현재 진행 단계 ('connecting' | 'fetching' | 'processing' | 'completed')
  * @returns {number} 0-100 사이의 진행률 퍼센트
  */
 export function calculateProgress(
   processedActivities: number,
   totalActivities: number | null,
-  stage: 'connecting' | 'fetching' | 'processing'
+  stage: 'connecting' | 'fetching' | 'processing' | 'completed'
 ): number {
   let targetProgress: number
 
@@ -64,11 +64,14 @@ export function calculateProgress(
 
         // 모든 활동이 처리되었을 때
         if (processedActivities >= totalActivities) {
-          targetProgress = 100
+          targetProgress = 99 // processing 단계에서는 99%까지만
         }
       }
       break
     }
+    case 'completed':
+      targetProgress = 100 // completed 단계에서는 무조건 100%
+      break
     default:
       targetProgress = 0
   }
@@ -77,7 +80,7 @@ export function calculateProgress(
   targetProgress = Math.max(targetProgress, lastProgress)
 
   // 부드러운 증가를 위한 스텝 크기 계산
-  const step = targetProgress === 100 ? 15 : 8
+  const step = stage === 'completed' ? 100 : 8 // completed 단계에서는 바로 100%로
   const newProgress = Math.min(targetProgress, lastProgress + step)
 
   // 상태 업데이트

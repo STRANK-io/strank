@@ -153,12 +153,12 @@ export async function GET() {
         // 최종 진행률 업데이트를 위한 대기
         await new Promise(resolve => setTimeout(resolve, 500))
 
-        // 마지막으로 한 번 더 progress 상태로 100% 전송
+        // 마지막으로 한 번 더 progress 상태로 전송
         send(calculateProgress(processedCount, total, 'processing'), 'processing', controller)
 
         // 짧은 대기 후 completed 상태로 전환
         await new Promise(resolve => setTimeout(resolve, 300))
-        send(calculateProgress(processedCount, total, 'processing'), 'completed', controller)
+        send(calculateProgress(processedCount, total, 'completed'), 'completed', controller)
         closeController()
       } catch (error) {
         logError('Sync error:', {
