@@ -1,13 +1,12 @@
 'use client'
 
-import Image from 'next/image'
-import { DefaultUserIcon } from '@/components/common/icons/DefaultUserIcon'
 import { CrownIcon } from '@/components/common/icons/CrownIcon'
 import { cn } from '@/lib/utils/cn'
 import { RankingFilters, ActivityWithRanking } from '@/lib/types/ranking'
 import { MoveToStravaButton } from '@/components/common/MoveToStravaButton'
 import { formatActivityValue } from '@/lib/utils/activity'
 import { ACTIVITY_UNITS } from '@/lib/constants/unit'
+import { ProfileImage } from '@/components/common/userInfo/ProfileImage'
 
 interface RankingCardProps {
   activity: ActivityWithRanking
@@ -58,27 +57,10 @@ export function RankingCard({
               <CrownIcon />
             </div>
           )}
-          <div
-            className={cn(
-              'overflow-hidden rounded-full',
-              variant === 'ranker' ? 'h-[94px] w-[94px]' : 'h-[40px] w-[40px]'
-            )}
-          >
-            {activity.user.imageUrl ? (
-              <Image
-                src={activity.user.imageUrl}
-                alt="User Image"
-                fill
-                sizes={variant === 'ranker' ? '94px' : '40px'}
-                className="object-cover"
-              />
-            ) : (
-              <DefaultUserIcon
-                width={variant === 'ranker' ? 94 : 40}
-                height={variant === 'ranker' ? 94 : 40}
-              />
-            )}
-          </div>
+          <ProfileImage
+            imageUrl={activity.user.imageUrl || null}
+            size={variant === 'ranker' ? 94 : 40}
+          />
         </div>
 
         <div

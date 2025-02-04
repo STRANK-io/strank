@@ -3,8 +3,7 @@
 import { ChangeEvent, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
-import Image from 'next/image'
-import { DefaultUserIcon } from '@/components/common/icons/DefaultUserIcon'
+import { ProfileImage } from '@/components/common/userInfo/ProfileImage'
 
 interface ProfileImageProps {
   imageUrl: string | null
@@ -12,7 +11,7 @@ interface ProfileImageProps {
   buttonText: string
 }
 
-export const ProfileImage = ({ imageUrl, onImageChange, buttonText }: ProfileImageProps) => {
+export const ProfileImageSection = ({ imageUrl, onImageChange, buttonText }: ProfileImageProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleImageClick = () => {
@@ -37,25 +36,7 @@ export const ProfileImage = ({ imageUrl, onImageChange, buttonText }: ProfileIma
       />
 
       <div className={cn('flex w-full flex-col items-center justify-center gap-3')}>
-        <div
-          className={cn(
-            'relative flex h-[94px] w-[94px] items-center justify-center overflow-hidden rounded-full bg-white',
-            imageUrl ? 'bg-white' : 'bg-[#FFD7A1]'
-          )}
-        >
-          {imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt="Profile"
-              fill
-              className="object-cover"
-              sizes="94px"
-              priority
-            />
-          ) : (
-            <DefaultUserIcon width={94} height={94} />
-          )}
-        </div>
+        <ProfileImage imageUrl={imageUrl} size={94} />
 
         <Button
           size={null}

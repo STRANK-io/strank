@@ -8,7 +8,7 @@ import { useGetUserInfoQuery } from '@/hooks/user/api/useGetUserInfoQuery'
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants/error'
 import { ToastContent } from '@/components/common/ToastContent'
 import { toast } from 'sonner'
-import { ProfileImage } from '@/components/common/userInfo/userInfoForm/ProfileImage'
+import { ProfileImageSection } from '@/components/common/userInfo/userInfoForm/ProfileImageSection'
 import { convertAndCreatePreview } from '@/lib/utils/image'
 import { logError } from '@/lib/utils/log'
 
@@ -48,7 +48,7 @@ export const UserInfoForm = ({ userId }: { userId: string }) => {
 
   return (
     <div className="mt-6 w-full px-5">
-      <ProfileImage
+      <ProfileImageSection
         imageUrl={imagePreviewUrl}
         onImageChange={handleImageChange}
         buttonText="프로필 변경"
