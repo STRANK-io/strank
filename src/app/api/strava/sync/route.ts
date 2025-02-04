@@ -2,12 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { User } from '@supabase/supabase-js'
 import { SYNC_CONFIG } from '@/lib/constants/strava'
-import {
-  calculateProgress,
-  resetProgress,
-  fetchStravaActivities,
-  processActivities,
-} from '@/lib/utils/strava'
+import { createProgressManager, fetchStravaActivities, processActivities } from '@/lib/utils/strava'
 import { StravaActivity } from '@/lib/types/strava'
 import { logError } from '@/lib/utils/log'
 
@@ -17,20 +12,6 @@ export async function GET() {
 
   let currentUser: User | null = null
   let isControllerClosed = false
-
-  const send = (progress: number, status: string, controller: ReadableStreamDefaultController) => {
-    if (!isControllerClosed) {
-      try {
-        const data = JSON.stringify({ progress, status })
-        controller.enqueue(encoder.encode(`data: ${data}\n\n`))
-      } catch (error) {
-        logError('Failed to send data:', {
-          error,
-          endpoint: 'api/strava/sync',
-        })
-      }
-    }
-  }
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -55,25 +36,37 @@ export async function GET() {
         }
       }
 
-      try {
-        // 진행률 초기화
-        resetProgress()
+      const send = (progress: number, status: string) => {
+        if (!isControllerClosed) {
+          try {
+            const data = JSON.stringify({ progress, status })
+            controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+          } catch (error) {
+            logError('Failed to send data:', {
+              error,
+              endpoint: 'api/strava/sync',
+            })
+          }
+        }
+      }
 
+      const progress = createProgressManager(send)
+
+      try {
         const {
           data: { user },
           error: userError,
         } = await supabase.auth.getUser()
 
         if (userError || !user) {
-          send(0, ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED, controller)
+          send(0, ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED)
           closeController()
           return
         }
 
         currentUser = user
 
-        // 초기 연결 상태 전송
-        send(calculateProgress(0, null, 'connecting'), 'connecting', controller)
+        progress.setStage('connecting')
 
         // Strava 토큰 가져오기
         const { data: tokenData, error: tokenError } = await supabase
@@ -84,13 +77,12 @@ export async function GET() {
           .single()
 
         if (tokenError || !tokenData) {
-          send(0, ERROR_CODES.AUTH.STRAVA_CONNECTION_REQUIRED, controller)
+          send(0, ERROR_CODES.AUTH.STRAVA_CONNECTION_REQUIRED)
           closeController()
           return
         }
 
-        // 데이터 가져오기 상태 전송
-        send(calculateProgress(0, null, 'fetching'), 'fetching', controller)
+        progress.setStage('fetching')
 
         let allActivities: StravaActivity[] = []
 
@@ -102,19 +94,14 @@ export async function GET() {
         }
 
         // 활동 데이터 처리
-        const total = allActivities.length
-        let processedCount = 0
+        progress.setStage('processing', allActivities.length)
 
         // 배치 처리
-        for (let i = 0; i < total; i += SYNC_CONFIG.BATCH_SIZE) {
+        for (let i = 0; i < allActivities.length; i += SYNC_CONFIG.BATCH_SIZE) {
           const batch = allActivities.slice(i, i + SYNC_CONFIG.BATCH_SIZE)
           await processActivities(batch, user.id, supabase)
-          processedCount += batch.length
-          send(calculateProgress(processedCount, total, 'processing'), 'processing', controller)
+          progress.addProcessedItems(batch.length)
         }
-
-        // 마지막 진행률 업데이트 (전체 활동 처리 완료)
-        send(calculateProgress(processedCount, total, 'processing'), 'processing', controller)
 
         // 모든 데이터 처리가 완료된 후 strava_connected_at 업데이트 (최대 2번 재시도)
         let retryCount = 0
@@ -137,7 +124,6 @@ export async function GET() {
           retryCount++
 
           if (retryCount <= MAX_RETRIES) {
-            // 재시도 전 잠시 대기 (500ms)
             await new Promise(resolve => setTimeout(resolve, 500))
           }
         }
@@ -150,15 +136,11 @@ export async function GET() {
           throw new Error(ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED)
         }
 
-        // 최종 진행률 업데이트를 위한 대기
-        await new Promise(resolve => setTimeout(resolve, 500))
+        // 완료 상태로 전환
+        progress.setStage('completed')
 
-        // 마지막으로 한 번 더 progress 상태로 전송
-        send(calculateProgress(processedCount, total, 'processing'), 'processing', controller)
-
-        // 짧은 대기 후 completed 상태로 전환
-        await new Promise(resolve => setTimeout(resolve, 300))
-        send(calculateProgress(processedCount, total, 'completed'), 'completed', controller)
+        // UI에서 100% 표시를 보장하기 위한 짧은 대기
+        await new Promise(resolve => setTimeout(resolve, 100))
         closeController()
       } catch (error) {
         logError('Sync error:', {
@@ -170,7 +152,6 @@ export async function GET() {
         if (currentUser) {
           try {
             await supabase.from('strava_user_tokens').delete().eq('user_id', currentUser.id)
-
             await supabase
               .from('users')
               .update({ strava_connected_at: null })
@@ -186,8 +167,7 @@ export async function GET() {
         try {
           send(
             0,
-            error instanceof Error ? error.message : ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED,
-            controller
+            error instanceof Error ? error.message : ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED
           )
         } catch (sendError) {
           logError('Failed to send error to client:', {

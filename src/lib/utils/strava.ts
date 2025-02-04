@@ -11,82 +11,68 @@ import { StravaActivity } from '@/lib/types/strava'
 import { convertUTCToKoreanTime } from '@/lib/utils/date'
 import { logError } from '@/lib/utils/log'
 
-let lastProgress = 0
-let lastProcessedActivities = 0
-
-/**
- * 진행률을 초기화하는 함수
- */
-export function resetProgress() {
-  lastProgress = 0
-  lastProcessedActivities = 0
+type ProgressStage = 'initial' | 'connecting' | 'fetching' | 'processing' | 'completed'
+type ProgressState = {
+  progress: number
+  stage: ProgressStage
+  processedItems: number
+  totalItems: number | null
 }
 
-/**
- * 스트라바 데이터 동기화 진행률을 계산하는 함수
- *
- * @description
- * 전체 과정을 세 단계로 나누어 진행률을 계산하며, 부드러운 진행을 위해 보간법을 적용합니다:
- * 1. 초기 연결 및 데이터 요청 (0-20%)
- * 2. 데이터 가져오기 (20-40%)
- * 3. 데이터 처리 (40-100%)
- *
- * @param processedActivities - 처리 완료된 활동 수
- * @param totalActivities - 전체 활동 수 (아직 알 수 없는 경우 null)
- * @param stage - 현재 진행 단계 ('connecting' | 'fetching' | 'processing' | 'completed')
- * @returns {number} 0-100 사이의 진행률 퍼센트
- */
-export function calculateProgress(
-  processedActivities: number,
-  totalActivities: number | null,
-  stage: 'connecting' | 'fetching' | 'processing' | 'completed'
-): number {
-  let targetProgress: number
-
-  switch (stage) {
-    case 'connecting':
-      targetProgress = 10
-      break
-    case 'fetching':
-      targetProgress = 30
-      break
-    case 'processing': {
-      if (!totalActivities) {
-        targetProgress = 40
-      } else {
-        // 처리된 활동 수가 이전보다 작아질 수 없음
-        processedActivities = Math.max(processedActivities, lastProcessedActivities)
-        lastProcessedActivities = processedActivities
-
-        // 진행률 계산 (40-100%)
-        const processRatio = processedActivities / totalActivities
-        targetProgress = Math.floor(40 + processRatio * 60)
-
-        // 모든 활동이 처리되었을 때
-        if (processedActivities >= totalActivities) {
-          targetProgress = 99 // processing 단계에서는 99%까지만
-        }
-      }
-      break
-    }
-    case 'completed':
-      targetProgress = 100 // completed 단계에서는 무조건 100%
-      break
-    default:
-      targetProgress = 0
+export const createProgressManager = (onProgress: (progress: number, stage: string) => void) => {
+  const state: ProgressState = {
+    progress: 0,
+    stage: 'initial',
+    processedItems: 0,
+    totalItems: null,
   }
 
-  // 진행률은 항상 이전 진행률보다 크거나 같아야 함
-  targetProgress = Math.max(targetProgress, lastProgress)
+  const calculateProgress = (state: ProgressState): number => {
+    switch (state.stage) {
+      case 'initial':
+        return 0
+      case 'connecting':
+        return 10
+      case 'fetching':
+        return 30
+      case 'processing':
+        if (!state.totalItems) return 40
+        return Math.min(99, 40 + (state.processedItems / state.totalItems) * 59)
+      case 'completed':
+        return 100
+      default:
+        return state.progress
+    }
+  }
 
-  // 부드러운 증가를 위한 스텝 크기 계산
-  const step = stage === 'completed' ? 100 : 8 // completed 단계에서는 바로 100%로
-  const newProgress = Math.min(targetProgress, lastProgress + step)
+  const updateProgress = () => {
+    const newProgress = calculateProgress(state)
+    if (newProgress !== state.progress) {
+      state.progress = newProgress
+      onProgress(newProgress, state.stage)
+    }
+  }
 
-  // 상태 업데이트
-  lastProgress = newProgress
+  return {
+    setStage: (stage: ProgressStage, total?: number) => {
+      state.stage = stage
+      if (total !== undefined) state.totalItems = total
+      updateProgress()
+    },
 
-  return newProgress
+    addProcessedItems: (count: number) => {
+      state.processedItems += count
+      updateProgress()
+    },
+
+    reset: () => {
+      state.progress = 0
+      state.stage = 'initial'
+      state.processedItems = 0
+      state.totalItems = null
+      updateProgress()
+    },
+  }
 }
 
 /**
