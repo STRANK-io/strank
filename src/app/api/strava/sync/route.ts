@@ -111,6 +111,9 @@ export async function GET() {
           send(calculateProgress(i + batch.length, total, 'processing'), 'processing', controller)
         }
 
+        // 마지막 진행률 업데이트 (전체 활동 처리 완료)
+        send(calculateProgress(total, total, 'processing'), 'processing', controller)
+
         // 모든 데이터 처리가 완료된 후 strava_connected_at 업데이트 (최대 2번 재시도)
         let retryCount = 0
         const MAX_RETRIES = 2

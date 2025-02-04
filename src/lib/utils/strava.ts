@@ -12,12 +12,14 @@ import { convertUTCToKoreanTime } from '@/lib/utils/date'
 import { logError } from '@/lib/utils/log'
 
 let lastProgress = 0
+let lastProcessedActivities = 0
 
 /**
  * 진행률을 초기화하는 함수
  */
 export function resetProgress() {
   lastProgress = 0
+  lastProcessedActivities = 0
 }
 
 /**
@@ -39,41 +41,49 @@ export function calculateProgress(
   totalActivities: number | null,
   stage: 'connecting' | 'fetching' | 'processing'
 ): number {
-  let currentProgress: number
+  let targetProgress: number
 
   switch (stage) {
     case 'connecting':
-      currentProgress = 10
+      targetProgress = 10
       break
     case 'fetching':
-      currentProgress = 30
+      targetProgress = 30
       break
     case 'processing': {
       if (!totalActivities) {
-        currentProgress = 40
+        targetProgress = 40
       } else {
-        // 마지막 활동이 처리되었을 때는 100%로 설정
+        // 처리된 활동 수가 이전보다 작아질 수 없음
+        processedActivities = Math.max(processedActivities, lastProcessedActivities)
+        lastProcessedActivities = processedActivities
+
+        // 진행률 계산 (40-100%)
+        const processRatio = processedActivities / totalActivities
+        targetProgress = Math.floor(40 + processRatio * 60)
+
+        // 모든 활동이 처리되었을 때
         if (processedActivities >= totalActivities) {
-          currentProgress = 100
-        } else {
-          const processProgress = Math.round((processedActivities / totalActivities) * 60)
-          currentProgress = Math.min(99, 40 + processProgress) // 99%까지만 진행하고 마지막에 100%
+          targetProgress = 100
         }
       }
       break
     }
     default:
-      currentProgress = 0
+      targetProgress = 0
   }
 
-  // 부드러운 보간 적용 (최대 10%까지만 증가 허용)
-  const maxIncrease = 10
-  const smoothProgress = Math.min(currentProgress, lastProgress + maxIncrease)
+  // 진행률은 항상 이전 진행률보다 크거나 같아야 함
+  targetProgress = Math.max(targetProgress, lastProgress)
 
-  // 진행률이 감소하는 것 방지
-  lastProgress = Math.max(lastProgress, smoothProgress)
+  // 부드러운 증가를 위한 스텝 크기 계산
+  const step = targetProgress === 100 ? 15 : 8
+  const newProgress = Math.min(targetProgress, lastProgress + step)
 
-  return lastProgress
+  // 상태 업데이트
+  lastProgress = newProgress
+
+  return newProgress
 }
 
 /**
