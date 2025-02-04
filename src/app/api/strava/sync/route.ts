@@ -103,16 +103,18 @@ export async function GET() {
 
         // 활동 데이터 처리
         const total = allActivities.length
+        let processedCount = 0
 
         // 배치 처리
         for (let i = 0; i < total; i += SYNC_CONFIG.BATCH_SIZE) {
           const batch = allActivities.slice(i, i + SYNC_CONFIG.BATCH_SIZE)
           await processActivities(batch, user.id, supabase)
-          send(calculateProgress(i + batch.length, total, 'processing'), 'processing', controller)
+          processedCount += batch.length
+          send(calculateProgress(processedCount, total, 'processing'), 'processing', controller)
         }
 
         // 마지막 진행률 업데이트 (전체 활동 처리 완료)
-        send(calculateProgress(total, total, 'processing'), 'processing', controller)
+        send(calculateProgress(processedCount, total, 'processing'), 'processing', controller)
 
         // 모든 데이터 처리가 완료된 후 strava_connected_at 업데이트 (최대 2번 재시도)
         let retryCount = 0
@@ -148,8 +150,15 @@ export async function GET() {
           throw new Error(ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED)
         }
 
-        // 모든 처리가 완료되면 100% 진행률 전송
-        send(100, 'completed', controller)
+        // 최종 진행률 업데이트를 위한 대기
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // 마지막으로 한 번 더 progress 상태로 100% 전송
+        send(calculateProgress(processedCount, total, 'processing'), 'processing', controller)
+
+        // 짧은 대기 후 completed 상태로 전환
+        await new Promise(resolve => setTimeout(resolve, 300))
+        send(calculateProgress(processedCount, total, 'processing'), 'completed', controller)
         closeController()
       } catch (error) {
         logError('Sync error:', {
