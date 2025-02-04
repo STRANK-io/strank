@@ -2,7 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { User } from '@supabase/supabase-js'
 import { SYNC_CONFIG } from '@/lib/constants/strava'
-import { calculateProgress, fetchStravaActivities, processActivities } from '@/lib/utils/strava'
+import {
+  calculateProgress,
+  resetProgress,
+  fetchStravaActivities,
+  processActivities,
+} from '@/lib/utils/strava'
 import { StravaActivity } from '@/lib/types/strava'
 import { logError } from '@/lib/utils/log'
 
@@ -51,6 +56,9 @@ export async function GET() {
       }
 
       try {
+        // 진행률 초기화
+        resetProgress()
+
         const {
           data: { user },
           error: userError,
@@ -137,6 +145,7 @@ export async function GET() {
           throw new Error(ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED)
         }
 
+        // 모든 처리가 완료되면 100% 진행률 전송
         send(100, 'completed', controller)
         closeController()
       } catch (error) {

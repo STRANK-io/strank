@@ -14,6 +14,13 @@ import { logError } from '@/lib/utils/log'
 let lastProgress = 0
 
 /**
+ * 진행률을 초기화하는 함수
+ */
+export function resetProgress() {
+  lastProgress = 0
+}
+
+/**
  * 스트라바 데이터 동기화 진행률을 계산하는 함수
  *
  * @description
@@ -45,8 +52,13 @@ export function calculateProgress(
       if (!totalActivities) {
         currentProgress = 40
       } else {
-        const processProgress = Math.round((processedActivities / totalActivities) * 60)
-        currentProgress = Math.min(100, 40 + processProgress)
+        // 마지막 활동이 처리되었을 때는 100%로 설정
+        if (processedActivities >= totalActivities) {
+          currentProgress = 100
+        } else {
+          const processProgress = Math.round((processedActivities / totalActivities) * 60)
+          currentProgress = Math.min(99, 40 + processProgress) // 99%까지만 진행하고 마지막에 100%
+        }
       }
       break
     }
