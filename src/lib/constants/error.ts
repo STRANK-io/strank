@@ -49,7 +49,7 @@ export const ERROR_MESSAGES = {
   [ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED]: '활동 업데이트에 실패했습니다. 다시 시도해주세요.',
   [ERROR_CODES.STRAVA.ACTIVITY_SYNC_FAILED]: '활동 동기화에 실패했습니다. 다시 시도해주세요.',
   [ERROR_CODES.STRAVA.INSUFFICIENT_PERMISSIONS]:
-    '스트랭크 서비스 이용을 위해 스트라바 계정 연동 시 필요한 모든 권한을 허용해주세요.',
+    '원활한 서비스 이용을 위해 스트라바 계정 연동 시 필요한 모든 권한을 허용해주세요.',
   // INTERNAL
   [ERROR_CODES.INTERNAL_ERROR]: '시스템 오류가 발생했습니다. 다시 시도해주세요.',
 } as const
