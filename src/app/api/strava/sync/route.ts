@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { User } from '@supabase/supabase-js'
 import { SYNC_CONFIG } from '@/lib/constants/strava'
@@ -7,7 +7,7 @@ import { StravaActivity } from '@/lib/types/strava'
 import { logError } from '@/lib/utils/log'
 
 export async function GET() {
-  const supabase = await createClient()
+  const supabase = await createServiceRoleClient()
   const encoder = new TextEncoder()
 
   let currentUser: User | null = null
