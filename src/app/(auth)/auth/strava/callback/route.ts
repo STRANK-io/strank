@@ -4,7 +4,7 @@ import { ERROR_CODES } from '@/lib/constants/error'
 import { ROUTES } from '@/lib/constants/routes'
 import { redirectWithError } from '@/lib/utils/auth'
 import { StravaTokenResponse } from '@/lib/types/strava'
-import { STRAVA_TOKEN_URL } from '@/lib/constants/strava'
+import { REQUIRED_SCOPES, STRAVA_TOKEN_URL } from '@/lib/constants/strava'
 import { logError } from '@/lib/utils/log'
 
 export async function GET(request: Request) {
@@ -21,6 +21,23 @@ export async function GET(request: Request) {
         origin,
         ROUTES.PUBLIC.STRAVA_CONNECT,
         ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED
+      )
+    }
+
+    // * 서비스 이용에 필요한 권한이 모두 있는지 확인
+    const grantedScopes = searchParams.get('scope')?.split(',') || []
+    const missingScopes = REQUIRED_SCOPES.filter(scope => !grantedScopes.includes(scope))
+
+    if (missingScopes.length > 0) {
+      logError('Missing required Strava scopes', {
+        grantedScopes,
+        missingScopes,
+        endpoint: 'auth/strava/callback',
+      })
+      return redirectWithError(
+        origin,
+        ROUTES.PUBLIC.STRAVA_CONNECT,
+        ERROR_CODES.STRAVA.INSUFFICIENT_PERMISSIONS
       )
     }
 

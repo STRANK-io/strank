@@ -18,6 +18,7 @@ export const ERROR_CODES = {
     API_LIMIT_EXCEEDED: 'strava_api_limit_exceeded',
     ACTIVITY_UPDATE_FAILED: 'strava_activity_update_failed',
     ACTIVITY_SYNC_FAILED: 'strava_activity_sync_failed',
+    INSUFFICIENT_PERMISSIONS: 'strava_insufficient_permissions',
   },
   INTERNAL_ERROR: 'internal_error',
 } as const
@@ -47,7 +48,8 @@ export const ERROR_MESSAGES = {
   [ERROR_CODES.STRAVA.API_LIMIT_EXCEEDED]: 'Strava API 일일 사용량을 초과했습니다.',
   [ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED]: '활동 업데이트에 실패했습니다. 다시 시도해주세요.',
   [ERROR_CODES.STRAVA.ACTIVITY_SYNC_FAILED]: '활동 동기화에 실패했습니다. 다시 시도해주세요.',
-
+  [ERROR_CODES.STRAVA.INSUFFICIENT_PERMISSIONS]:
+    '스트랭크 서비스 이용을 위해 스트라바 계정 연동 시 필요한 모든 권한을 허용해주세요.',
   // INTERNAL
   [ERROR_CODES.INTERNAL_ERROR]: '시스템 오류가 발생했습니다. 다시 시도해주세요.',
 } as const

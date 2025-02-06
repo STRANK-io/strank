@@ -3,6 +3,8 @@ export const STRAVA_API_URL = 'https://www.strava.com/api/v3'
 export const STRAVA_ATHLETE_ACTIVITIES_ENDPOINT = '/athlete/activities'
 export const STRAVA_ACTIVITY_BY_ID_ENDPOINT = (id: number) => `/activities/${id}`
 
+export const REQUIRED_SCOPES = ['read', 'profile:read_all', 'activity:read_all', 'activity:write']
+
 export const SYNC_CONFIG = {
   FETCH_PAGE_SIZE: 200,
   BATCH_SIZE: 20,
