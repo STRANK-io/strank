@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { ROUTES } from '@/lib/constants/routes'
 import { redirectWithError } from '@/lib/utils/auth'
@@ -10,6 +10,7 @@ import { logError } from '@/lib/utils/log'
 export async function GET(request: Request) {
   try {
     const { searchParams, origin } = new URL(request.url)
+    // * 인가 코드
     const code = searchParams.get('code')
 
     if (!code) {
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
       )
     }
 
+    // * 토큰 요청
     const tokenResponse = await fetch(STRAVA_TOKEN_URL, {
       method: 'POST',
       headers: {
@@ -48,13 +50,23 @@ export async function GET(request: Request) {
       )
     }
 
-    const {
-      athlete: { id: stravaAthleteId },
-      access_token: stravaAccessToken,
-      refresh_token: stravaRefreshToken,
-      expires_at: stravaExpiresAt,
-    }: StravaTokenResponse = await tokenResponse.json()
-    const supabase = await createClient()
+    // * 토큰 응답
+    const stravaTokenResponse: StravaTokenResponse = await tokenResponse.json()
+
+    if (!stravaTokenResponse) {
+      logError('Failed to get Strava token response', {
+        error: stravaTokenResponse,
+        endpoint: 'auth/strava/callback',
+      })
+      return redirectWithError(
+        origin,
+        ROUTES.PUBLIC.STRAVA_CONNECT,
+        ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED
+      )
+    }
+
+    // * 유저 조회
+    const supabase = await createServiceRoleClient()
 
     const {
       data: { user },
@@ -69,25 +81,15 @@ export async function GET(request: Request) {
       return redirectWithError(origin, ROUTES.PUBLIC.HOME, ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED)
     }
 
-    // 이미 연동된 스트라바 계정인지 조회
-    const { data: tokenData } = await supabase
-      .from('strava_user_tokens')
-      .select('*')
-      .eq('strava_athlete_id', stravaAthleteId)
-      .is('deleted_at', null)
-      .maybeSingle()
+    const {
+      athlete: { id: stravaAthleteId },
+      access_token: stravaAccessToken,
+      refresh_token: stravaRefreshToken,
+      expires_at: stravaExpiresAt,
+    } = stravaTokenResponse
 
-    // 있으면 이미 연동되었으니 가입 불가
-    if (tokenData) {
-      return redirectWithError(
-        origin,
-        ROUTES.PUBLIC.STRAVA_CONNECT,
-        ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED_ALREADY_CONNECTED
-      )
-    }
-
-    // 스트라바 토큰 저장
-    const { error: tokenSaveError } = await supabase.from('strava_user_tokens').upsert({
+    // *스트라바 토큰 저장
+    const { error: tokenSaveError } = await supabase.from('strava_user_tokens').insert({
       user_id: user.id,
       strava_athlete_id: stravaAthleteId,
       access_token: stravaAccessToken,
@@ -96,6 +98,15 @@ export async function GET(request: Request) {
     })
 
     if (tokenSaveError) {
+      // * 동일한 stravaAthleteId를 가진 계정 데이터가 strava_user_tokens 테이블에 있는 경우 -> 이미 연동된 계정이므로 가입 불가
+      if (tokenSaveError.code === '23505') {
+        return redirectWithError(
+          origin,
+          ROUTES.PUBLIC.STRAVA_CONNECT,
+          ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED_ALREADY_CONNECTED
+        )
+      }
+
       logError('Failed to save token to database', {
         error: tokenSaveError,
         endpoint: 'auth/strava/callback',
