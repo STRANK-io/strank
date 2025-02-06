@@ -1,6 +1,5 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { ERROR_CODES } from '@/lib/constants/error'
-import { User } from '@supabase/supabase-js'
 import { SYNC_CONFIG } from '@/lib/constants/strava'
 import { createProgressManager, fetchStravaActivities, processActivities } from '@/lib/utils/strava'
 import { StravaActivity } from '@/lib/types/strava'
@@ -10,7 +9,6 @@ export async function GET() {
   const supabase = await createServiceRoleClient()
   const encoder = new TextEncoder()
 
-  let currentUser: User | null = null
   let isControllerClosed = false
 
   const stream = new ReadableStream({
@@ -52,20 +50,18 @@ export async function GET() {
 
       const progress = createProgressManager(send)
 
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
+
+      if (userError || !user) {
+        send(0, ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED)
+        closeController()
+        return
+      }
+
       try {
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser()
-
-        if (userError || !user) {
-          send(0, ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED)
-          closeController()
-          return
-        }
-
-        currentUser = user
-
         progress.setStage('connecting')
 
         // Strava 토큰 가져오기
@@ -149,13 +145,10 @@ export async function GET() {
         })
 
         // 에러 발생 시 토큰 삭제 및 strava_connected_at 초기화
-        if (currentUser) {
+        if (user) {
           try {
-            await supabase.from('strava_user_tokens').delete().eq('user_id', currentUser.id)
-            await supabase
-              .from('users')
-              .update({ strava_connected_at: null })
-              .eq('id', currentUser.id)
+            await supabase.from('strava_user_tokens').delete().eq('user_id', user.id)
+            await supabase.from('users').update({ strava_connected_at: null }).eq('id', user.id)
           } catch (cleanupError) {
             logError('Cleanup error:', {
               error: cleanupError,
