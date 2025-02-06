@@ -87,18 +87,13 @@ export async function GET(request: Request) {
     }
 
     // 스트라바 토큰 저장
-    const { error: tokenSaveError } = await supabase.from('strava_user_tokens').upsert(
-      {
-        user_id: user.id,
-        strava_athlete_id: stravaAthleteId,
-        access_token: stravaAccessToken,
-        refresh_token: stravaRefreshToken,
-        expires_at: new Date(stravaExpiresAt * 1000).toISOString(),
-      },
-      {
-        onConflict: 'user_id',
-      }
-    )
+    const { error: tokenSaveError } = await supabase.from('strava_user_tokens').upsert({
+      user_id: user.id,
+      strava_athlete_id: stravaAthleteId,
+      access_token: stravaAccessToken,
+      refresh_token: stravaRefreshToken,
+      expires_at: new Date(stravaExpiresAt * 1000).toISOString(),
+    })
 
     if (tokenSaveError) {
       logError('Failed to save token to database', {
