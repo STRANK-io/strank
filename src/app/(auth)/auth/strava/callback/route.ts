@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { ROUTES } from '@/lib/constants/routes'
 import { redirectWithError } from '@/lib/utils/auth'
@@ -83,7 +83,7 @@ export async function GET(request: Request) {
     }
 
     // * 유저 조회
-    const supabase = await createServiceRoleClient()
+    const supabase = await createClient()
 
     const {
       data: { user },

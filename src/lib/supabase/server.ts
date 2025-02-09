@@ -43,6 +43,9 @@ export const createServiceRoleClient = async () => {
           return cookieStore.getAll()
         },
       },
+      auth: {
+        persistSession: false,
+      },
     }
   )
 }

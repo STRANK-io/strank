@@ -1,4 +1,4 @@
-import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { SYNC_CONFIG } from '@/lib/constants/strava'
 import { createProgressManager, fetchStravaActivities, processActivities } from '@/lib/utils/strava'
@@ -6,7 +6,7 @@ import { StravaActivity } from '@/lib/types/strava'
 import { logError } from '@/lib/utils/log'
 
 export async function GET() {
-  const supabase = await createServiceRoleClient()
+  const supabase = await createClient()
   const encoder = new TextEncoder()
 
   let isControllerClosed = false
