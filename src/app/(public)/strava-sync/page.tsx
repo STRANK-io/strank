@@ -19,10 +19,8 @@ export default function StravaSyncPage() {
     const RETRY_DELAY = 2000
     const CONNECTION_TIMEOUT = 60000
 
-    const handleError = (errorStatus?: string) => {
-      router.push(
-        `${ROUTES.PUBLIC.STRAVA_CONNECT}?error=${errorStatus || ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED}`
-      )
+    const handleError = ({ path, errorStatus }: { path: string; errorStatus?: string }) => {
+      router.push(`${path}?error=${errorStatus || ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED}`)
     }
 
     const connectEventSource = () => {
@@ -37,7 +35,7 @@ export default function StravaSyncPage() {
             setConnectionAttempts(prev => prev + 1)
             setTimeout(connectEventSource, RETRY_DELAY)
           } else {
-            handleError()
+            handleError({ path: ROUTES.PUBLIC.STRAVA_CONNECT })
           }
         }, CONNECTION_TIMEOUT)
       }
@@ -62,11 +60,12 @@ export default function StravaSyncPage() {
           if (Object.values(ERROR_CODES).flat().includes(data.status)) {
             eventSource.close()
             clearTimeout(timeoutId)
-            if (data.status === ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED) {
-              router.push(`${ROUTES.PUBLIC.HOME}?error=${data.status}`)
-            } else {
-              router.push(`${ROUTES.PUBLIC.STRAVA_CONNECT}?error=${data.status}`)
-            }
+            const path =
+              data.status === ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED
+                ? ROUTES.PUBLIC.HOME
+                : ROUTES.PUBLIC.STRAVA_CONNECT
+            handleError({ path, errorStatus: data.status })
+
             return
           }
 
@@ -104,7 +103,7 @@ export default function StravaSyncPage() {
           logError('Max retries reached, redirecting to error page', {
             endpoint: 'strava-sync',
           })
-          handleError()
+          handleError({ path: ROUTES.PUBLIC.STRAVA_CONNECT })
         }
       }
 
