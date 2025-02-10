@@ -61,7 +61,7 @@ function generateRankingSection(
   isEveryone: boolean
 ): string {
   const { rankings, district } = rankingsWithDistrict || {}
-  const section = '■ 랭킹 정보 ■'
+  const section = '◾ 랭킹 정보 ◾'
 
   if (!isEveryone) {
     return `${section}\n\n공개 범위를 everyone으로 설정하지 않은 데이터는 랭킹 정보가 표기되지 않습니다.`
@@ -74,7 +74,7 @@ function generateRankingSection(
   const sections = []
 
   // 거리 랭킹 섹션
-  sections.push('\n※ 거리 랭킹 ※')
+  sections.push('\n🏅 거리 랭킹')
   if (distanceRankCity && distanceRankDistrict) {
     sections.push(`📍 서울시 (${distanceRankCity.toLocaleString()}위)
 📍 서울시 ${district} (${distanceRankDistrict.toLocaleString()}위)`)
@@ -85,7 +85,7 @@ function generateRankingSection(
   }
 
   // 고도 랭킹 섹션
-  sections.push('\n※ 고도 랭킹 ※')
+  sections.push('\n🏅 고도 랭킹')
   if (elevationRankCity && elevationRankDistrict) {
     sections.push(`📍 서울시 (${elevationRankCity.toLocaleString()}위)
 📍 서울시 ${district} (${elevationRankDistrict.toLocaleString()}위)`)
@@ -115,23 +115,32 @@ function generateAnalysisSection(activity: StravaActivity): string {
   } = activity
 
   const metrics = [
-    ['총거리', formatActivityValue(distance, 'distance'), ACTIVITY_UNITS.DISTANCE],
-    ['총고도', formatActivityValue(total_elevation_gain), ACTIVITY_UNITS.ELEVATION],
-    ['평균속도', formatActivityValue(average_speed, 'speed'), ACTIVITY_UNITS.SPEED],
-    ['최고속도', formatActivityValue(max_speed, 'speed'), ACTIVITY_UNITS.SPEED],
-    ['평균파워', formatActivityValue(average_watts), ACTIVITY_UNITS.POWER],
-    ['최대파워', formatActivityValue(max_watts), ACTIVITY_UNITS.POWER],
-    ['최고심박수', formatActivityValue(max_heartrate), ACTIVITY_UNITS.HEART_RATE],
-    ['평균케이던스', formatActivityValue(average_cadence), ACTIVITY_UNITS.CADENCE],
+    ['🚴총거리', formatActivityValue(distance, 'distance'), ACTIVITY_UNITS.DISTANCE],
+    ['🚵 총고도', formatActivityValue(total_elevation_gain), ACTIVITY_UNITS.ELEVATION],
+    ['🪫평균속도', formatActivityValue(average_speed, 'speed'), ACTIVITY_UNITS.SPEED],
+    ['🔋최고속도', formatActivityValue(max_speed, 'speed'), ACTIVITY_UNITS.SPEED],
+    ...(average_watts! >= 1
+      ? [['🦵평균파워', formatActivityValue(average_watts), ACTIVITY_UNITS.POWER]]
+      : []),
+    ...(max_watts! >= 1
+      ? [['🦿최대파워', formatActivityValue(max_watts), ACTIVITY_UNITS.POWER]]
+      : []),
+    ...(max_heartrate! >= 1
+      ? [['❤️최고심박수', formatActivityValue(max_heartrate), ACTIVITY_UNITS.HEART_RATE]]
+      : []),
+    ...(average_cadence! >= 1
+      ? [['💫평균케이던스', formatActivityValue(average_cadence), ACTIVITY_UNITS.CADENCE]]
+      : []),
   ]
 
   const analysisInfo = metrics
     .map(([label, value, unit]) => `${label} : ${value} ${unit}`)
     .join('\n')
 
-  return `■ 라이딩 분석 정보 ■
+  return `◾ 라이딩 분석 정보 ◾
 ${analysisInfo}
-🔗 Powered by STRANK`
+
+🏆 Powered by STRANK`
 }
 
 /**
