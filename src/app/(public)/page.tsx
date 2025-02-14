@@ -29,7 +29,7 @@ export default function HomePage() {
         <section className="mb-[48px] mt-[50px] flex flex-col items-center gap-6">
           <GoogleSignButton />
           <Link
-            href="https://bit.ly/strank"
+            href="https://strank.framer.website"
             className="text-lg font-medium leading-[23px] text-brand-dark"
           >
             서비스 둘러보기
