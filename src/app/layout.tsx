@@ -4,7 +4,8 @@ import { pretendardFont } from '@/lib/fonts'
 import { Metadata } from 'next'
 import { Toaster } from 'sonner'
 import { GoogleAnalytics } from '@next/third-parties/google'
-import type { Viewport } from 'next'
+import { Viewport } from 'next'
+import { KakaoInAppBrowserHandler } from '@/components/common/KakaoInAppBrowserHandler'
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://strank.io'),
@@ -36,6 +37,7 @@ export default function RootLayout({
         {process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_GA_ID && (
           <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
         )}
+        <KakaoInAppBrowserHandler />
         <Providers>{children}</Providers>
         <Toaster toastOptions={{ unstyled: true }} duration={2000} />
       </body>
