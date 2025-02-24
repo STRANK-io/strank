@@ -98,6 +98,20 @@ export async function GET(request: Request) {
       return redirectWithError(origin, ROUTES.PUBLIC.HOME, ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED)
     }
 
+    const { data: userInfo, error: userInfoError } = await supabase
+      .from('users')
+      .select('strava_connected_at')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (!userInfo || userInfoError) {
+      logError('Failed to get user info', {
+        error: userInfoError,
+        endpoint: 'auth/strava/callback',
+      })
+      return redirectWithError(origin, ROUTES.PUBLIC.HOME, ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED)
+    }
+
     const {
       athlete: { id: stravaAthleteId },
       access_token: stravaAccessToken,
@@ -115,24 +129,27 @@ export async function GET(request: Request) {
     })
 
     if (tokenSaveError) {
-      // * 동일한 stravaAthleteId를 가진 계정 데이터가 strava_user_tokens 테이블에 있는 경우 -> 이미 연동된 계정이므로 가입 불가
+      // * 동일한 stravaAthleteId를 가진 계정 데이터가 strava_user_tokens 테이블에 있고 users.strava_connected_at도 있는 경우 -> 이미 연동된 계정이므로 가입 불가
       if (tokenSaveError.code === '23505') {
+        if (userInfo.strava_connected_at) {
+          return redirectWithError(
+            origin,
+            ROUTES.PUBLIC.STRAVA_CONNECT,
+            ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED_ALREADY_CONNECTED
+          )
+        }
+        // strava_user_tokens에 데이터는 있으나 users.strava_connected_at가 없는 경우 -> 연동 안된 유저로 간주.
+      } else {
+        logError('Failed to save token to database', {
+          error: tokenSaveError,
+          endpoint: 'auth/strava/callback',
+        })
         return redirectWithError(
           origin,
           ROUTES.PUBLIC.STRAVA_CONNECT,
-          ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED_ALREADY_CONNECTED
+          ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED
         )
       }
-
-      logError('Failed to save token to database', {
-        error: tokenSaveError,
-        endpoint: 'auth/strava/callback',
-      })
-      return redirectWithError(
-        origin,
-        ROUTES.PUBLIC.STRAVA_CONNECT,
-        ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED
-      )
     }
 
     // 성공 시 strava-sync 페이지로 이동
