@@ -1,6 +1,7 @@
 import { ERROR_CODES } from '@/lib/constants/error'
 import {
   STRAVA_ACTIVITY_BY_ID_ENDPOINT,
+  STRAVA_ACTIVITY_TYPE,
   STRAVA_API_URL,
   STRAVA_VISIBILITY,
 } from '@/lib/constants/strava'
@@ -107,6 +108,9 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
     }
 
     const activity: StravaActivity = await response.json()
+
+    // * 라이딩 데이터가 아닌 경우 로직 종료
+    if (activity.type !== STRAVA_ACTIVITY_TYPE.RIDE) return
 
     // * 활동 데이터 DB에 저장
     await processActivities([activity], user_id, supabase)

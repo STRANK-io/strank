@@ -46,6 +46,7 @@ export interface StravaActivity {
   total_elevation_gain: number | null
   start_date: string
   visibility: StravaVisibility
+  type: string // strank에서는 "Ride" 데이터만 사용
   [key: string]: any
 }
 
