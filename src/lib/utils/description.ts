@@ -169,6 +169,8 @@ export async function updateStravaActivityDescription(
     ? `${strankDescription}\n\n${stravaActivity.description}`
     : strankDescription
 
+  logError('combinedDescription', { combinedDescription })
+
   const updateResponse = await fetch(
     `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
     {

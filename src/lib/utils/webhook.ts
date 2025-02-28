@@ -135,7 +135,7 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
 
     // * 디스크립션 생성
     const description = generateActivityDescription(activity, rankingsWithDistrict, isEveryone)
-
+    logError('우리꺼 디스크립션', { description })
     // * 스트라바 활동 업데이트
     await updateStravaActivityDescription(accessToken, activity, description)
 
