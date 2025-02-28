@@ -35,6 +35,7 @@ import { Database } from '@/lib/supabase/supabase'
  * - 액세스 토큰이 만료 예정인 경우 자동으로 갱신합니다
  * - API 사용량을 추적하기 위해 호출 횟수를 카운트합니다
  * - 활동의 공개 범위가 'everyone'이 아닌 경우 랭킹 계산을 생략합니다
+ * - activity.type이 ride인 경우만 처리합니다. (라이딩 데이터만 처리)
  */
 export async function processWebhookEvent(body: StravaWebhookEventResponse) {
   try {

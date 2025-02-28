@@ -164,9 +164,8 @@ export async function updateStravaActivityDescription(
   stravaActivity: StravaActivity,
   strankDescription: string
 ): Promise<void> {
-  const combinedDescription = stravaActivity.description
-    ? `${strankDescription}\n\n${stravaActivity.description}`
-    : strankDescription
+  // * Strank 디스크립션을 최상단에 배치, 나머지 디스크립션을 하위에 추가
+  const combinedDescription = `${strankDescription}\n\n${stravaActivity.description}`
 
   const updateResponse = await fetch(
     `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
