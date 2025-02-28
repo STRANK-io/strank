@@ -201,4 +201,8 @@ export async function updateStravaActivityDescription(
     })
     throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
   }
+
+  logError('updateStravaActivityDescription 성공', {
+    updateResponse,
+  })
 }
