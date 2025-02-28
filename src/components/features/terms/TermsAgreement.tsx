@@ -5,7 +5,7 @@ interface TermsSectionProps {
   children: ReactNode
 }
 
-function TermsSection({ title, children }: TermsSectionProps) {
+export function TermsSection({ title, children }: TermsSectionProps) {
   return (
     <div className="flex flex-col gap-4">
       <h2 className="text-base font-bold leading-[21px]">{title}</h2>
