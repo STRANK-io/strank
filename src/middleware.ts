@@ -30,7 +30,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|api/strava/webhook|.*\\.(?:png|jpg|jpeg|gif|ico)).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/strava/webhook|google92ef127495fc8c64.html|.*\\.(?:png|jpg|jpeg|gif|ico)).*)',
   ],
 }
 
