@@ -30,7 +30,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|api/strava/webhook|google92ef127495fc8c64.html|.*\\.(?:png|jpg|jpeg|gif|ico)).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/strava/webhook|privacy-policy|google92ef127495fc8c64.html|.*\\.(?:png|jpg|jpeg|gif|ico)).*)',
   ],
 }
 
@@ -76,12 +76,8 @@ async function handleRouting(
     }
   }
 
-  // 1. 홈페이지, auth/callback, 개인정보처리방침은 로그인 없이 접근 가능 (auth/callback에서 세션 교환해서 그 이후에 세션이 생김)
-  if (
-    path === ROUTES.PUBLIC.HOME ||
-    path === ROUTES.PUBLIC.AUTH_CALLBACK ||
-    path === ROUTES.PUBLIC.TERMS
-  ) {
+  // 1. 홈페이지, auth/callback 로그인 없이 접근 가능 (auth/callback에서 세션 교환해서 그 이후에 세션이 생김)
+  if (path === ROUTES.PUBLIC.HOME || path === ROUTES.PUBLIC.AUTH_CALLBACK) {
     return { shouldRedirect: false }
   }
 
@@ -110,10 +106,11 @@ async function handleRouting(
     }
   }
 
-  // 4. 세션은 있고 유저 정보가 없는 경우 (구글 로그인 ~ 유저정보입력 완료 사이 / 개인정보처리방침은 예외)
+  // 4. 세션은 있고 유저 정보가 없는 경우 (구글 로그인 ~ 유저정보입력 완료 사이)
   if (!user) {
     if (
       path === ROUTES.PUBLIC.AUTH_CALLBACK ||
+      path === ROUTES.PUBLIC.TERMS ||
       path === ROUTES.PUBLIC.STRAVA_CONNECT ||
       path === ROUTES.PUBLIC.REGISTER_USER_INFO
     ) {
