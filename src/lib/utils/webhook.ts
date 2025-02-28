@@ -130,6 +130,9 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
       rankingsWithDistrict = await calculateActivityRanking(activity, user_id, supabase)
     }
 
+    // * 디스크립션 생성 및 업데이트를 1초 후에 실행
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
     // * 디스크립션 생성
     const description = generateActivityDescription(activity, rankingsWithDistrict, isEveryone)
 
