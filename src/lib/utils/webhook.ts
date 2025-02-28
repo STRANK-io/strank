@@ -78,6 +78,9 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
       accessToken = await refreshStravaTokenAndUpdate(supabase, user_id, refresh_token)
     }
 
+    // * 2초 후 조회 (서드파티 서비스와의 디스크립션 수정 충돌을 피하기 위함)
+    await new Promise(resolve => setTimeout(resolve, 2000))
+
     // * 활동 상세 정보 조회
     const response = await fetch(
       `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(body.object_id)}`,
@@ -129,9 +132,6 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
     if (isEveryone) {
       rankingsWithDistrict = await calculateActivityRanking(activity, user_id, supabase)
     }
-
-    // * 디스크립션 생성 및 업데이트를 5초 후에 실행
-    await new Promise(resolve => setTimeout(resolve, 5000))
 
     // * 디스크립션 생성
     const description = generateActivityDescription(activity, rankingsWithDistrict, isEveryone)
