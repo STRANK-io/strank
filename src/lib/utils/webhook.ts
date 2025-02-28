@@ -111,7 +111,12 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
     const activity: StravaActivity = await response.json()
 
     // * 라이딩 데이터가 아닌 경우 로직 종료
-    // if (activity.type !== STRAVA_ACTIVITY_TYPE.RIDE) return
+    if (
+      activity.type &&
+      activity.type.trim().toLowerCase() !== STRAVA_ACTIVITY_TYPE.RIDE.toLowerCase()
+    ) {
+      return
+    }
 
     // * 활동 데이터 DB에 저장
     await processActivities([activity], user_id, supabase)
