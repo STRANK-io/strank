@@ -3,7 +3,7 @@ import Providers from '@/components/providers'
 import { pretendardFont } from '@/lib/fonts'
 import { Metadata } from 'next'
 import { Toaster } from 'sonner'
-import { GoogleTagManager } from '@next/third-parties/google'
+import { GoogleTagManager, GoogleAnalytics } from '@next/third-parties/google'
 import { Viewport } from 'next'
 import { KakaoInAppBrowserHandler } from '@/components/common/KakaoInAppBrowserHandler'
 
@@ -35,8 +35,9 @@ export default function RootLayout({
     <html lang="ko" className={`${pretendardFont.variable} font-sans`} suppressHydrationWarning>
       <body suppressHydrationWarning className="bg-gray-100">
         {process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_GTM_ID && (
-          <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GTM_ID} />
         )}
+
         <KakaoInAppBrowserHandler />
         <Providers>{children}</Providers>
         <Toaster toastOptions={{ unstyled: true }} duration={2000} />
