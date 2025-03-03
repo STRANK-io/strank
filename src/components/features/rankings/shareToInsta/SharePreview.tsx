@@ -9,15 +9,17 @@ import { useRef } from 'react'
 interface SharePreviewProps {
   backgroundImage: string
   myRankingActivity: ActivityWithRanking
-  criteria: RankingFilters['criteria']
-  period: RankingFilters['period']
+  criteriaFilter: RankingFilters['criteria']
+  periodFilter: RankingFilters['period']
+  districtFilter: RankingFilters['district']
 }
 
 export default function SharePreview({
   backgroundImage,
   myRankingActivity,
-  criteria,
-  period,
+  criteriaFilter,
+  periodFilter,
+  districtFilter,
 }: SharePreviewProps) {
   const previewRef = useRef<HTMLDivElement>(null)
 
@@ -28,9 +30,9 @@ export default function SharePreview({
     user: { nickname, district },
   } = myRankingActivity
 
-  const criteriaText = criteria === 'distance' ? '거리' : '고도'
+  const criteriaText = criteriaFilter === 'distance' ? '거리' : '고도'
   const criteriaValue =
-    criteria === 'distance'
+    criteriaFilter === 'distance'
       ? `${formatActivityValue(totalDistance, 'distance')} ${ACTIVITY_UNITS.DISTANCE}`
       : `${formatActivityValue(totalElevationGain)} ${ACTIVITY_UNITS.ELEVATION}`
 
@@ -66,7 +68,7 @@ export default function SharePreview({
       .slice(0, -1)
   }
 
-  const formattedDate = getFormattedDate(period)
+  const formattedDate = getFormattedDate(periodFilter)
 
   return (
     <div
@@ -106,7 +108,7 @@ export default function SharePreview({
             </span>
           </div>
           <div className="flex items-center justify-between text-sm font-medium leading-[18.2px]">
-            <span>서울시 {district}</span>
+            <span>{`${districtFilter === 'users' ? `서울시 ${district}` : '서울시'}`}</span>
             <span>strank.io</span>
           </div>
         </div>

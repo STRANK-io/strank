@@ -19,6 +19,7 @@ interface ShareDialogProps {
   onClose: () => void
   criteria: RankingFilters['criteria']
   period: RankingFilters['period']
+  district: RankingFilters['district']
   initialImage: string
   myRankingActivity: ActivityWithRanking
 }
@@ -28,6 +29,7 @@ export default function ShareDialog({
   onClose,
   criteria,
   period,
+  district,
   initialImage,
   myRankingActivity,
 }: ShareDialogProps) {
@@ -189,8 +191,9 @@ export default function ShareDialog({
           <SharePreview
             backgroundImage={backgroundImage}
             myRankingActivity={myRankingActivity}
-            criteria={criteria}
-            period={period}
+            criteriaFilter={criteria}
+            periodFilter={period}
+            districtFilter={district}
           />
 
           <div className="flex flex-col gap-[7px]">
