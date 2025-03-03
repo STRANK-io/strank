@@ -35,7 +35,7 @@ export const ERROR_MESSAGES = {
   [ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED]: '인증이 필요한 페이지입니다. 로그인 후 이용해주세요.',
   [ERROR_CODES.AUTH.STRAVA_CONNECTION_REQUIRED]: 'Strava 계정 연동이 필요합니다.',
   [ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED]:
-    '스트라바 계정 연결에 문제가 발생하였습니다. 다시 한번 시도해주세요. 지속적으로 문제가 발생하는 경우 support@strank.io 로 문의주세요.',
+    '스트라바 계정 연결에 문제가 발생하였습니다.\n다시 한번 시도해주세요. 지속적으로 문제가 발생하는 경우 support@strank.io 로 문의주세요.',
   [ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED_ALREADY_CONNECTED]:
     '이미 연동된 스트라바 계정입니다.\n동일한 스트라바 계정은 연동할 수 없습니다.',
   [ERROR_CODES.AUTH.BETA_TESTER_RECRUITMENT_CLOSED]:
