@@ -1,84 +1,91 @@
+import { createClient } from '@/lib/supabase/server'
 import { STRAVA_OAUTH_BASE_URL, STRAVA_TOKEN_ENDPOINT } from '@/lib/constants/strava'
-import { Database } from '@/lib/supabase/supabase'
 import { logError } from '@/lib/utils/log'
-import { SupabaseClient } from '@supabase/supabase-js'
 
 /**
- * 토큰이 만료되었거나 만료가 임박한지 확인하는 함수
- * @param expiresAt 토큰 만료 시간 (ISO 문자열 또는 timestamp)
- * @param thresholdHours 만료 임박 판단 기준 시간(시간 단위, 기본값: 1시간)
- * @returns true: 토큰 갱신 필요, false: 토큰이 아직 유효함
- */
-export function isTokenExpiringSoon(
-  expiresAt: string | number,
-  thresholdHours: number = 1
-): boolean {
-  const expirationTime = new Date(expiresAt).getTime()
-  const currentTime = Date.now()
-  const thresholdMs = thresholdHours * 3600 * 1000
-
-  return expirationTime - currentTime <= thresholdMs
-}
-
-/**
- * Strava 리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받고,
- * 데이터베이스에 해당 사용자의 토큰 정보를 업데이트하는 함수
+ * Strava 액세스 토큰이 만료되었는지 확인하고 필요한 경우 갱신하는 함수
  *
- * @param supabase - 데이터베이스 작업을 위한 Supabase 클라이언트 인스턴스
- * @param userId - Strava 토큰 정보를 업데이트할 사용자의 ID
- * @param refreshToken - 새로운 액세스 토큰 발급에 사용할 리프레시 토큰
- * @returns 새로운 액세스 토큰
- *
- * @remarks
- * 이 함수는 Strava API와 상호작용하며, 서버단에서 실행되어야 합니다.
- * 또한 아래 환경 변수가 필요합니다:
- * - `NEXT_PUBLIC_STRAVA_CLIENT_ID`
- * - `STRAVA_CLIENT_SECRET`
+ * @param userId - 사용자 ID
+ * @returns 갱신 필요 여부와 새 액세스 토큰 (갱신된 경우)
  */
-export async function refreshStravaTokenAndUpdate(
-  supabase: SupabaseClient<Database>,
-  userId: string,
-  refreshToken: string
-) {
-  const response = await fetch(`${STRAVA_OAUTH_BASE_URL}${STRAVA_TOKEN_ENDPOINT}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      client_id: process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID,
-      client_secret: process.env.STRAVA_CLIENT_SECRET,
-      grant_type: 'refresh_token',
-      refresh_token: refreshToken,
-    }),
-  })
+export async function refreshStravaToken(userId: string) {
+  const supabase = await createClient()
 
-  if (!response.ok) {
-    const { error } = await response.json()
-    logError('Strava Token Refresh Error: [refreshStravaTokenAndUpdate]', {
-      error,
-    })
-    throw new Error(error)
-  }
-
-  const data = await response.json()
-
-  // 새로운 토큰으로 업데이트
-  const { error: updateError } = await supabase
+  // 토큰 정보 가져오기
+  const { data: tokenData, error: tokenError } = await supabase
     .from('strava_user_tokens')
-    .update({
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
-      expires_at: new Date(data.expires_at * 1000).toISOString(),
-    })
+    .select('refresh_token, expires_at, access_token')
     .eq('user_id', userId)
     .is('deleted_at', null)
+    .single()
 
-  if (updateError) {
-    logError('Strava Token Update Error: 데이터베이스 업데이트 실패', {
-      error: updateError,
-    })
+  if (tokenError || !tokenData) {
+    throw new Error('Token not found')
   }
 
-  return data.access_token
+  // 토큰이 만료되었는지 확인
+  const now = new Date()
+  const expiresAt = new Date(tokenData.expires_at)
+
+  // 만료 10분 전부터 갱신 시도 (여유 시간 확보)
+  if (expiresAt.getTime() - now.getTime() > 10 * 60 * 1000) {
+    return {
+      needsRefresh: false,
+      accessToken: tokenData.access_token,
+    }
+  }
+
+  try {
+    // 토큰 갱신 요청
+    const response = await fetch(`${STRAVA_OAUTH_BASE_URL}${STRAVA_TOKEN_ENDPOINT}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID,
+        client_secret: process.env.STRAVA_CLIENT_SECRET,
+        refresh_token: tokenData.refresh_token,
+        grant_type: 'refresh_token',
+      }),
+    })
+
+    if (!response.ok) {
+      logError('Failed to refresh token:', {
+        response,
+        functionName: 'refreshStravaToken',
+      })
+      throw new Error(`Failed to refresh token: ${response.status} ${response.statusText}`)
+    }
+
+    const refreshData = await response.json()
+
+    // 새 토큰 정보 저장
+    const { error: updateError } = await supabase
+      .from('strava_user_tokens')
+      .update({
+        access_token: refreshData.access_token,
+        refresh_token: refreshData.refresh_token,
+        expires_at: new Date(refreshData.expires_at * 1000).toISOString(),
+      })
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+
+    if (updateError) {
+      throw new Error(`Failed to update token: ${updateError.message}`)
+    }
+
+    logError('Token refreshed successfully', {
+      userId,
+      expiresAt: new Date(refreshData.expires_at * 1000).toISOString(),
+    })
+
+    return {
+      needsRefresh: true,
+      accessToken: refreshData.access_token,
+    }
+  } catch (error) {
+    logError('Token refresh error:', { error, userId })
+    throw error
+  }
 }

@@ -13,7 +13,7 @@ import {
 } from '@/lib/utils/description'
 import { logError } from '@/lib/utils/log'
 import { isRidingActivityType, processActivities } from '@/lib/utils/strava'
-import { isTokenExpiringSoon, refreshStravaTokenAndUpdate } from '@/lib/utils/stravaToken'
+import { refreshStravaToken } from '@/lib/utils/stravaToken'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/lib/supabase/supabase'
 
@@ -34,7 +34,6 @@ import { Database } from '@/lib/supabase/supabase'
  * - 액세스 토큰이 만료 예정인 경우 자동으로 갱신합니다
  * - API 사용량을 추적하기 위해 호출 횟수를 카운트합니다
  * - 활동의 공개 범위가 'everyone'이 아닌 경우 랭킹 계산을 생략합니다
- * - activity.type이 ride인 경우만 처리합니다. (라이딩 데이터만 처리)
  */
 export async function processWebhookEvent(body: StravaWebhookEventResponse) {
   try {
@@ -68,17 +67,23 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
       return
     }
 
-    const { access_token, refresh_token, expires_at, user_id } = tokenData
+    const { user_id } = tokenData
 
     // * 엑세스 토큰 만료 확인 및 만료 시 갱신
-    let accessToken = access_token
-
-    if (isTokenExpiringSoon(expires_at)) {
-      accessToken = await refreshStravaTokenAndUpdate(supabase, user_id, refresh_token)
+    let accessToken
+    try {
+      const tokenResult = await refreshStravaToken(user_id)
+      accessToken = tokenResult.accessToken
+    } catch (error) {
+      logError('Strava Webhook: 토큰 갱신 중 오류 발생', {
+        error,
+        userId: user_id,
+      })
+      return
     }
 
-    // * 2초 후 조회 (서드파티 서비스와의 디스크립션 수정 충돌을 피하기 위함)
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // * 1초 후 조회 (서드파티 서비스와의 디스크립션 수정 충돌을 피하기 위함)
+    await new Promise(resolve => setTimeout(resolve, 1000))
 
     // * 활동 상세 정보 조회
     const response = await fetch(

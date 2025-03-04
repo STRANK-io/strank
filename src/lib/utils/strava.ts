@@ -10,8 +10,15 @@ import {
 import { StravaActivity } from '@/lib/types/strava'
 import { convertUTCToKoreanTime } from '@/lib/utils/date'
 import { logError } from '@/lib/utils/log'
+import { retryFetch } from '@/lib/utils/fetch'
 
-type ProgressStage = 'initial' | 'connecting' | 'fetching' | 'processing' | 'completed'
+type ProgressStage =
+  | 'initial'
+  | 'connecting'
+  | 'token_refreshed'
+  | 'fetching'
+  | 'processing'
+  | 'completed'
 type ProgressState = {
   progress: number
   stage: ProgressStage
@@ -99,19 +106,23 @@ export function isRidingActivityType(activityType: string | null | undefined): b
  * @param accessToken - 스트라바 액세스 토큰
  * @param page - 조회할 페이지 번호 (기본값: 1)
  * @param supabase - Supabase 클라이언트 인스턴스
+ * @param signal - AbortController 신호 (선택 사항)
  * @returns {Promise<StravaActivity[]>} 스트라바 활동 데이터 배열
  *
  * @throws {Error} API_LIMIT_EXCEEDED - API 호출 한도 초과 시
  * @throws {Error} AUTH.STRAVA_CONNECTION_FAILED - API 연결 실패 시
+ * @throws {Error} NETWORK.CONNECTION_LOST - 네트워크 연결 끊김 시
  *
  * @remarks
  * - API 호출마다 사용량을 카운트합니다
  * - Rate limit 초과 시 별도의 에러를 발생시킵니다
+ * - AbortController 신호를 통해 요청을 중단할 수 있습니다
  */
 export async function fetchStravaActivities(
   accessToken: string,
   page = 1,
-  supabase: SupabaseClient<Database>
+  supabase: SupabaseClient<Database>,
+  signal?: AbortSignal
 ): Promise<StravaActivity[]> {
   // API 사용량 증가
   const { error: usageError } = await supabase.rpc('increment_strava_api_usage', {
@@ -122,34 +133,82 @@ export async function fetchStravaActivities(
     logError('Failed to increment API usage:', { error: usageError })
   }
 
-  // Strava API 호출
-  const response = await fetch(
-    `${STRAVA_API_URL}${STRAVA_ATHLETE_ACTIVITIES_ENDPOINT}?page=${page}&per_page=${SYNC_CONFIG.FETCH_PAGE_SIZE}`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  )
+  try {
+    // Strava API 호출 (재시도 로직 적용)
+    const response = await retryFetch(
+      `${STRAVA_API_URL}${STRAVA_ATHLETE_ACTIVITIES_ENDPOINT}?page=${page}&per_page=${SYNC_CONFIG.FETCH_PAGE_SIZE}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        signal,
+        retries: 3,
+        retryDelay: 1000,
+        retryStatusCodes: [408, 500, 502, 503, 504],
+        onRetry: (attempt, error, response) => {
+          logError('Retrying Strava API request', {
+            attempt,
+            error: error?.message,
+            status: response?.status,
+          })
+        },
+      }
+    )
 
-  if (!response.ok) {
-    if (response.status === 429) {
-      logError('Strava API limit exceeded', {
+    if (!response.ok) {
+      if (response.status === 429) {
+        logError('Strava API limit exceeded', {
+          status: response.status,
+          statusText: response.statusText,
+        })
+        throw new Error(ERROR_CODES.STRAVA.API_LIMIT_EXCEEDED)
+      }
+
+      if (response.status === 401) {
+        logError('Strava token expired or invalid', {
+          status: response.status,
+          statusText: response.statusText,
+        })
+        throw new Error(ERROR_CODES.STRAVA.TOKEN_EXPIRED)
+      }
+
+      logError('Strava connection failed', {
         status: response.status,
         statusText: response.statusText,
       })
-      throw new Error(ERROR_CODES.STRAVA.API_LIMIT_EXCEEDED)
+      throw new Error(ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED)
     }
-    logError('Strava connection failed', {
-      status: response.status,
-      statusText: response.statusText,
-    })
+
+    const data: StravaActivity[] = await response.json()
+    const ridingActivities = data.filter(activity => isRidingActivityType(activity.type))
+
+    return ridingActivities
+  } catch (error) {
+    if (error instanceof Error) {
+      // AbortError는 요청이 의도적으로 중단된 경우
+      if (error.name === 'AbortError') {
+        throw new Error(ERROR_CODES.STRAVA.CONNECTION_ABORTED)
+      }
+
+      // 이미 처리된 에러는 그대로 전달
+      if (
+        error.message === ERROR_CODES.STRAVA.API_LIMIT_EXCEEDED ||
+        error.message === ERROR_CODES.STRAVA.TOKEN_EXPIRED ||
+        error.message === ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED
+      ) {
+        throw error
+      }
+
+      // 네트워크 관련 에러
+      if (error.message.includes('network') || error.message.includes('fetch')) {
+        throw new Error(ERROR_CODES.NETWORK.CONNECTION_LOST)
+      }
+    }
+
+    // 기타 에러
+    logError('Unexpected error in fetchStravaActivities:', { error })
     throw new Error(ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED)
   }
-  const data: StravaActivity[] = await response.json()
-  const ridingActivities = data.filter(activity => isRidingActivityType(activity.type))
-
-  return ridingActivities
 }
 
 /**

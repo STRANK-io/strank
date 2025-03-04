@@ -19,6 +19,15 @@ export const ERROR_CODES = {
     ACTIVITY_UPDATE_FAILED: 'strava_activity_update_failed',
     ACTIVITY_SYNC_FAILED: 'strava_activity_sync_failed',
     INSUFFICIENT_PERMISSIONS: 'strava_insufficient_permissions',
+    TOKEN_EXPIRED: 'strava_token_expired',
+    TOKEN_REFRESH_FAILED: 'strava_token_refresh_failed',
+    NETWORK_ERROR: 'strava_network_error',
+    CONNECTION_ABORTED: 'strava_connection_aborted',
+  },
+  NETWORK: {
+    CONNECTION_TIMEOUT: 'network_connection_timeout',
+    CONNECTION_LOST: 'network_connection_lost',
+    REQUEST_FAILED: 'network_request_failed',
   },
   INTERNAL_ERROR: 'internal_error',
 } as const
@@ -45,11 +54,27 @@ export const ERROR_MESSAGES = {
     '프로필 이미지 처리에 실패했습니다. 다시 시도해주세요.',
 
   // STRAVA
-  [ERROR_CODES.STRAVA.API_LIMIT_EXCEEDED]: 'Strava API 일일 사용량을 초과했습니다.',
+  [ERROR_CODES.STRAVA.API_LIMIT_EXCEEDED]:
+    'Strava API 일일 사용량을 초과했습니다. 잠시 후 다시 시도해주세요.',
   [ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED]: '활동 업데이트에 실패했습니다. 다시 시도해주세요.',
   [ERROR_CODES.STRAVA.ACTIVITY_SYNC_FAILED]: '활동 동기화에 실패했습니다. 다시 시도해주세요.',
   [ERROR_CODES.STRAVA.INSUFFICIENT_PERMISSIONS]:
     '원활한 서비스 이용을 위해 스트라바 계정 연동 시 필요한 모든 권한을 허용해주세요.',
+  [ERROR_CODES.STRAVA.TOKEN_EXPIRED]: '스트라바 인증이 만료되었습니다. 다시 연동해주세요.',
+  [ERROR_CODES.STRAVA.TOKEN_REFRESH_FAILED]:
+    '스트라바 인증 갱신에 실패했습니다. 다시 연동해주세요.',
+  [ERROR_CODES.STRAVA.NETWORK_ERROR]:
+    '스트라바 서버와 통신 중 오류가 발생했습니다. 네트워크 연결을 확인하고 다시 시도해주세요.',
+  [ERROR_CODES.STRAVA.CONNECTION_ABORTED]:
+    '스트라바 연동 과정이 중단되었습니다. 처음부터 다시 시도해주세요.',
+
+  // NETWORK
+  [ERROR_CODES.NETWORK.CONNECTION_TIMEOUT]:
+    '서버 연결 시간이 초과되었습니다. 네트워크 상태를 확인하고 다시 시도해주세요.',
+  [ERROR_CODES.NETWORK.CONNECTION_LOST]:
+    '네트워크 연결이 끊어졌습니다. 연결 상태를 확인하고 다시 시도해주세요.',
+  [ERROR_CODES.NETWORK.REQUEST_FAILED]: '네트워크 요청이 실패했습니다. 다시 시도해주세요.',
+
   // INTERNAL
   [ERROR_CODES.INTERNAL_ERROR]: '시스템 오류가 발생했습니다. 다시 시도해주세요.',
 } as const
