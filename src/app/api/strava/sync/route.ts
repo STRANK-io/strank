@@ -18,7 +18,7 @@ export async function GET() {
   let isControllerClosed = false
   let pingInterval: NodeJS.Timeout | null = null
   let lastPingTime = Date.now()
-  let abortController = new AbortController()
+  const abortController = new AbortController()
 
   const stream = new ReadableStream({
     async start(controller) {

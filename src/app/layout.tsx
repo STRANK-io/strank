@@ -3,7 +3,7 @@ import Providers from '@/components/providers'
 import { pretendardFont } from '@/lib/fonts'
 import { Metadata } from 'next'
 import { Toaster } from 'sonner'
-import { GoogleTagManager, GoogleAnalytics } from '@next/third-parties/google'
+import { GoogleAnalytics } from '@next/third-parties/google'
 import { Viewport } from 'next'
 import { InAppBrowserHandler } from '@/components/common/InAppBrowserHandler'
 
