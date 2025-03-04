@@ -5,7 +5,7 @@ import { Metadata } from 'next'
 import { Toaster } from 'sonner'
 import { GoogleTagManager, GoogleAnalytics } from '@next/third-parties/google'
 import { Viewport } from 'next'
-import { KakaoInAppBrowserHandler } from '@/components/common/KakaoInAppBrowserHandler'
+import { InAppBrowserHandler } from '@/components/common/InAppBrowserHandler'
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://strank.io'),
@@ -38,7 +38,7 @@ export default function RootLayout({
           <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GTM_ID} />
         )}
 
-        <KakaoInAppBrowserHandler />
+        <InAppBrowserHandler />
         <Providers>{children}</Providers>
         <Toaster toastOptions={{ unstyled: true }} duration={2000} />
       </body>
