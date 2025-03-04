@@ -76,6 +76,21 @@ export const createProgressManager = (onProgress: (progress: number, stage: stri
 }
 
 /**
+ * 스트라바 활동 타입이 스트랭크에서 지원하는 라이딩 타입인지 확인하는 유틸리티 함수
+ *
+ * @param activityType - 확인할 활동 타입
+ * @returns {boolean} 지원하는 타입인 경우 true, 아닌 경우 false
+ */
+export function isRidingActivityType(activityType: string | null | undefined): boolean {
+  if (!activityType?.trim()) return false
+
+  const normalizedType = activityType.trim().toLowerCase()
+  const supportedTypes = Object.values(STRAVA_ACTIVITY_TYPE).map(type => type.toLowerCase())
+
+  return supportedTypes.includes(normalizedType)
+}
+
+/**
  * 스트라바 API를 통해 사용자의 활동 데이터를 조회하는 함수
  *
  * @description
@@ -132,12 +147,7 @@ export async function fetchStravaActivities(
     throw new Error(ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED)
   }
   const data: StravaActivity[] = await response.json()
-  const ridingActivities = data.filter(
-    activity =>
-      activity.type &&
-      (activity.type.trim().toLowerCase() === STRAVA_ACTIVITY_TYPE.RIDE.toLowerCase() ||
-        activity.type.trim().toLowerCase() === STRAVA_ACTIVITY_TYPE.VIRTUAL.toLowerCase())
-  )
+  const ridingActivities = data.filter(activity => isRidingActivityType(activity.type))
 
   return ridingActivities
 }
