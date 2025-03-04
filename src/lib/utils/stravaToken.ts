@@ -1,4 +1,4 @@
-import { STRAVA_TOKEN_URL } from '@/lib/constants/strava'
+import { STRAVA_OAUTH_BASE_URL, STRAVA_TOKEN_ENDPOINT } from '@/lib/constants/strava'
 import { Database } from '@/lib/supabase/supabase'
 import { logError } from '@/lib/utils/log'
 import { SupabaseClient } from '@supabase/supabase-js'
@@ -40,7 +40,7 @@ export async function refreshStravaTokenAndUpdate(
   userId: string,
   refreshToken: string
 ) {
-  const response = await fetch(STRAVA_TOKEN_URL, {
+  const response = await fetch(`${STRAVA_OAUTH_BASE_URL}${STRAVA_TOKEN_ENDPOINT}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

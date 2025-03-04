@@ -4,7 +4,11 @@ import { ERROR_CODES } from '@/lib/constants/error'
 import { ROUTES } from '@/lib/constants/routes'
 import { redirectWithError } from '@/lib/utils/auth'
 import { StravaTokenResponse } from '@/lib/types/strava'
-import { REQUIRED_SCOPES, STRAVA_TOKEN_URL } from '@/lib/constants/strava'
+import {
+  REQUIRED_SCOPES,
+  STRAVA_OAUTH_BASE_URL,
+  STRAVA_TOKEN_ENDPOINT,
+} from '@/lib/constants/strava'
 import { logError } from '@/lib/utils/log'
 
 export async function GET(request: Request) {
@@ -42,7 +46,7 @@ export async function GET(request: Request) {
     }
 
     // * 토큰 요청
-    const tokenResponse = await fetch(STRAVA_TOKEN_URL, {
+    const tokenResponse = await fetch(`${STRAVA_OAUTH_BASE_URL}${STRAVA_TOKEN_ENDPOINT}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
