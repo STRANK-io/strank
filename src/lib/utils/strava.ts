@@ -135,7 +135,8 @@ export async function fetchStravaActivities(
   const ridingActivities = data.filter(
     activity =>
       activity.type &&
-      activity.type.trim().toLowerCase() === STRAVA_ACTIVITY_TYPE.RIDE.toLowerCase()
+      (activity.type.trim().toLowerCase() === STRAVA_ACTIVITY_TYPE.RIDE.toLowerCase() ||
+        activity.type.trim().toLowerCase() === STRAVA_ACTIVITY_TYPE.VIRTUAL.toLowerCase())
   )
 
   return ridingActivities

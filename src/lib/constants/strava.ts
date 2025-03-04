@@ -18,4 +18,5 @@ export const STRAVA_VISIBILITY = {
 
 export const STRAVA_ACTIVITY_TYPE = {
   RIDE: 'Ride',
+  VIRTUAL: 'Virtual', // 실내자전거
 } as const

@@ -115,8 +115,9 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
 
     // * 라이딩 데이터가 아닌 경우 로직 종료
     if (
-      activity.type &&
-      activity.type.trim().toLowerCase() !== STRAVA_ACTIVITY_TYPE.RIDE.toLowerCase()
+      !activity.type ||
+      activity.type.trim().toLowerCase() !== STRAVA_ACTIVITY_TYPE.RIDE.toLowerCase() ||
+      activity.type.trim().toLowerCase() !== STRAVA_ACTIVITY_TYPE.VIRTUAL.toLowerCase()
     ) {
       return
     }
