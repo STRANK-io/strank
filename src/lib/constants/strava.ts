@@ -19,4 +19,6 @@ export const STRAVA_VISIBILITY = {
 export const STRAVA_ACTIVITY_TYPE = {
   RIDE: 'Ride',
   VIRTUAL_RIDE: 'VirtualRide',
+  MOUNTAIN_BIKE_RIDE: 'MountainBikeRide',
+  GRAVEL_RIDE: 'GravelRide',
 } as const

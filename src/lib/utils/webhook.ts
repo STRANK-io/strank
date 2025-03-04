@@ -1,7 +1,6 @@
 import { ERROR_CODES } from '@/lib/constants/error'
 import {
   STRAVA_ACTIVITY_BY_ID_ENDPOINT,
-  STRAVA_ACTIVITY_TYPE,
   STRAVA_API_URL,
   STRAVA_VISIBILITY,
 } from '@/lib/constants/strava'
