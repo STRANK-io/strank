@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { STRAVA_OAUTH_BASE_URL, STRAVA_TOKEN_ENDPOINT } from '@/lib/constants/strava'
 import { logError } from '@/lib/utils/log'
 
@@ -9,7 +9,7 @@ import { logError } from '@/lib/utils/log'
  * @returns 갱신 필요 여부와 새 액세스 토큰 (갱신된 경우)
  */
 export async function refreshStravaToken(userId: string) {
-  const supabase = await createClient()
+  const supabase = await createServiceRoleClient()
 
   // 토큰 정보 가져오기
   const { data: tokenData, error: tokenError } = await supabase
@@ -20,6 +20,15 @@ export async function refreshStravaToken(userId: string) {
     .single()
 
   if (tokenError || !tokenData) {
+    logError('Token not found in refreshStravaToken:', {
+      userId,
+      error: tokenError,
+      query: {
+        table: 'strava_user_tokens',
+        column: 'user_id',
+        value: userId,
+      },
+    })
     throw new Error('Token not found')
   }
 

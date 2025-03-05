@@ -72,12 +72,20 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
     // * 엑세스 토큰 만료 확인 및 만료 시 갱신
     let accessToken
     try {
+      // 토큰 갱신 전 사용자 정보 로깅
+      logError('Strava Webhook: 토큰 갱신 시도', {
+        userId: user_id,
+        stravaAthleteId: body.owner_id,
+        tokenExists: !!tokenData,
+      })
+
       const tokenResult = await refreshStravaToken(user_id)
       accessToken = tokenResult.accessToken
     } catch (error) {
       logError('Strava Webhook: 토큰 갱신 중 오류 발생', {
         error,
         userId: user_id,
+        stravaAthleteId: body.owner_id,
       })
       return
     }
