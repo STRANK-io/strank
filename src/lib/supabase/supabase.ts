@@ -317,6 +317,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      save_strava_token_and_update_user: {
+        Args: {
+          p_strava_athlete_id: number
+          p_access_token: string
+          p_refresh_token: string
+          p_expires_at: string
+        }
+        Returns: string
+      }
       update_user_info: {
         Args: {
           nickname?: string

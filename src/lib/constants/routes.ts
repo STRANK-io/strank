@@ -24,6 +24,14 @@ export const isPublicPath = (path: string): boolean => {
   )
 }
 
+export const isPublicPathWithoutSync = (path: string): boolean => {
+  return PUBLIC_PATHS.some(publicPath =>
+    publicPath === '/'
+      ? path === '/'
+      : path.startsWith(publicPath) && path !== ROUTES.PUBLIC.STRAVA_SYNC
+  )
+}
+
 export const isPrivatePath = (path: string): boolean => {
   return PRIVATE_PATHS.some(privatePath => path.startsWith(privatePath))
 }

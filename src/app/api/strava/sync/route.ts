@@ -154,39 +154,6 @@ export async function GET() {
             progress.addProcessedItems(batch.length)
           }
 
-          // 모든 데이터 처리가 완료된 후 strava_connected_at 업데이트 (최대 2번 재시도)
-          let retryCount = 0
-          const MAX_RETRIES = 2
-          let userUpdateError = null
-
-          while (retryCount <= MAX_RETRIES) {
-            const { error } = await supabase
-              .from('users')
-              .update({
-                strava_connected_at: new Date().toISOString(),
-              })
-              .eq('id', user.id)
-
-            if (!error) {
-              break
-            }
-
-            userUpdateError = error
-            retryCount++
-
-            if (retryCount <= MAX_RETRIES) {
-              await new Promise(resolve => setTimeout(resolve, 500))
-            }
-          }
-
-          if (userUpdateError && retryCount > MAX_RETRIES) {
-            logError('Failed to update strava_connected_at after retries:', {
-              error: userUpdateError,
-              endpoint: 'api/strava/sync',
-            })
-            throw new Error(ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED)
-          }
-
           // 완료 상태로 전환
           progress.setStage('completed')
 
@@ -218,41 +185,6 @@ export async function GET() {
             errorCode = ERROR_CODES.STRAVA.CONNECTION_ABORTED
           } else if (error.message.includes('network') || error.message.includes('fetch')) {
             errorCode = ERROR_CODES.STRAVA.NETWORK_ERROR
-          }
-        }
-
-        // 에러 발생 시 토큰 삭제 및 strava_connected_at 초기화
-        if (user) {
-          try {
-            // 중단 API 호출을 통해 정리 작업 수행
-            const abortResponse = await fetch(
-              new URL('/api/strava/sync/abort', process.env.NEXT_PUBLIC_APP_URL).toString(),
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-              }
-            )
-
-            if (!abortResponse.ok) {
-              // 중단 API 호출 실패 시 직접 정리 시도
-              await supabase.from('strava_user_tokens').delete().eq('user_id', user.id)
-              await supabase.from('users').update({ strava_connected_at: null }).eq('id', user.id)
-
-              // 최근 30분 이내 생성된 활동 데이터 삭제
-              const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
-              await supabase
-                .from('activities')
-                .delete()
-                .eq('user_id', user.id)
-                .gte('created_at', thirtyMinutesAgo)
-            }
-          } catch (cleanupError) {
-            logError('Cleanup error:', {
-              error: cleanupError,
-              endpoint: 'api/strava/sync',
-            })
           }
         }
 

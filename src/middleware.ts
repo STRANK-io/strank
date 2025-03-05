@@ -1,7 +1,12 @@
 import { ERROR_CODES } from '@/lib/constants/error'
 import { User, type SupabaseClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
-import { isPrivatePath, isPublicPath, ROUTES } from '@/lib/constants/routes'
+import {
+  isPrivatePath,
+  isPublicPath,
+  isPublicPathWithoutSync,
+  ROUTES,
+} from '@/lib/constants/routes'
 import { Database, Tables } from '@/lib/supabase/supabase'
 import { redirectWithError } from '@/lib/utils/auth'
 import { logError } from '@/lib/utils/log'
@@ -69,7 +74,7 @@ async function handleRouting(
 ) {
   const path = request.nextUrl.pathname
   // 0. 가입 완료한 유저는 공개 페이지 접근 불가능 -> rankings 페이지로 이동
-  if (user?.strava_connected_at && isPublicPath(path)) {
+  if (user?.strava_connected_at && isPublicPathWithoutSync(path)) {
     return {
       shouldRedirect: true,
       response: NextResponse.redirect(new URL(ROUTES.PRIVATE.RANKINGS, request.url)),
@@ -106,12 +111,11 @@ async function handleRouting(
     }
   }
 
-  // 4. 세션은 있고 유저 정보가 없는 경우 (구글 로그인 ~ 유저정보입력 완료 사이)
+  // 4. 세션은 있고 유저 정보가 없는 경우 (구글 로그인 ~ 유저정보입력 완료 사이만 접근 가능)
   if (!user) {
     if (
       path === ROUTES.PUBLIC.AUTH_CALLBACK ||
       path === ROUTES.PUBLIC.TERMS ||
-      path === ROUTES.PUBLIC.STRAVA_CONNECT ||
       path === ROUTES.PUBLIC.REGISTER_USER_INFO
     ) {
       return { shouldRedirect: false }
@@ -126,6 +130,19 @@ async function handleRouting(
     }
   }
 
+  // 5. 스트라바 연동 안된 유저는 스트라바 활동 데이터 동기화 페이지 접근 불가능
+  if (!user.strava_connected_at && path === ROUTES.PUBLIC.STRAVA_SYNC) {
+    return {
+      shouldRedirect: true,
+      response: redirectWithError(
+        request.nextUrl.origin,
+        ROUTES.PUBLIC.STRAVA_CONNECT,
+        ERROR_CODES.AUTH.STRAVA_CONNECTION_REQUIRED
+      ),
+    }
+  }
+
+  // 6. 스트라바 연동 안된 유저는 비공개 페이지 접근 불가능
   if (!user.strava_connected_at && isPrivatePath(path)) {
     return {
       shouldRedirect: true,

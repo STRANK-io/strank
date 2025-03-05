@@ -9,67 +9,35 @@ import { logError } from '@/lib/utils/log'
 import StrankVerticalLogo from '@/components/common/logos/StrankVerticalLogo'
 import CompatibleWithStravaImage from '@/components/common/CompatibleWithStravaImage'
 
+// 상수 정의
+const MAX_RETRIES = 2
+const RETRY_DELAY = 2000
+const CONNECTION_TIMEOUT = 60000
+const PING_INTERVAL = 10000
+
 export default function StravaSyncPage() {
   const [progress, setProgress] = useState(0)
-  const [connectionAttempts, setConnectionAttempts] = useState(0)
+  const [isRetrying, setIsRetrying] = useState(false)
   const eventSourceRef = useRef<EventSource | null>(null)
-  const isSyncingRef = useRef(true)
   const router = useRouter()
 
   useEffect(() => {
-    const MAX_RETRIES = 5
-    const RETRY_DELAY = 2000
-    const CONNECTION_TIMEOUT = 60000
-    const PING_INTERVAL = 10000
+    // 오류 발생 또는 완료 시 랭킹 페이지로 이동
+    const completeAndRedirect = () => {
+      // 진행 상태를 100%로 설정
+      setProgress(100)
 
-    const handleError = ({ path, errorStatus }: { path: string; errorStatus?: string }) => {
-      router.push(`${path}?error=${errorStatus || ERROR_CODES.AUTH.STRAVA_CONNECTION_FAILED}`)
+      // 잠시 후 랭킹 페이지로 이동
+      setTimeout(() => {
+        router.push(ROUTES.PRIVATE.RANKINGS)
+      }, 500) // 사용자가 100% 진행 상태를 볼 수 있도록 약간의 지연 추가
     }
-
-    // 동기화 중단 요청 함수
-    const sendAbortRequest = async () => {
-      if (!isSyncingRef.current) return
-
-      try {
-        await fetch('/api/strava/sync/abort', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          keepalive: true, // 페이지가 언로드된 후에도 요청이 완료되도록 함
-        })
-      } catch (error) {
-        logError('Failed to send abort signal:', {
-          error,
-          endpoint: 'strava-sync',
-        })
-      }
-    }
-
-    // 페이지 이탈 시 서버에 알림
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (isSyncingRef.current) {
-        // 동기화 중단 요청만 전송 (사용자 알림 없음)
-        sendAbortRequest()
-      }
-    }
-
-    // 뒤로가기 버튼 처리
-    const handlePopState = () => {
-      if (isSyncingRef.current) {
-        isSyncingRef.current = false
-        sendAbortRequest()
-      }
-    }
-
-    // 페이지 이탈 이벤트 리스너 등록
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    window.addEventListener('popstate', handlePopState)
 
     const connectEventSource = () => {
       let timeoutId: NodeJS.Timeout
       let pingTimeoutId: NodeJS.Timeout
       let lastPingTime = Date.now()
+      let retryCount = 0
 
       // 이전 EventSource가 있으면 정리
       if (eventSourceRef.current) {
@@ -78,17 +46,20 @@ export default function StravaSyncPage() {
 
       const eventSource = new EventSource('/api/strava/sync')
       eventSourceRef.current = eventSource
-      isSyncingRef.current = true
 
       const setupTimeout = () => {
         clearTimeout(timeoutId)
         timeoutId = setTimeout(() => {
           eventSource.close()
-          if (connectionAttempts < MAX_RETRIES) {
-            setConnectionAttempts(prev => prev + 1)
+          if (retryCount < MAX_RETRIES) {
+            retryCount++
+            setIsRetrying(true)
             setTimeout(connectEventSource, RETRY_DELAY)
           } else {
-            handleError({ path: ROUTES.PUBLIC.STRAVA_CONNECT })
+            logError('Connection timeout, redirecting to rankings', {
+              endpoint: 'strava-sync',
+            })
+            completeAndRedirect()
           }
         }, CONNECTION_TIMEOUT)
       }
@@ -106,14 +77,15 @@ export default function StravaSyncPage() {
             })
 
             eventSource.close()
-            if (connectionAttempts < MAX_RETRIES) {
-              setConnectionAttempts(prev => prev + 1)
+            if (retryCount < MAX_RETRIES) {
+              retryCount++
+              setIsRetrying(true)
               setTimeout(connectEventSource, RETRY_DELAY)
             } else {
-              handleError({
-                path: ROUTES.PUBLIC.STRAVA_CONNECT,
-                errorStatus: ERROR_CODES.NETWORK.CONNECTION_LOST,
+              logError('Max ping retries reached, redirecting to rankings', {
+                endpoint: 'strava-sync',
               })
+              completeAndRedirect()
             }
           } else {
             setupPingCheck()
@@ -124,6 +96,7 @@ export default function StravaSyncPage() {
       eventSource.addEventListener('open', () => {
         setupTimeout()
         setupPingCheck()
+        setIsRetrying(false)
       })
 
       // 브라우저의 기본 재연결 간격을 2초로 설정
@@ -150,14 +123,13 @@ export default function StravaSyncPage() {
             eventSource.close()
             clearTimeout(timeoutId)
             clearTimeout(pingTimeoutId)
-            isSyncingRef.current = false
 
-            const path =
-              data.status === ERROR_CODES.AUTH.AUTHENTICATION_REQUIRED
-                ? ROUTES.PUBLIC.HOME
-                : ROUTES.PUBLIC.STRAVA_CONNECT
-            handleError({ path, errorStatus: data.status })
+            logError('Error received from server:', {
+              status: data.status,
+              endpoint: 'strava-sync',
+            })
 
+            completeAndRedirect()
             return
           }
 
@@ -166,8 +138,7 @@ export default function StravaSyncPage() {
             eventSource.close()
             clearTimeout(timeoutId)
             clearTimeout(pingTimeoutId)
-            isSyncingRef.current = false
-            router.push(ROUTES.PRIVATE.RANKINGS)
+            completeAndRedirect()
             return
           }
 
@@ -196,19 +167,16 @@ export default function StravaSyncPage() {
         clearTimeout(pingTimeoutId)
         eventSource.close()
 
-        if (connectionAttempts < MAX_RETRIES) {
-          setConnectionAttempts(prev => prev + 1)
+        if (retryCount < MAX_RETRIES) {
+          retryCount++
+          setIsRetrying(true)
           // 지수 백오프를 적용한 재시도 간격
-          setTimeout(connectEventSource, RETRY_DELAY * Math.pow(2, connectionAttempts))
+          setTimeout(connectEventSource, RETRY_DELAY * Math.pow(2, retryCount))
         } else {
-          logError('Max retries reached, redirecting to error page', {
+          logError('Max retries reached, redirecting to rankings', {
             endpoint: 'strava-sync',
           })
-          isSyncingRef.current = false
-          handleError({
-            path: ROUTES.PUBLIC.STRAVA_CONNECT,
-            errorStatus: ERROR_CODES.NETWORK.CONNECTION_LOST,
-          })
+          completeAndRedirect()
         }
       }
 
@@ -223,21 +191,12 @@ export default function StravaSyncPage() {
 
     // 컴포넌트 언마운트 시 정리
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-      window.removeEventListener('popstate', handlePopState)
-
       if (eventSourceRef.current) {
         eventSourceRef.current.close()
         eventSourceRef.current = null
       }
-
-      // 페이지 이동 시 동기화 중단 요청 전송
-      if (isSyncingRef.current) {
-        isSyncingRef.current = false
-        sendAbortRequest()
-      }
     }
-  }, [router, connectionAttempts])
+  }, [router])
 
   return (
     <div className="pt-[50px]">
@@ -254,11 +213,7 @@ export default function StravaSyncPage() {
           <p className="whitespace-pre-line text-base font-bold leading-[20.8px] text-brand-dark">
             {`소중한 운동정보를 가져오고 있습니다. (최근200개)\n조금만 기다려 주세요.\n자동으로 첫화면으로 이동됩니다.`}
           </p>
-          {connectionAttempts > 0 && (
-            <p className="text-sm text-brand-secondary">
-              연결 재시도 중... ({connectionAttempts}/{5})
-            </p>
-          )}
+          {isRetrying && <p className="text-sm text-brand-secondary">연결 재시도 중...</p>}
         </div>
 
         <div className="mt-[11px] flex justify-center">
