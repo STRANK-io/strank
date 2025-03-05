@@ -98,6 +98,26 @@ export function isRidingActivityType(activityType: string | null | undefined): b
 }
 
 /**
+ * 활동이 유효한 라이딩 데이터인지 확인하는 함수
+ *
+ * @param activity - 확인할 스트라바 활동 데이터
+ * @returns {boolean} 유효한 라이딩 데이터인 경우 true, 아닌 경우 false
+ */
+export function isValidRidingActivity(activity: StravaActivity): boolean {
+  // 라이딩 타입이 아닌 경우 유효하지 않음
+  if (!isRidingActivityType(activity.type)) {
+    return false
+  }
+
+  // 평균 속도가 50 이상인 경우 유효하지 않음 (비현실적인 속도)
+  if (activity.average_speed && activity.average_speed >= 50) {
+    return false
+  }
+
+  return true
+}
+
+/**
  * 스트라바 API를 통해 사용자의 활동 데이터를 조회하는 함수
  *
  * @description
@@ -180,7 +200,9 @@ export async function fetchStravaActivities(
     }
 
     const data: StravaActivity[] = await response.json()
-    const ridingActivities = data.filter(activity => isRidingActivityType(activity.type))
+
+    // * 라이딩 데이터가 아니거나 평균속도가 50 이상인 경우 제외
+    const ridingActivities = data.filter(activity => isValidRidingActivity(activity))
 
     return ridingActivities
   } catch (error) {

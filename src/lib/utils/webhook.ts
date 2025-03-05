@@ -12,7 +12,7 @@ import {
   updateStravaActivityDescription,
 } from '@/lib/utils/description'
 import { logError } from '@/lib/utils/log'
-import { isRidingActivityType, processActivities } from '@/lib/utils/strava'
+import { processActivities, isValidRidingActivity } from '@/lib/utils/strava'
 import { refreshStravaToken } from '@/lib/utils/stravaToken'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/lib/supabase/supabase'
@@ -118,8 +118,8 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
 
     const activity: StravaActivity = await response.json()
 
-    // * 라이딩 데이터가 아닌 경우 로직 종료
-    if (!isRidingActivityType(activity.type)) {
+    // * 유효한 라이딩 활동인지 확인
+    if (!isValidRidingActivity(activity)) {
       return
     }
 
