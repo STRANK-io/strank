@@ -29,7 +29,7 @@ export default function StravaSyncPage() {
 
       // 잠시 후 랭킹 페이지로 이동
       setTimeout(() => {
-        router.push(ROUTES.PRIVATE.RANKINGS)
+        router.replace(ROUTES.PRIVATE.RANKINGS)
       }, 500) // 사용자가 100% 진행 상태를 볼 수 있도록 약간의 지연 추가
     }
 
