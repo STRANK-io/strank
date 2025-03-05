@@ -165,7 +165,7 @@ export async function GET() {
             error: tokenError,
             endpoint: 'api/strava/sync',
           })
-          send(0, ERROR_CODES.STRAVA.TOKEN_REFRESH_FAILED)
+          send(99, ERROR_CODES.STRAVA.TOKEN_REFRESH_FAILED)
           closeController()
           return
         }
@@ -189,7 +189,8 @@ export async function GET() {
         }
 
         try {
-          send(0, errorCode)
+          // 오류 발생 시에도 높은 진행률을 표시
+          send(99, errorCode)
         } catch (sendError) {
           logError('Failed to send error to client:', {
             error: sendError,

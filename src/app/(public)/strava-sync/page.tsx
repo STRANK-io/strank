@@ -20,6 +20,15 @@ export default function StravaSyncPage() {
   const [isRetrying, setIsRetrying] = useState(false)
   const eventSourceRef = useRef<EventSource | null>(null)
   const router = useRouter()
+  const maxProgressRef = useRef(0) // 최대 진행 상태를 저장하는 ref
+
+  // progress가 감소하지 않도록 하는 함수
+  const updateProgress = (newProgress: number) => {
+    if (newProgress > maxProgressRef.current) {
+      maxProgressRef.current = newProgress
+    }
+    setProgress(maxProgressRef.current)
+  }
 
   useEffect(() => {
     // 오류 발생 또는 완료 시 랭킹 페이지로 이동
@@ -29,8 +38,23 @@ export default function StravaSyncPage() {
 
       // 잠시 후 랭킹 페이지로 이동
       setTimeout(() => {
-        router.replace(ROUTES.PRIVATE.RANKINGS)
-      }, 500) // 사용자가 100% 진행 상태를 볼 수 있도록 약간의 지연 추가
+        // 브라우저 환경인지 확인 (window 객체가 존재하는지)
+        if (typeof window !== 'undefined') {
+          try {
+            // 현재 페이지를 히스토리에서 제거
+            window.history.replaceState(null, '', ROUTES.PRIVATE.RANKINGS)
+
+            // 페이지 이동 (새로운 히스토리 항목 생성 없이)
+            window.location.replace(ROUTES.PRIVATE.RANKINGS)
+          } catch (error) {
+            // 히스토리 API 오류 시 일반 리다이렉트로 폴백
+            router.replace(ROUTES.PRIVATE.RANKINGS)
+          }
+        } else {
+          // 서버 사이드 렌더링 환경에서는 router 사용
+          router.replace(ROUTES.PRIVATE.RANKINGS)
+        }
+      }, 200) // 사용자가 100% 진행 상태를 볼 수 있도록 약간의 지연 추가
     }
 
     const connectEventSource = () => {
@@ -147,8 +171,10 @@ export default function StravaSyncPage() {
             return
           }
 
-          // 일반 진행 상태 업데이트
-          setProgress(data.progress)
+          // 일반 진행 상태 업데이트 (감소하지 않도록)
+          if (typeof data.progress === 'number') {
+            updateProgress(data.progress)
+          }
         } catch (error) {
           logError('Failed to parse message:', {
             error,
