@@ -17,6 +17,7 @@ export const metadata: Metadata = {
     '지역별 랭킹으로 더 가까워진 라이딩 커뮤니티 / 자전거 기록도, 랭킹도 이제 하이퍼 로컬하게',
   other: {
     'format-detection': 'telephone=no, email=no',
+    'naver-site-verification': '7a826a257d5221d1d1c4cd52c8e2b252a37dbc2e',
   },
 }
 
