@@ -84,11 +84,6 @@ export async function refreshStravaToken(userId: string) {
       throw new Error(`Failed to update token: ${updateError.message}`)
     }
 
-    logError('Token refreshed successfully', {
-      userId,
-      expiresAt: new Date(refreshData.expires_at * 1000).toISOString(),
-    })
-
     return {
       needsRefresh: true,
       accessToken: refreshData.access_token,
