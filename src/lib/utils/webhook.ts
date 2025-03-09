@@ -83,9 +83,6 @@ export async function processWebhookEvent(body: StravaWebhookEventResponse) {
       return
     }
 
-    // * 1초 후 조회 (서드파티 서비스와의 디스크립션 수정 충돌을 피하기 위함)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
     // * 활동 상세 정보 조회
     const response = await fetch(
       `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(body.object_id)}`,
