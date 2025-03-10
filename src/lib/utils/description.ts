@@ -21,7 +21,7 @@ export function generateActivityDescription(
   isEveryone: boolean
 ): string {
   const sections = [
-    generateDateSection(activity.start_date),
+    generateDateSection(activity.start_date_local), // local 시간으로 변환된 활동 날짜 사용
     generateRankingSection(rankingsWithDistrict, isEveryone),
     generateAnalysisSection(activity),
   ]
