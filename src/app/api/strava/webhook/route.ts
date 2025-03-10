@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
       logError('Failed to record webhook event:', { error: insertError })
     }
 
-    // * 10초 후 조회 (서드파티 서비스와의 디스크립션 수정 충돌을 피하기 위함)
-    await new Promise(resolve => setTimeout(resolve, 10000))
+    // * 7초 후 조회 (서드파티 서비스와의 디스크립션 수정 충돌을 피하기 위함)
+    await new Promise(resolve => setTimeout(resolve, 7000))
 
     await processWebhookEvent(webhookBody)
 
