@@ -4,7 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { StravaWebhookEventResponse } from '@/lib/types/strava'
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants/error'
 import { logError } from '@/lib/utils/log'
-import { processWebhookEvent } from '@/lib/utils/webhook'
+import { processCreateActivityEvent, processDeleteActivityEvent } from '@/lib/utils/webhook'
 
 // * 1. 웹훅 검증을 위한 GET 요청 처리
 export async function GET(request: Request) {
@@ -25,16 +25,19 @@ export async function GET(request: Request) {
   return new NextResponse('OK', { status: 200 })
 }
 
-// * 2. 활동 업데이트 시 웹훅 온 이벤트 처리
+// * 2. 활동 웹훅 이벤트 처리
 export async function POST(request: NextRequest) {
   let webhookBody: StravaWebhookEventResponse
 
   try {
     webhookBody = await request.json()
 
-    // * 활동 생성 이벤트만 처리
-    if (webhookBody.aspect_type !== 'create' || webhookBody.object_type !== 'activity') {
-      return new NextResponse('Not a new activity', { status: 200 })
+    // * 활동 생성, 삭제가 아닌 경우 즉시 응답
+    if (
+      webhookBody.object_type !== 'activity' ||
+      (webhookBody.aspect_type !== 'create' && webhookBody.aspect_type !== 'delete')
+    ) {
+      return new NextResponse('Not an activity event', { status: 200 })
     }
 
     const supabase = await createServiceRoleClient()
@@ -64,10 +67,22 @@ export async function POST(request: NextRequest) {
       logError('Failed to record webhook event:', { error: insertError })
     }
 
-    // * 4초 후 조회 (서드파티 서비스와의 디스크립션 수정 충돌을 피하기 위함)
-    await new Promise(resolve => setTimeout(resolve, 4000))
+    // 생성, 삭제에 따른 분기 처리
+    switch (webhookBody.aspect_type) {
+      case 'create':
+        // * 4초 후 진행 (서드파티 서비스와의 디스크립션 수정 충돌을 피하기 위함)
+        await new Promise(resolve => setTimeout(resolve, 4000))
 
-    await processWebhookEvent(webhookBody)
+        await processCreateActivityEvent(webhookBody)
+        break
+
+      case 'delete':
+        await processDeleteActivityEvent(webhookBody)
+        break
+
+      default:
+        return new NextResponse('Unsupported aspect type', { status: 200 })
+    }
 
     return new NextResponse('Success', {
       status: 200,

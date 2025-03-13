@@ -18,6 +18,51 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/lib/supabase/supabase'
 
 /**
+ * @description
+ * 스트라바 활동 삭제 시 스트랭크 DB의 활동 데이터도 삭제하는 함수
+ * @param body - 스트라바 웹훅 이벤트 응답 객체
+ */
+export async function processDeleteActivityEvent(body: StravaWebhookEventResponse) {
+  const supabase = await createServiceRoleClient()
+
+  // 1. 해당 활동이 존재하는지 확인
+  const { data: activity, error: selectError } = await supabase
+    .from('activities')
+    .select('id')
+    .eq('id', body.object_id)
+    .single()
+
+  if (selectError) {
+    logError('웹훅: 삭제할 활동 조회 실패', {
+      error: selectError,
+      functionName: 'processDeleteActivityEvent',
+      stravaActivityId: body.object_id,
+    })
+    return
+  }
+
+  // 이미 삭제되었거나 존재하지 않는 활동인 경우
+  if (!activity) {
+    logError('웹훅: 삭제할 활동을 찾을 수 없음', {
+      functionName: 'processDeleteActivityEvent',
+      stravaActivityId: body.object_id,
+    })
+    return
+  }
+
+  // 2. 활동 삭제
+  const { error: deleteError } = await supabase.from('activities').delete().eq('id', body.object_id)
+
+  if (deleteError) {
+    logError('웹훅: 스트라바에서 삭제한 활동 데이터 삭제 실패', {
+      error: deleteError,
+      functionName: 'processDeleteActivityEvent',
+      stravaActivityId: body.object_id,
+    })
+  }
+}
+
+/**
  * 스트라바 웹훅 이벤트를 처리하는 백그라운드 작업을 수행하는 함수
  *
  * @description
@@ -35,7 +80,7 @@ import { Database } from '@/lib/supabase/supabase'
  * - API 사용량을 추적하기 위해 호출 횟수를 카운트합니다
  * - 활동의 공개 범위가 'everyone'이 아닌 경우 랭킹 계산을 생략합니다
  */
-export async function processWebhookEvent(body: StravaWebhookEventResponse) {
+export async function processCreateActivityEvent(body: StravaWebhookEventResponse) {
   try {
     const supabase = await createServiceRoleClient()
 
