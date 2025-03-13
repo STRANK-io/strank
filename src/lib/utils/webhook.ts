@@ -16,6 +16,7 @@ import { processActivities, isValidRidingActivity } from '@/lib/utils/strava'
 import { refreshStravaToken } from '@/lib/utils/stravaToken'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/lib/supabase/supabase'
+import { generateActivityHash } from '@/lib/utils/activity'
 
 /**
  * @description
@@ -165,14 +166,40 @@ export async function processCreateActivityEvent(body: StravaWebhookEventRespons
       return
     }
 
-    // * 활동 데이터 DB에 저장
-    await processActivities([activity], user_id, supabase)
+    // * 활동 해시 생성
+    const activityHash = generateActivityHash(
+      user_id,
+      activity.distance || 0,
+      activity.total_elevation_gain || 0,
+      activity.start_date
+    )
+
+    // * 중복 활동 체크 (삭제되지 않은 활동만)
+    const { data: existingActivity } = await supabase
+      .from('activities')
+      .select('id')
+      .eq('activity_hash', activityHash)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    if (existingActivity) {
+      // 해시값이 같은데 ID가 다른 경우 기존 활동 삭제 (최신 활동을 저장하기 위함)
+      if (existingActivity.id !== activity.id) {
+        await supabase.from('activities').delete().eq('id', existingActivity.id)
+      } else {
+        // 해시값도 같고 ID도 같으면 기존 활동 유지
+        return
+      }
+    }
+
+    // * 활동 데이터 DB에 저장 (activity_hash 포함)
+    await processActivities([{ ...activity, activity_hash: activityHash }], user_id, supabase)
 
     let rankingsWithDistrict: CalculateActivityRankingReturn | null = null
 
     const isEveryone = activity.visibility === STRAVA_VISIBILITY.EVERYONE
     // * 랭킹 정보 계산
-    // * activity.visibility가 everyone이 아닌 경우는 랭킹 데이터 계산 생략 및 디스크립션에 넣지 않음
+    // activity.visibility가 everyone이 아닌 경우는 랭킹 데이터 계산 생략 및 디스크립션에 넣지 않음
     if (isEveryone) {
       rankingsWithDistrict = await calculateActivityRanking(activity, user_id, supabase)
     }

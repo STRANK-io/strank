@@ -5,6 +5,7 @@ import { createProgressManager, fetchStravaActivities, processActivities } from 
 import { StravaActivity } from '@/lib/types/strava'
 import { logError } from '@/lib/utils/log'
 import { refreshStravaToken } from '@/lib/utils/stravaToken'
+import { generateActivityHash } from '@/lib/utils/activity'
 
 // 연결 상태 확인을 위한 핑 간격 (밀리초)
 const PING_INTERVAL = 10000
@@ -125,8 +126,6 @@ export async function GET() {
 
           progress.setStage('fetching')
 
-          let allActivities: StravaActivity[] = []
-
           // * 최근 200개 활동 가져오기 (재시도 로직 적용)
           const activities = await fetchStravaActivities(
             accessToken,
@@ -135,21 +134,41 @@ export async function GET() {
             abortController.signal
           )
 
-          if (activities.length > 0) {
-            allActivities = activities
-          }
-
           // 활동 데이터 처리
-          progress.setStage('processing', allActivities.length)
+          progress.setStage('processing', activities.length)
+
+          // 각 활동에 대해 해시값 생성
+          const activitiesWithHash = activities.map(activity => ({
+            ...activity,
+            activity_hash: generateActivityHash(
+              user.id,
+              activity.distance || 0,
+              activity.total_elevation_gain || 0,
+              activity.start_date
+            ),
+          }))
+
+          // 해시값 기준으로 그룹화하고 각 그룹에서 가장 최신 활동만 선택
+          const uniqueActivities = Object.values(
+            activitiesWithHash.reduce(
+              (acc, activity) => {
+                if (!acc[activity.activity_hash] || activity.id > acc[activity.activity_hash].id) {
+                  acc[activity.activity_hash] = activity
+                }
+                return acc
+              },
+              {} as Record<string, (typeof activitiesWithHash)[0]>
+            )
+          )
 
           // * 배치 처리
-          for (let i = 0; i < allActivities.length; i += SYNC_CONFIG.BATCH_SIZE) {
+          for (let i = 0; i < uniqueActivities.length; i += SYNC_CONFIG.BATCH_SIZE) {
             // 연결이 끊겼는지 확인
             if (isControllerClosed) {
               throw new Error(ERROR_CODES.STRAVA.CONNECTION_ABORTED)
             }
 
-            const batch = allActivities.slice(i, i + SYNC_CONFIG.BATCH_SIZE)
+            const batch = uniqueActivities.slice(i, i + SYNC_CONFIG.BATCH_SIZE)
             await processActivities(batch, user.id, supabase)
             progress.addProcessedItems(batch.length)
           }

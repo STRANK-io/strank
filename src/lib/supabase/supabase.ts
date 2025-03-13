@@ -30,6 +30,7 @@ export type Database = {
     Tables: {
       activities: {
         Row: {
+          activity_hash: string
           average_cadence: number | null
           average_speed: number | null
           average_watts: number | null
@@ -48,6 +49,7 @@ export type Database = {
           visibility: string | null
         }
         Insert: {
+          activity_hash: string
           average_cadence?: number | null
           average_speed?: number | null
           average_watts?: number | null
@@ -66,6 +68,7 @@ export type Database = {
           visibility?: string | null
         }
         Update: {
+          activity_hash?: string
           average_cadence?: number | null
           average_speed?: number | null
           average_watts?: number | null

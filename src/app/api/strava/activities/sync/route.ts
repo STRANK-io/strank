@@ -4,6 +4,7 @@ import { ERROR_CODES, type ErrorMessageCode } from '@/lib/constants/error'
 import { logError } from '@/lib/utils/log'
 import { fetchStravaActivities, processActivities } from '@/lib/utils/strava'
 import { refreshStravaToken } from '@/lib/utils/stravaToken'
+import { generateActivityHash } from '@/lib/utils/activity'
 
 export async function POST(request: Request) {
   try {
@@ -41,10 +42,69 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: 'No new activities' })
       }
 
-      // 활동 데이터 저장
-      await processActivities(activities, userId, supabase)
+      // 각 활동에 대해 해시값 생성
+      const activitiesWithHash = activities.map(activity => ({
+        ...activity,
+        activity_hash: generateActivityHash(
+          userId,
+          activity.distance || 0,
+          activity.total_elevation_gain || 0,
+          activity.start_date
+        ),
+      }))
 
-      return NextResponse.json({ message: 'Activities synced successfully' })
+      // 해시값 기준으로 그룹화하고 각 그룹에서 가장 최신 활동만 선택
+      const uniqueActivities = Object.values(
+        activitiesWithHash.reduce(
+          (acc, activity) => {
+            if (!acc[activity.activity_hash] || activity.id > acc[activity.activity_hash].id) {
+              acc[activity.activity_hash] = activity
+            }
+            return acc
+          },
+          {} as Record<string, (typeof activitiesWithHash)[0]>
+        )
+      )
+
+      // DB에서 해시값이 일치하는 기존 활동들 조회
+      const { data: existingActivities } = await supabase
+        .from('activities')
+        .select('id, activity_hash')
+        .in(
+          'activity_hash',
+          uniqueActivities.map(a => a.activity_hash)
+        )
+        .is('deleted_at', null)
+
+      if (existingActivities) {
+        // 해시값이 같은데 ID가 다른 스트랭크 내 활동들 삭제
+        const activitiesToDelete = existingActivities.filter(existing =>
+          uniqueActivities.some(
+            activity =>
+              activity.activity_hash === existing.activity_hash && activity.id !== existing.id
+          )
+        )
+
+        if (activitiesToDelete.length > 0) {
+          await supabase
+            .from('activities')
+            .delete()
+            .in(
+              'id',
+              activitiesToDelete.map(a => a.id)
+            )
+        }
+      }
+
+      // 중복되지 않은 활동 저장 (이제 upsert가 가능한 상태)
+      await processActivities(uniqueActivities, userId, supabase)
+
+      return NextResponse.json({
+        message: 'Activities synced successfully',
+        total: activities.length,
+        unique: uniqueActivities.length,
+        duplicates: activities.length - uniqueActivities.length,
+      })
     } catch (error) {
       // 오류 유형에 따른 처리
       let errorCode: ErrorMessageCode = ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED

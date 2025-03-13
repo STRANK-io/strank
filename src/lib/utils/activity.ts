@@ -1,3 +1,5 @@
+import crypto from 'crypto'
+
 /**
  * 소수점 절사 & 세자리 마다 콤마 추가
  *
@@ -26,4 +28,20 @@ export const formatActivityValue = (
   const truncatedValue = Math.floor(convertedValue)
 
   return truncatedValue.toLocaleString('ko-KR')
+}
+
+/**
+ * 활동 데이터로부터 고유 해시를 생성하는 함수
+ * @description
+ * user_id, distance, total_elevation_gain, start_date를 조합하여 해시를 생성합니다.
+ * 같은 기록은 activity_id가 달라도 동일한 해시값을 가집니다.
+ */
+export const generateActivityHash = (
+  userId: string,
+  distance: number,
+  elevationGain: number,
+  startDate: string
+): string => {
+  const dataString = `${userId}:${distance}:${elevationGain}:${startDate}`
+  return crypto.createHash('sha256').update(dataString).digest('hex')
 }
