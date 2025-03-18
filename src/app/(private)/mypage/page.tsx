@@ -7,6 +7,7 @@ import { CompleteButton } from '@/components/common/userInfo/CompleteButton'
 import { LogOutButton } from '@/components/features/auth/LogOutButton'
 import { WithdrawalButton } from '@/components/features/auth/WithdrawalButton'
 import SyncRecentActivitySection from '@/components/features/mypage/SyncRecentActivitySection'
+import { ChevronRightIcon } from 'lucide-react'
 
 export default function MypagePage() {
   const { userId } = useUserContext()
@@ -27,6 +28,12 @@ export default function MypagePage() {
       </section>
 
       <section className="flex w-full flex-col items-center justify-center gap-4 text-sm font-bold leading-[18.2px] text-brand-dark">
+        <Link
+          href="https://strank.framer.website/notice/description-error"
+          className=" text-sm underline decoration-brand-dark"
+        >
+          디스크립션 오류 해결 방법
+        </Link>
         <Link href="https://strank.framer.website" className="underline decoration-brand-dark">
           공지사항
         </Link>
