@@ -419,13 +419,8 @@ export async function processUpdateActivityEvent(body: StravaWebhookEventRespons
       isEveryone
     )
 
-    // 기존 디스크립션 앞에 새 디스크립션 추가
-    const newDescription = activity.description
-      ? `${strankDescription}\n\n${activity.description}`
-      : strankDescription
-
     // * 스트라바 활동 업데이트
-    await updateStravaActivityDescription(accessToken, activity, newDescription)
+    await updateStravaActivityDescription(accessToken, activity, strankDescription)
 
     // * API 사용량 증가
     await supabase.rpc('increment_strava_api_usage', {
