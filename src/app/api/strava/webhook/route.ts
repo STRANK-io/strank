@@ -10,6 +10,8 @@ import {
   processUpdateActivityEvent,
 } from '@/lib/utils/webhook'
 
+export const maxDuration = 20 // hobby 플랜 max duration은 기본 10, 최대 60초
+
 // * 1. 웹훅 검증을 위한 GET 요청 처리
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -93,6 +95,15 @@ export async function POST(request: NextRequest) {
       default:
         return new NextResponse('Unsupported aspect type', { status: 200 })
     }
+
+    // 웹훅 이벤트 기록 제거
+    await supabase.from('strava_webhook_events').delete().match({
+      event_time: webhookBody.event_time,
+      object_id: webhookBody.object_id,
+      object_type: webhookBody.object_type,
+      aspect_type: webhookBody.aspect_type,
+      owner_id: webhookBody.owner_id,
+    })
 
     return new NextResponse('Success', {
       status: 200,
