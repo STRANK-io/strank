@@ -285,3 +285,153 @@ export async function calculateActivityRanking(
     district: user.district,
   }
 }
+
+/**
+ * 스트라바 활동 수정 이벤트를 처리하는 함수
+ *
+ * @description
+ * 다음과 같은 순차적인 작업을 수행합니다:
+ * 1. 스트라바 액세스 토큰 조회 및 필요시 갱신
+ * 2. 스트라바 API를 통한 활동 상세 정보 조회
+ * 3. 활동 name에 strank, STRANK, rank, RANK, 랭크, 랭킹, 순위 키워드가 있는지 확인
+ * 4. 키워드가 있고 디스크립션에 STRANK가 없으면 디스크립션 생성 및 업데이트
+ *
+ * @param body - 스트라바 웹훅 이벤트 응답 객체
+ */
+export async function processUpdateActivityEvent(body: StravaWebhookEventResponse) {
+  try {
+    const supabase = await createServiceRoleClient()
+
+    // * 유저의 스트라바 엑세스 토큰 조회
+    const { data: tokenData, error: tokenError } = await supabase
+      .from('strava_user_tokens')
+      .select('user_id')
+      .eq('strava_athlete_id', body.owner_id)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    if (tokenError || !tokenData) {
+      logError('Strava Webhook Update: 토큰 조회 실패', {
+        error: tokenError,
+        owner_id: body.owner_id,
+      })
+      return
+    }
+
+    const { user_id } = tokenData
+
+    // * 엑세스 토큰 갱신 및 조회
+    let accessToken
+    try {
+      const tokenResult = await refreshStravaToken(user_id)
+      accessToken = tokenResult.accessToken
+
+      // accessToken이 없는 경우
+      if (!accessToken) {
+        logError('Strava Webhook Update: 토큰 갱신 실패', {
+          userId: user_id,
+        })
+        return
+      }
+    } catch (error) {
+      logError('Strava Webhook Update: 토큰 갱신 중 오류 발생', {
+        error,
+        userId: user_id,
+      })
+      return
+    }
+
+    // * 활동 상세 정보 조회
+    const response = await fetch(
+      `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(body.object_id)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    )
+
+    // * 스트라바 API 호출 카운트 추가
+    await supabase.rpc('increment_strava_api_usage', {
+      is_upload: false,
+    })
+
+    if (!response.ok) {
+      logError('Strava Webhook Update: 활동 조회 실패', {
+        status: response.status,
+        error: await response.text(),
+      })
+      return
+    }
+
+    const activity: StravaActivity = await response.json()
+
+    // * 유효한 라이딩 활동인지 확인
+    if (!isValidRidingActivity(activity)) {
+      return
+    }
+
+    // * 활동 해시 생성
+    const activityHash = generateActivityHash(
+      user_id,
+      activity.distance || 0,
+      activity.total_elevation_gain || 0,
+      activity.start_date
+    )
+
+    // * 중복 활동 체크
+    const { data: existingActivity } = await supabase
+      .from('activities')
+      .select('id')
+      .eq('activity_hash', activityHash)
+      .maybeSingle()
+
+    if (existingActivity) {
+      // 해시값이 같은데 ID가 다른 경우 기존 활동 삭제
+      if (existingActivity.id !== activity.id) {
+        await supabase.from('activities').delete().eq('id', existingActivity.id)
+      }
+    }
+
+    // * 활동 데이터 DB에 저장/업데이트
+    await processActivities([{ ...activity, activity_hash: activityHash }], user_id, supabase)
+
+    // * 활동 이름에 키워드가 포함되어 있는지 확인
+    const keywords = ['strank', 'STRANK', 'rank', 'RANK', '랭크', '랭킹', '순위']
+    const hasKeyword = keywords.some(keyword => activity.name?.includes(keyword))
+
+    if (!hasKeyword || activity.description?.includes('STRANK')) {
+      return // 키워드가 없거나 이미 STRANK 디스크립션이 있으면 종료
+    }
+
+    // * 랭킹 정보 계산
+    const isEveryone = activity.visibility === STRAVA_VISIBILITY.EVERYONE
+    let rankingsWithDistrict: CalculateActivityRankingReturn | null = null
+
+    if (isEveryone) {
+      rankingsWithDistrict = await calculateActivityRanking(activity, user_id, supabase)
+    }
+
+    // * 디스크립션 생성
+    const strankDescription = generateActivityDescription(
+      activity,
+      rankingsWithDistrict,
+      isEveryone
+    )
+
+    // 기존 디스크립션 앞에 새 디스크립션 추가
+    const newDescription = activity.description
+      ? `${strankDescription}\n\n${activity.description}`
+      : strankDescription
+
+    // * 스트라바 활동 업데이트
+    await updateStravaActivityDescription(accessToken, activity, newDescription)
+
+    // * API 사용량 증가
+    await supabase.rpc('increment_strava_api_usage', {
+      is_upload: false,
+    })
+  } catch (error) {
+    logError('Strava Webhook Update: 처리 중 오류 발생', { error })
+  }
+}

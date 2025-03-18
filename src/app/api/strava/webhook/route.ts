@@ -4,7 +4,11 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { StravaWebhookEventResponse } from '@/lib/types/strava'
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants/error'
 import { logError } from '@/lib/utils/log'
-import { processCreateActivityEvent, processDeleteActivityEvent } from '@/lib/utils/webhook'
+import {
+  processCreateActivityEvent,
+  processDeleteActivityEvent,
+  processUpdateActivityEvent,
+} from '@/lib/utils/webhook'
 
 // * 1. 웹훅 검증을 위한 GET 요청 처리
 export async function GET(request: Request) {
@@ -35,7 +39,9 @@ export async function POST(request: NextRequest) {
     // * 활동 생성, 삭제가 아닌 경우 즉시 응답
     if (
       webhookBody.object_type !== 'activity' ||
-      (webhookBody.aspect_type !== 'create' && webhookBody.aspect_type !== 'delete')
+      (webhookBody.aspect_type !== 'create' &&
+        webhookBody.aspect_type !== 'delete' &&
+        webhookBody.aspect_type !== 'update')
     ) {
       return new NextResponse('Not an activity event', { status: 200 })
     }
@@ -51,7 +57,7 @@ export async function POST(request: NextRequest) {
       owner_id: webhookBody.owner_id,
     })
 
-    // * 중복 이벤트인 경우 처리 (유니크 제약조건 위반)
+    // * 중복 이벤트인 경우 처리 (유니크 제약조건 위반 - object_id,object_type,aspect_type,owner_id 일치하면 위반)
     if (insertError?.code === '23505') {
       logError('Duplicate webhook event:', {
         event_time: webhookBody.event_time,
@@ -70,14 +76,18 @@ export async function POST(request: NextRequest) {
     // 생성, 삭제에 따른 분기 처리
     switch (webhookBody.aspect_type) {
       case 'create':
-        // * 4초 후 진행 (서드파티 서비스와의 디스크립션 수정 충돌을 피하기 위함)
-        await new Promise(resolve => setTimeout(resolve, 4000))
+        // * 2.5초 후 진행 (서드파티 서비스와의 디스크립션 수정 충돌을 피하기 위함)
+        await new Promise(resolve => setTimeout(resolve, 2500))
 
         await processCreateActivityEvent(webhookBody)
         break
 
       case 'delete':
         await processDeleteActivityEvent(webhookBody)
+        break
+
+      case 'update':
+        await processUpdateActivityEvent(webhookBody)
         break
 
       default:
