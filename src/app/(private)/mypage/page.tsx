@@ -7,7 +7,6 @@ import { CompleteButton } from '@/components/common/userInfo/CompleteButton'
 import { LogOutButton } from '@/components/features/auth/LogOutButton'
 import { WithdrawalButton } from '@/components/features/auth/WithdrawalButton'
 import SyncRecentActivitySection from '@/components/features/mypage/SyncRecentActivitySection'
-import { ChevronRightIcon } from 'lucide-react'
 
 export default function MypagePage() {
   const { userId } = useUserContext()
