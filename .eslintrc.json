@@ -2,7 +2,7 @@
   "extends": "next/core-web-vitals",
   "overrides": [
     {
-      "files": ["src/test/**/*.{ts,tsx}"],
+      "files": ["src/test/**/*.{ts,tsx}", "src/app/api/test/**/*.{ts,tsx}"],
       "rules": {
         "no-console": "off"
       }
