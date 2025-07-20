@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     // 테스트용 활동 데이터
     const testActivity: StravaActivity = {
       id: 15171788816,
-      name: 'STRANK 테스트 라이딩',
+      name: 'TEST Riding',
       description: '',
       distance: 42463.0,
       moving_time: 5878,
