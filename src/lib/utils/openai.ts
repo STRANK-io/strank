@@ -109,8 +109,12 @@ export async function generateActivityDescriptionWithGPT(
 STRANK와 함께한 오늘, 고단하였으나 뿌듯한 하루 🚴‍♂️`
 
     // ChatGPT에 전달할 프롬프트 생성
-    const prompt = `다음 라이딩 데이터를 기반으로 주어진 템플릿에 맞춰 디스크립션을 생성해주세요.
+    const prompt = `주어진 템플릿의 형식을 정확히 유지하면서, [ ] 안의 내용을 실제 데이터로 채워주세요.
+아래는 채워야 할 템플릿입니다:
 
+${template}
+
+채워 넣어야 할 데이터:
 활동 데이터:
 - 날짜: ${activityData.date}
 - 총거리: ${activityData.distance}km
@@ -129,17 +133,18 @@ ${rankingData ? `랭킹 데이터:
 - 도시 고도 순위: ${rankingData.elevationRankCity || 'N/A'}
 - 지역구 고도 순위: ${rankingData.elevationRankDistrict || 'N/A'}\n` : ''}
 
-위 데이터를 기반으로 아래 가이드라인에 따라 디스크립션을 생성해주세요:
-1. 데이터를 분석하여 의미있는 인사이트를 제공해주세요
-2. 라이더의 성과를 격려하고 동기부여가 되는 내용을 포함해주세요
-3. 다음 훈련을 위한 구체적인 제안을 해주세요
-4. 회복과 컨디셔닝을 위한 실용적인 조언을 제공해주세요
-5. 주어진 템플릿의 이모지와 포맷을 정확히 유지해주세요`
+주의사항:
+1. 템플릿의 모든 이모지와 포맷을 정확히 유지해주세요.
+2. [ ] 안의 내용만 교체하고, 나머지 구조는 그대로 유지해주세요.
+3. 랭킹 데이터가 있는 경우 "[지역1]"은 "서울시"로, "[지역2]"는 실제 지역구 이름으로 교체해주세요.
+4. 파워, 심박수, 케이던스 데이터가 없는 경우 해당 라인은 생략해주세요.
+5. 훈련포커스, 회복 가이드, 다음 훈련 추천 등은 데이터를 분석하여 의미있는 인사이트를 제공해주세요.
+6. 격려와 동기부여가 되는 내용을 포함해주세요.`
 
     try {
       // ChatGPT API 호출
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
@@ -150,8 +155,8 @@ ${rankingData ? `랭킹 데이터:
             content: prompt
           }
         ],
-        temperature: 0.7,
-        max_tokens: 1000,
+        temperature: 0.3,
+        max_tokens: 3000,
       })
 
       // 생성된 디스크립션 반환

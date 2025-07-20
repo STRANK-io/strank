@@ -1,7 +1,7 @@
-const { generateActivityDescriptionWithGPT } = require('../lib/utils/openai')
+import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
-async function testDescriptionGeneration() {
-  try {
+describe('Description Generation Test', () => {
+  it('should generate description with ChatGPT', async () => {
     // 테스트용 활동 데이터
     const testActivityData = {
       date: new Date().toISOString(),
@@ -35,13 +35,9 @@ async function testDescriptionGeneration() {
 
     console.log('\n✅ 생성된 디스크립션:')
     console.log(description)
-    
-    return description
-  } catch (error) {
-    console.error('\n❌ 디스크립션 생성 중 오류 발생:', error)
-    throw error
-  }
-}
 
-// 테스트 실행
-testDescriptionGeneration() 
+    expect(description).toBeTruthy()
+    expect(typeof description).toBe('string')
+    expect(description.length).toBeGreaterThan(0)
+  })
+}) 

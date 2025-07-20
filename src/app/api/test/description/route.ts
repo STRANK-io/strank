@@ -1,6 +1,10 @@
-const { generateActivityDescriptionWithGPT } = require('../lib/utils/openai')
+import { NextResponse } from 'next/server'
+import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
-async function testDescriptionGeneration() {
+// 테스트 엔드포인트는 인증을 우회합니다
+export const dynamic = 'force-dynamic'
+
+export async function GET() {
   try {
     // 테스트용 활동 데이터
     const testActivityData = {
@@ -35,13 +39,10 @@ async function testDescriptionGeneration() {
 
     console.log('\n✅ 생성된 디스크립션:')
     console.log(description)
-    
-    return description
+
+    return NextResponse.json({ success: true, description })
   } catch (error) {
     console.error('\n❌ 디스크립션 생성 중 오류 발생:', error)
-    throw error
+    return NextResponse.json({ success: false, error: String(error) }, { status: 500 })
   }
-}
-
-// 테스트 실행
-testDescriptionGeneration() 
+} 
