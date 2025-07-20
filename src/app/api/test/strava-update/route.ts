@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server'
 import { updateStravaActivityDescription } from '@/lib/utils/description'
 import { StravaActivity } from '@/lib/types/strava'
-import { STRAVA_VISIBILITY } from '@/lib/constants/strava'
+import { STRAVA_ACTIVITY_BY_ID_ENDPOINT, STRAVA_API_URL } from '@/lib/constants/strava'
+import { ERROR_CODES } from '@/lib/constants/error'
+import { logError } from '@/lib/utils/log'
+import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
 // 테스트 엔드포인트는 인증을 우회합니다
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: Request) {
+export async function POST(request: Request) {
   try {
     // URL에서 액세스 토큰과 활동 ID를 가져옵니다
     const { searchParams } = new URL(request.url)
@@ -20,41 +23,60 @@ export async function GET(request: Request) {
       )
     }
 
-    // 테스트용 활동 데이터
-    const testActivity: StravaActivity = {
-      id: parseInt(activityId),
-      name: '테스트 라이딩',
-      description: '',
-      distance: 0,
-      moving_time: 0,
-      elapsed_time: 0,
-      total_elevation_gain: 0,
-      type: '',
-      start_date: '',
-      start_date_local: '',
-      timezone: '',
-      visibility: STRAVA_VISIBILITY.EVERYONE,
-      average_speed: 0,
-      max_speed: 0,
-      average_watts: 0,
-      max_watts: 0,
-      average_cadence: 0,
-      max_heartrate: 0,
+    console.log('🚀 스트라바 업데이트 테스트 시작...')
+
+    // 실제 활동 데이터 가져오기
+    const response = await fetch(
+      `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(parseInt(activityId))}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    )
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error(ERROR_CODES.STRAVA.API_LIMIT_EXCEEDED)
+      }
+      throw new Error('Failed to fetch activity: ' + await response.text())
     }
 
-    // 테스트용 디스크립션
-    const testDescription = `🚴 STRANK AI 라이딩 리포트 (Pro)
-테스트용 디스크립션입니다.
-이 부분은 실제 생성된 디스크립션으로 교체해주세요.`
+    const activity: StravaActivity = await response.json()
 
-    console.log('🚀 스트라바 업데이트 테스트 시작...')
-    console.log('\n📊 테스트 데이터:', {
-      activityId,
-      description: testDescription.substring(0, 100) + '...',
+    console.log('\n📊 활동 데이터:', {
+      id: activity.id,
+      name: activity.name,
+      distance: activity.distance,
+      elevation: activity.total_elevation_gain,
     })
 
+    // OpenAI를 사용하여 디스크립션 생성
+    const description = await generateActivityDescriptionWithGPT(
+      {
+        date: activity.start_date,
+        distance: activity.distance || 0,
+        elevation: activity.total_elevation_gain || 0,
+        averageSpeed: (activity.average_speed || 0) * 3.6,
+        maxSpeed: (activity.max_speed || 0) * 3.6,
+        averageWatts: activity.average_watts || undefined,
+        maxWatts: activity.max_watts || undefined,
+        maxHeartrate: activity.max_heartrate || undefined,
+        averageCadence: activity.average_cadence || undefined,
+      },
+      {
+        distanceRankCity: 84,
+        distanceRankDistrict: 9,
+        elevationRankCity: 89,
+        elevationRankDistrict: 9,
+        district: '구로구',
+      }
+    )
+
+    console.log('\n📝 생성된 디스크립션:', description)
+
     // 스트라바 업데이트
-    await updateStravaActivityDescription(accessToken, testActivity, testDescription)
+    await updateStravaActivityDescription(accessToken, activity, description)
 
     console.log('\n✅ 스트라바 업데이트 완료')
     return NextResponse.json({ success: true })
