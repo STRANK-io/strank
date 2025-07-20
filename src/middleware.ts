@@ -3,7 +3,6 @@ import { User, type SupabaseClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 import {
   isPrivatePath,
-  isPublicPath,
   isPublicPathWithoutSync,
   ROUTES,
 } from '@/lib/constants/routes'

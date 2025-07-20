@@ -62,4 +62,4 @@ export async function GET(request: Request) {
     console.error('\n❌ 스트라바 업데이트 중 오류 발생:', error)
     return NextResponse.json({ success: false, error: String(error) }, { status: 500 })
   }
-} 
+}

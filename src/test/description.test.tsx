@@ -40,4 +40,4 @@ describe('Description Generation Test', () => {
     expect(typeof description).toBe('string')
     expect(description.length).toBeGreaterThan(0)
   })
-}) 
+})

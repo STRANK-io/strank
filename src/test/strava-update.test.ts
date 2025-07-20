@@ -6,7 +6,7 @@ async function testStravaUpdate() {
   try {
     // 테스트용 액세스 토큰 (실제 토큰으로 교체 필요)
     const accessToken = 'your_access_token'
-    
+
     // 테스트용 활동 ID (실제 활동 ID로 교체 필요)
     const activityId = 123456789
 
@@ -54,4 +54,4 @@ async function testStravaUpdate() {
 }
 
 // 테스트 실행
-testStravaUpdate() 
+testStravaUpdate()

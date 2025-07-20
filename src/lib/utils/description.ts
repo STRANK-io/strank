@@ -18,8 +18,7 @@ import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
  */
 export async function generateActivityDescription(
   activity: StravaActivity,
-  rankingsWithDistrict: CalculateActivityRankingReturn | null,
-  isEveryone: boolean
+  rankingsWithDistrict: CalculateActivityRankingReturn | null
 ): Promise<string> {
   try {
     // ChatGPT API를 통해 디스크립션 생성
@@ -97,7 +96,9 @@ function generateDateSection(startDate: string): string {
  * @param rankingsWithDistrict - 랭킹 데이터
  * @returns 랭킹 섹션
  */
-function generateRankingSection(rankingsWithDistrict: CalculateActivityRankingReturn | null): string {
+function generateRankingSection(
+  rankingsWithDistrict: CalculateActivityRankingReturn | null
+): string {
   if (!rankingsWithDistrict || !rankingsWithDistrict.rankings) return ''
 
   const { rankings, district } = rankingsWithDistrict
@@ -116,7 +117,9 @@ function generateRankingSection(rankingsWithDistrict: CalculateActivityRankingRe
   if (rankings.elevationRankCity || rankings.elevationRankDistrict) {
     sections.push(
       `🧗 고도 랭킹${rankings.elevationRankCity ? `\n📍서울시 (${rankings.elevationRankCity}위)` : ''}${
-        rankings.elevationRankDistrict ? `\n📍${district} (${rankings.elevationRankDistrict}위)` : ''
+        rankings.elevationRankDistrict
+          ? `\n📍${district} (${rankings.elevationRankDistrict}위)`
+          : ''
       }`
     )
   }

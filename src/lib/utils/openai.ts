@@ -9,7 +9,7 @@ const openai = new OpenAI({
 
 /**
  * 활동 데이터를 기반으로 ChatGPT를 통해 디스크립션을 생성하는 함수
- * 
+ *
  * @param activityData - 활동 데이터 (거리, 고도, 속도 등)
  * @param rankingData - 랭킹 데이터 (지역별 순위)
  * @returns 생성된 디스크립션
@@ -126,12 +126,16 @@ ${activityData.maxWatts ? `- 최대파워: ${activityData.maxWatts}W\n` : ''}
 ${activityData.maxHeartrate ? `- 최고심박수: ${activityData.maxHeartrate}bpm\n` : ''}
 ${activityData.averageCadence ? `- 평균케이던스: ${activityData.averageCadence}rpm\n` : ''}
 
-${rankingData ? `랭킹 데이터:
+${
+  rankingData
+    ? `랭킹 데이터:
 - 지역: ${rankingData.district}
 - 도시 거리 순위: ${rankingData.distanceRankCity || 'N/A'}
 - 지역구 거리 순위: ${rankingData.distanceRankDistrict || 'N/A'}
 - 도시 고도 순위: ${rankingData.elevationRankCity || 'N/A'}
-- 지역구 고도 순위: ${rankingData.elevationRankDistrict || 'N/A'}\n` : ''}
+- 지역구 고도 순위: ${rankingData.elevationRankDistrict || 'N/A'}\n`
+    : ''
+}
 
 주의사항:
 1. 템플릿의 모든 이모지와 포맷을 정확히 유지해주세요.
@@ -148,12 +152,13 @@ ${rankingData ? `랭킹 데이터:
         messages: [
           {
             role: 'system',
-            content: '당신은 전문적인 사이클링 코치이자 데이터 분석가입니다. 라이더의 활동 데이터를 분석하여 인사이트를 제공하고, 개선을 위한 조언을 해주세요.'
+            content:
+              '당신은 전문적인 사이클링 코치이자 데이터 분석가입니다. 라이더의 활동 데이터를 분석하여 인사이트를 제공하고, 개선을 위한 조언을 해주세요.',
           },
           {
             role: 'user',
-            content: prompt
-          }
+            content: prompt,
+          },
         ],
         temperature: 0.3,
         max_tokens: 3000,
@@ -194,4 +199,4 @@ ${rankingData ? `랭킹 데이터:
     })
     throw error
   }
-} 
+}

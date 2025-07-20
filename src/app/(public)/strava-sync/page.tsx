@@ -175,9 +175,8 @@ export default function StravaSyncPage() {
           if (typeof data.progress === 'number') {
             updateProgress(data.progress)
           }
-        } catch (error) {
-          logError('Failed to parse message:', {
-            error,
+        } catch (_error) {
+          logError('Failed to sync activities:', {
             endpoint: 'strava-sync',
           })
           // JSON 파싱 에러는 무시하고 계속 진행

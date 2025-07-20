@@ -45,4 +45,4 @@ export async function GET() {
     console.error('\n❌ 디스크립션 생성 중 오류 발생:', error)
     return NextResponse.json({ success: false, error: String(error) }, { status: 500 })
   }
-} 
+}

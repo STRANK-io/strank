@@ -1,4 +1,4 @@
-const { generateActivityDescriptionWithGPT } = require('../lib/utils/openai')
+import { generateActivityDescriptionWithGPT } from '../lib/utils/openai'
 
 async function testDescriptionGeneration() {
   try {
@@ -35,7 +35,7 @@ async function testDescriptionGeneration() {
 
     console.log('\n✅ 생성된 디스크립션:')
     console.log(description)
-    
+
     return description
   } catch (error) {
     console.error('\n❌ 디스크립션 생성 중 오류 발생:', error)
@@ -44,4 +44,4 @@ async function testDescriptionGeneration() {
 }
 
 // 테스트 실행
-testDescriptionGeneration() 
+testDescriptionGeneration()
