@@ -29,6 +29,11 @@ export const ERROR_CODES = {
     CONNECTION_LOST: 'network_connection_lost',
     REQUEST_FAILED: 'network_request_failed',
   },
+  OPENAI: {
+    API_ERROR: 'openai_api_error',
+    API_LIMIT_EXCEEDED: 'openai_api_limit_exceeded',
+    DESCRIPTION_GENERATION_FAILED: 'openai_description_generation_failed',
+  },
   INTERNAL_ERROR: 'internal_error',
 } as const
 

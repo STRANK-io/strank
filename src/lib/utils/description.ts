@@ -5,6 +5,7 @@ import { ACTIVITY_UNITS } from '@/lib/constants/unit'
 import { STRAVA_ACTIVITY_BY_ID_ENDPOINT, STRAVA_API_URL } from '@/lib/constants/strava'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { logError } from '@/lib/utils/log'
+import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
 /**
  * 스트랭크 디스크립션 포맷에 맞춰 활동 디스크립션을 생성하는 함수
@@ -15,14 +16,58 @@ import { logError } from '@/lib/utils/log'
  * @remarks
  * - STRANK.io와 같이 도메인으로 인식되는 텍스트는 스트라바에서 표시되지 않습니다. (STRANK.io 표시 불가 -> STRANK 표시 가능)
  */
-export function generateActivityDescription(
+export async function generateActivityDescription(
   activity: StravaActivity,
   rankingsWithDistrict: CalculateActivityRankingReturn | null,
   isEveryone: boolean
+): Promise<string> {
+  try {
+    // ChatGPT API를 통해 디스크립션 생성
+    const description = await generateActivityDescriptionWithGPT(
+      {
+        date: activity.start_date_local,
+        distance: activity.distance || 0,
+        elevation: activity.total_elevation_gain || 0,
+        averageSpeed: activity.average_speed || 0,
+        maxSpeed: activity.max_speed || 0,
+        averageWatts: activity.average_watts || undefined,
+        maxWatts: activity.max_watts || undefined,
+        maxHeartrate: activity.max_heartrate || undefined,
+        averageCadence: activity.average_cadence || undefined,
+      },
+      rankingsWithDistrict && rankingsWithDistrict.rankings
+        ? {
+            distanceRankCity: rankingsWithDistrict.rankings.distanceRankCity,
+            distanceRankDistrict: rankingsWithDistrict.rankings.distanceRankDistrict,
+            elevationRankCity: rankingsWithDistrict.rankings.elevationRankCity,
+            elevationRankDistrict: rankingsWithDistrict.rankings.elevationRankDistrict,
+            district: rankingsWithDistrict.district,
+          }
+        : undefined
+    )
+
+    return description
+  } catch (error) {
+    logError('디스크립션 생성 중 오류 발생:', {
+      error,
+      functionName: 'generateActivityDescription',
+    })
+
+    // 에러 발생 시 기본 디스크립션 생성
+    return generateBasicDescription(activity, rankingsWithDistrict)
+  }
+}
+
+/**
+ * 기본 디스크립션 생성 함수 (ChatGPT API 호출 실패 시 사용)
+ */
+function generateBasicDescription(
+  activity: StravaActivity,
+  rankingsWithDistrict: CalculateActivityRankingReturn | null
 ): string {
   const sections = [
-    generateDateSection(activity.start_date_local), // local 시간으로 변환된 활동 날짜 사용
-    generateRankingSection(rankingsWithDistrict, isEveryone),
+    generateDateSection(activity.start_date_local),
+    generateRankingSection(rankingsWithDistrict),
     generateAnalysisSection(activity),
   ]
 
@@ -30,70 +75,53 @@ export function generateActivityDescription(
 }
 
 /**
- * 활동 날짜 섹션 생성 함수
+ * 날짜 섹션 생성 함수
  *
- * @param startDate - 활동 날짜
- * @returns 활동 날짜 섹션
+ * @param startDate - 활동 시작 날짜
+ * @returns 날짜 섹션
  */
 function generateDateSection(startDate: string): string {
   const date = new Date(startDate)
-    .toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    })
-    .replace(/\. /g, '/')
-    .replace('.', '')
+  const formattedDate = date.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
 
-  return `◎ 라이딩 리포트 ◎ 
-(${date})`
+  return `🚴 STRANK AI 라이딩 리포트 (Pro)\n📅 ${formattedDate}`
 }
 
 /**
  * 랭킹 섹션 생성 함수
  *
  * @param rankingsWithDistrict - 랭킹 데이터
- * @param isEveryone - 공개 범위가 everyone인지 여부
  * @returns 랭킹 섹션
  */
-function generateRankingSection(
-  rankingsWithDistrict: CalculateActivityRankingReturn | null,
-  isEveryone: boolean
-): string {
-  const { rankings, district } = rankingsWithDistrict || {}
-  const section = '◾ 랭킹 정보 ◾'
+function generateRankingSection(rankingsWithDistrict: CalculateActivityRankingReturn | null): string {
+  if (!rankingsWithDistrict || !rankingsWithDistrict.rankings) return ''
 
-  if (!isEveryone) {
-    return `${section}\n\n공개 범위를 everyone으로 설정하지 않은 데이터는 랭킹 정보가 표기되지 않습니다.`
-  }
-
-  if (!rankings) return section
-
-  const { distanceRankCity, distanceRankDistrict, elevationRankCity, elevationRankDistrict } =
-    rankings
+  const { rankings, district } = rankingsWithDistrict
   const sections = []
 
   // 거리 랭킹 섹션
-  sections.push('\n🏅 거리 랭킹')
-  if (distanceRankCity && distanceRankDistrict) {
-    sections.push(`📍 서울시 (${distanceRankCity.toLocaleString()}위)
-📍 서울시 ${district} (${distanceRankDistrict.toLocaleString()}위)`)
-  } else if (!distanceRankCity && !distanceRankDistrict) {
+  if (rankings.distanceRankCity || rankings.distanceRankDistrict) {
     sections.push(
-      '이번주 내 거리기준으로 총합 1km를 넘지 않은 경우, 랭킹 정보가 표기되지 않습니다.'
+      `🥇 거리 랭킹${
+        rankings.distanceRankCity ? `\n📍서울시 (${rankings.distanceRankCity}위)` : ''
+      }${rankings.distanceRankDistrict ? `\n📍${district} (${rankings.distanceRankDistrict}위)` : ''}`
     )
   }
 
   // 고도 랭킹 섹션
-  sections.push('\n🏅 고도 랭킹')
-  if (elevationRankCity && elevationRankDistrict) {
-    sections.push(`📍 서울시 (${elevationRankCity.toLocaleString()}위)
-📍 서울시 ${district} (${elevationRankDistrict.toLocaleString()}위)`)
-  } else if (!elevationRankCity && !elevationRankDistrict) {
-    sections.push('이번주 내 고도기준으로 총합 1m를 넘지 않은 경우, 랭킹 정보가 표기되지 않습니다.')
+  if (rankings.elevationRankCity || rankings.elevationRankDistrict) {
+    sections.push(
+      `🧗 고도 랭킹${rankings.elevationRankCity ? `\n📍서울시 (${rankings.elevationRankCity}위)` : ''}${
+        rankings.elevationRankDistrict ? `\n📍${district} (${rankings.elevationRankDistrict}위)` : ''
+      }`
+    )
   }
 
-  return sections.length ? `${section}\n${sections.join('\n')}` : section
+  return sections.join('\n\n')
 }
 
 /**
