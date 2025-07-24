@@ -33,76 +33,134 @@ export async function GET(request: Request) {
 
 // * 2. 활동 웹훅 이벤트 처리
 export async function POST(request: NextRequest) {
-  let webhookBody: StravaWebhookEventResponse
-
   try {
-    webhookBody = await request.json()
-
-    // * 활동 생성, 삭제가 아닌 경우 즉시 응답
-    if (
-      webhookBody.object_type !== 'activity' ||
-      (webhookBody.aspect_type !== 'create' &&
-        webhookBody.aspect_type !== 'delete' &&
-        webhookBody.aspect_type !== 'update')
-    ) {
-      return new NextResponse('Not an activity event', { status: 200 })
-    }
-
-    const supabase = await createServiceRoleClient()
-
-    // * 중복 체크를 위해 웹훅 이벤트 기록
-    const { error: insertError } = await supabase.from('strava_webhook_events').insert({
-      event_time: webhookBody.event_time,
-      object_id: webhookBody.object_id,
-      object_type: webhookBody.object_type,
+    const webhookBody = await request.json()
+    
+    console.log('📥 웹훅 수신:', {
       aspect_type: webhookBody.aspect_type,
+      object_type: webhookBody.object_type,
+      object_id: webhookBody.object_id,
       owner_id: webhookBody.owner_id,
+      time: new Date().toISOString()
     })
 
-    // * 중복 이벤트인 경우 처리 (유니크 제약조건 위반 - object_id,object_type,aspect_type,owner_id 일치하면 위반)
-    if (insertError?.code === '23505') {
-      logError('Duplicate webhook event:', {
-        event_time: webhookBody.event_time,
-        object_id: webhookBody.object_id,
-        error: insertError,
-      })
-      return new NextResponse('Duplicate event', { status: 200 })
-    }
+    // 즉시 200 응답 반환
+    const response = new NextResponse('Success', { status: 200 })
 
-    // * 다른 에러가 발생한 경우
-    if (insertError) {
-      // 웹훅 이벤트 기록에 실패하더라도 처리는 진행
-      logError('Failed to record webhook event:', { error: insertError })
-    }
+    // 비동기 처리 함수
+    const processWebhook = async () => {
+      try {
+        // 활동 이벤트가 아닌 경우 처리하지 않음
+        if (
+          webhookBody.object_type !== 'activity' ||
+          (webhookBody.aspect_type !== 'create' &&
+            webhookBody.aspect_type !== 'delete' &&
+            webhookBody.aspect_type !== 'update')
+        ) {
+          console.log('⚠️ 활동 이벤트가 아님, 스킵')
+          return
+        }
 
-    // 생성, 삭제에 따른 분기 처리
-    switch (webhookBody.aspect_type) {
-      case 'create':
-        // * 2.5초 후 진행 (서드파티 서비스와의 디스크립션 수정 충돌을 피하기 위함)
+        console.log('🔄 웹훅 처리 시작:', {
+          type: webhookBody.aspect_type,
+          id: webhookBody.object_id,
+          time: new Date().toISOString()
+        })
+
+        const supabase = await createServiceRoleClient()
+
+        // 웹훅 이벤트 기록
+        const { error: insertError } = await supabase.from('strava_webhook_events').insert({
+          event_time: webhookBody.event_time,
+          object_id: webhookBody.object_id,
+          object_type: webhookBody.object_type,
+          aspect_type: webhookBody.aspect_type,
+          owner_id: webhookBody.owner_id,
+        })
+
+        // 중복 이벤트 체크
+        if (insertError?.code === '23505') {
+          console.log('⚠️ 중복 웹훅 이벤트, 스킵:', {
+            id: webhookBody.object_id,
+            time: new Date().toISOString()
+          })
+          return
+        }
+
+        if (insertError) {
+          console.error('❌ 웹훅 이벤트 기록 실패:', {
+            error: insertError,
+            time: new Date().toISOString()
+          })
+        }
+
+        // 2.5초 대기 (서드파티 서비스와의 충돌 방지)
+        console.log('⏳ 대기 시작 (2.5초)')
         await new Promise(resolve => setTimeout(resolve, 2500))
+        console.log('✓ 대기 완료')
 
-        await processCreateActivityEvent(webhookBody)
-        break
+        // 이벤트 타입에 따른 처리
+        switch (webhookBody.aspect_type) {
+          case 'create':
+            console.log('📝 활동 생성 처리 시작')
+            await processCreateActivityEvent(webhookBody)
+            console.log('✓ 활동 생성 처리 완료')
+            break
+          case 'delete':
+            console.log('🗑 활동 삭제 처리 시작')
+            await processDeleteActivityEvent(webhookBody)
+            console.log('✓ 활동 삭제 처리 완료')
+            break
+          case 'update':
+            console.log('✏️ 활동 업데이트 처리 시작')
+            await processUpdateActivityEvent(webhookBody)
+            console.log('✓ 활동 업데이트 처리 완료')
+            break
+        }
 
-      case 'delete':
-        await processDeleteActivityEvent(webhookBody)
-        break
+        // 처리 완료 기록
+        const { error: updateError } = await supabase
+          .from('strava_webhook_events')
+          .update({ processed_at: new Date().toISOString() })
+          .eq('object_id', webhookBody.object_id)
+          .is('processed_at', null)
 
-      case 'update':
-        await processUpdateActivityEvent(webhookBody)
-        break
+        if (updateError) {
+          console.error('❌ 처리 완료 기록 실패:', {
+            error: updateError,
+            time: new Date().toISOString()
+          })
+        }
 
-      default:
-        return new NextResponse('Unsupported aspect type', { status: 200 })
+        console.log('✨ 웹훅 처리 완료:', {
+          id: webhookBody.object_id,
+          type: webhookBody.aspect_type,
+          time: new Date().toISOString()
+        })
+      } catch (error) {
+        console.error('❌ 웹훅 처리 중 오류:', {
+          error,
+          id: webhookBody.object_id,
+          type: webhookBody.aspect_type,
+          time: new Date().toISOString()
+        })
+      }
     }
 
-    return new NextResponse('Success', {
-      status: 200,
+    // 백그라운드에서 처리 시작
+    processWebhook().catch(error => {
+      console.error('❌ 백그라운드 처리 시작 실패:', {
+        error,
+        time: new Date().toISOString()
+      })
     })
+
+    return response
   } catch (error) {
-    logError('Webhook request parsing error:', { error })
-    return new NextResponse(ERROR_MESSAGES[ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED], {
-      status: 500,
+    console.error('❌ 웹훅 요청 파싱 오류:', {
+      error,
+      time: new Date().toISOString()
     })
+    return new NextResponse('Error', { status: 500 })
   }
 }
