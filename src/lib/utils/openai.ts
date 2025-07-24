@@ -226,7 +226,13 @@ ${
 
     try {
       // ChatGPT API 호출
-      const completion = await openai.chat.completions.create({
+      console.log('🤖 GPT API 호출 시작:', {
+        model: 'gpt-4.1-mini',
+        temperature: 0.75,
+        max_tokens: 2048
+      })
+
+      const apiCall = openai.chat.completions.create({
         model: 'gpt-4.1-mini',
         messages: [
           {
@@ -242,6 +248,14 @@ ${
         temperature: 0.75,
         max_tokens: 2048,
       })
+
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('GPT API 호출 타임아웃 (30초)')), 30000)
+      )
+
+      const completion = await Promise.race([apiCall, timeoutPromise])
+
+      console.log('✓ GPT API 응답 수신')
 
       // 생성된 디스크립션 반환
       const description = completion.choices[0].message.content
@@ -261,6 +275,14 @@ ${
           functionName: 'generateActivityDescriptionWithGPT',
         })
         throw new Error(ERROR_CODES.OPENAI.API_LIMIT_EXCEEDED)
+      }
+
+      // 타임아웃 에러 처리
+      if (error.message === 'GPT API 호출 타임아웃 (30초)') {
+        logError('OpenAI API 호출 타임아웃', {
+          functionName: 'generateActivityDescriptionWithGPT',
+        })
+        throw new Error(ERROR_CODES.OPENAI.API_ERROR)
       }
 
       // 기타 API 에러 처리
