@@ -227,7 +227,7 @@ ${
     try {
       // ChatGPT API 호출
       console.log('🤖 GPT API 호출 시작:', {
-        model: 'gpt-4.1-mini',
+        model: 'gpt-4o-mini',
         temperature: 0.75,
         max_tokens: 2048
       })
