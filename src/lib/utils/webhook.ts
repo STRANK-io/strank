@@ -83,6 +83,13 @@ export async function processDeleteActivityEvent(body: StravaWebhookEventRespons
  */
 export async function processCreateActivityEvent(body: StravaWebhookEventResponse) {
   try {
+    console.log('🎯 웹훅 처리 시작:', {
+      aspect_type: body.aspect_type,
+      object_type: body.object_type,
+      object_id: body.object_id,
+      owner_id: body.owner_id,
+    })
+
     const supabase = await createServiceRoleClient()
 
     // * 유저의 스트라바 엑세스 토큰 조회
@@ -114,12 +121,14 @@ export async function processCreateActivityEvent(body: StravaWebhookEventRespons
     }
 
     const { user_id } = tokenData
+    console.log('✓ 토큰 데이터 조회 완료:', { user_id })
 
     // * 엑세스 토큰 만료 확인 및 만료 시 갱신
     let accessToken
     try {
       const tokenResult = await refreshStravaToken(user_id)
       accessToken = tokenResult.accessToken
+      console.log('✓ 토큰 갱신 완료')
     } catch (error) {
       logError('Strava Webhook: 토큰 갱신 중 오류 발생', {
         error,
@@ -130,6 +139,7 @@ export async function processCreateActivityEvent(body: StravaWebhookEventRespons
     }
 
     // * 활동 상세 정보 조회
+    console.log('📥 활동 정보 조회 시작...')
     const response = await fetch(
       `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(body.object_id)}`,
       {
@@ -160,11 +170,20 @@ export async function processCreateActivityEvent(body: StravaWebhookEventRespons
     }
 
     const activity: StravaActivity = await response.json()
+    console.log('✓ 활동 정보 조회 완료:', {
+      id: activity.id,
+      name: activity.name,
+      type: activity.type,
+      distance: activity.distance,
+      elevation: activity.total_elevation_gain
+    })
 
     // * 유효한 라이딩 활동인지 확인
     if (!isValidRidingActivity(activity)) {
+      console.log('⚠️ 유효하지 않은 라이딩 활동')
       return
     }
+    console.log('✓ 유효한 라이딩 활동 확인')
 
     // * 활동 해시 생성
     const activityHash = generateActivityHash(
@@ -186,14 +205,17 @@ export async function processCreateActivityEvent(body: StravaWebhookEventRespons
       // 해시값이 같은데 ID가 다른 경우 기존 활동 삭제 (최신 활동을 저장하기 위함)
       if (existingActivity.id !== activity.id) {
         await supabase.from('activities').delete().eq('id', existingActivity.id)
+        console.log('✓ 중복 활동 삭제 완료:', { old_id: existingActivity.id })
       } else {
         // 해시값도 같고 ID도 같으면 기존 활동 유지
+        console.log('⚠️ 이미 처리된 활동:', { id: activity.id })
         return
       }
     }
 
     // * 활동 데이터 DB에 저장 (activity_hash 포함)
     await processActivities([{ ...activity, activity_hash: activityHash }], user_id, supabase)
+    console.log('✓ 활동 데이터 저장 완료')
 
     let rankingsWithDistrict: CalculateActivityRankingReturn | null = null
 
@@ -201,14 +223,25 @@ export async function processCreateActivityEvent(body: StravaWebhookEventRespons
     // * 랭킹 정보 계산
     // activity.visibility가 everyone이 아닌 경우는 랭킹 데이터 계산 생략 및 디스크립션에 넣지 않음
     if (isEveryone) {
+      console.log('📊 랭킹 계산 시작...')
       rankingsWithDistrict = await calculateActivityRanking(activity, user_id, supabase)
+      console.log('✓ 랭킹 계산 완료:', rankingsWithDistrict)
+    } else {
+      console.log('⚠️ 비공개 활동, 랭킹 계산 생략')
     }
 
     // * 디스크립션 생성
+    console.log('📝 디스크립션 생성 시작...')
     const description = await generateActivityDescription(activity, rankingsWithDistrict)
+    console.log('✓ 디스크립션 생성 완료:', {
+      length: description.length,
+      preview: description.substring(0, 100) + '...'
+    })
 
     // * 스트라바 활동 업데이트
+    console.log('📤 스트라바 활동 업데이트 시작...')
     await updateStravaActivityDescription(accessToken, activity, description)
+    console.log('✓ 스트라바 활동 업데이트 완료')
 
     // * 스트라바 API 호출 카운트 추가 (PUT 요청도 non_upload 요청에 포함됨 - 스트라바 정책)
     const { error: incrementPutAPIUsageError } = await supabase.rpc('increment_strava_api_usage', {
@@ -218,8 +251,11 @@ export async function processCreateActivityEvent(body: StravaWebhookEventRespons
     if (incrementPutAPIUsageError) {
       logError('Strava Webhook: Failed to increment API usage:', incrementPutAPIUsageError)
     }
+
+    console.log('✨ 웹훅 처리 완료')
   } catch (error) {
     logError('Background webhook processing error:', { error })
+    console.error('❌ 웹훅 처리 중 오류 발생:', error)
     throw Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
   }
 }

@@ -21,14 +21,20 @@ export async function generateActivityDescription(
   rankingsWithDistrict: CalculateActivityRankingReturn | null
 ): Promise<string> {
   try {
+    console.log('📝 GPT 디스크립션 생성 시작:', {
+      activityId: activity.id,
+      activityName: activity.name,
+      hasRankings: !!rankingsWithDistrict
+    })
+
     // ChatGPT API를 통해 디스크립션 생성
     const description = await generateActivityDescriptionWithGPT(
       {
         date: activity.start_date_local,
-        distance: activity.distance || 0,
+        distance: (activity.distance || 0) / 1000, // m to km
         elevation: activity.total_elevation_gain || 0,
-        averageSpeed: activity.average_speed || 0,
-        maxSpeed: activity.max_speed || 0,
+        averageSpeed: (activity.average_speed || 0) * 3.6, // m/s to km/h
+        maxSpeed: (activity.max_speed || 0) * 3.6, // m/s to km/h
         averageWatts: activity.average_watts || undefined,
         maxWatts: activity.max_watts || undefined,
         maxHeartrate: activity.max_heartrate || undefined,
@@ -45,8 +51,18 @@ export async function generateActivityDescription(
         : undefined
     )
 
+    console.log('✓ GPT 디스크립션 생성 완료:', {
+      length: description.length,
+      preview: description.substring(0, 100) + '...'
+    })
+
     return description
   } catch (error) {
+    console.error('❌ GPT 디스크립션 생성 중 오류:', {
+      error,
+      activityId: activity.id,
+      activityName: activity.name
+    })
     logError('디스크립션 생성 중 오류 발생:', {
       error,
       functionName: 'generateActivityDescription',
