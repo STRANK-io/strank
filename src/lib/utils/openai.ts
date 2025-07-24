@@ -227,7 +227,7 @@ ${
     try {
 
       const apiCall = openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-4',  // 공식 GPT-4 모델 사용
         messages: [
           {
             role: 'system',
