@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
     // 테스트용 활동 데이터
     const testActivity = {
-      name: 'STRANK 테스트 라이딩',
+      name: 'STRANK 테스트 라이딩2',
       type: 'Ride',
       sport_type: 'Ride',
       start_date_local: new Date().toISOString(),

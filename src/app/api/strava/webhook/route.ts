@@ -47,9 +47,15 @@ export async function POST(request: NextRequest) {
     // 즉시 200 응답 반환
     const response = new NextResponse('Success', { status: 200 })
 
-    // 비동기 처리 함수
-    const processWebhook = async () => {
+    // 백그라운드에서 처리 시작
+    queueMicrotask(async () => {
       try {
+        console.log('🔄 백그라운드 처리 시작:', {
+          type: webhookBody.aspect_type,
+          id: webhookBody.object_id,
+          time: new Date().toISOString()
+        })
+
         // 활동 이벤트가 아닌 경우 처리하지 않음
         if (
           webhookBody.object_type !== 'activity' ||
@@ -60,12 +66,6 @@ export async function POST(request: NextRequest) {
           console.log('⚠️ 활동 이벤트가 아님, 스킵')
           return
         }
-
-        console.log('🔄 웹훅 처리 시작:', {
-          type: webhookBody.aspect_type,
-          id: webhookBody.object_id,
-          time: new Date().toISOString()
-        })
 
         const supabase = await createServiceRoleClient()
 
@@ -138,21 +138,13 @@ export async function POST(request: NextRequest) {
           time: new Date().toISOString()
         })
       } catch (error) {
-        console.error('❌ 웹훅 처리 중 오류:', {
+        console.error('❌ 백그라운드 처리 중 오류:', {
           error,
           id: webhookBody.object_id,
           type: webhookBody.aspect_type,
           time: new Date().toISOString()
         })
       }
-    }
-
-    // 백그라운드에서 처리 시작
-    processWebhook().catch(error => {
-      console.error('❌ 백그라운드 처리 시작 실패:', {
-        error,
-        time: new Date().toISOString()
-      })
     })
 
     return response
