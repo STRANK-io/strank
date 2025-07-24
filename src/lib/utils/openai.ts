@@ -225,12 +225,6 @@ ${
  STRANK와 함께한 오늘, 굿라이드였습니다! 🚴`
 
     try {
-      // ChatGPT API 호출
-      console.log('🤖 GPT API 호출 시작:', {
-        model: 'gpt-4o-mini',
-        temperature: 0.75,
-        max_tokens: 2048
-      })
 
       const apiCall = openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
