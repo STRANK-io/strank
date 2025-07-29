@@ -1,41 +1,39 @@
 import { ERROR_CODES } from '@/lib/constants/error'
 import { logError } from '@/lib/utils/log'
-import OpenAI from 'openai'
+import { generateText } from 'ai'
+import { openai } from '@ai-sdk/openai'
+import { z } from 'zod'
 
-// OpenAI 클라이언트 초기화
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+// API 키 확인
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error('OPENAI_API_KEY가 설정되지 않았습니다.')
+}
+
+// 활동 데이터 스키마 정의
+const activityDataSchema = z.object({
+  date: z.string(),
+  distance: z.number(),
+  elevation: z.number(),
+  averageSpeed: z.number(),
+  maxSpeed: z.number(),
+  averageWatts: z.number().optional(),
+  maxWatts: z.number().optional(),
+  maxHeartrate: z.number().optional(),
+  averageCadence: z.number().optional(),
 })
 
-/**
- * 활동 데이터를 기반으로 ChatGPT를 통해 디스크립션을 생성하는 함수
- *
- * @param activityData - 활동 데이터 (거리, 고도, 속도 등)
- * @param rankingData - 랭킹 데이터 (지역별 순위)
- * @returns 생성된 디스크립션
- * @throws {Error} OPENAI.API_ERROR - API 호출 중 오류 발생 시
- * @throws {Error} OPENAI.API_LIMIT_EXCEEDED - API 호출 한도 초과 시
- * @throws {Error} OPENAI.DESCRIPTION_GENERATION_FAILED - 디스크립션 생성 실패 시
- */
+// 랭킹 데이터 스키마 정의
+const rankingDataSchema = z.object({
+  distanceRankCity: z.number().nullable().optional(),
+  distanceRankDistrict: z.number().nullable().optional(),
+  elevationRankCity: z.number().nullable().optional(),
+  elevationRankDistrict: z.number().nullable().optional(),
+  district: z.string().optional(),
+})
+
 export async function generateActivityDescriptionWithGPT(
-  activityData: {
-    date: string
-    distance: number
-    elevation: number
-    averageSpeed: number
-    maxSpeed: number
-    averageWatts?: number
-    maxWatts?: number
-    maxHeartrate?: number
-    averageCadence?: number
-  },
-  rankingData?: {
-    distanceRankCity?: number | null
-    distanceRankDistrict?: number | null
-    elevationRankCity?: number | null
-    elevationRankDistrict?: number | null
-    district?: string
-  }
+  activityData: z.infer<typeof activityDataSchema>,
+  rankingData?: z.infer<typeof rankingDataSchema>
 ): Promise<string> {
   try {
     // API 키 확인
@@ -108,8 +106,19 @@ export async function generateActivityDescriptionWithGPT(
 "[격려 문구]"
 STRANK와 함께한 오늘, 고단하였으나 뿌듯한 하루 🚴‍♂️`
 
-    // ChatGPT에 전달할 프롬프트 생성
-    const prompt = `주어진 템플릿의 형식을 정확히 유지하면서, [ ] 안의 내용을 실제 데이터로 채워주세요.
+    // AI SDK를 사용한 텍스트 생성
+    const { text } = await generateText({
+      model: openai('gpt-4.1-mini'),
+      temperature: 0.3,
+      maxTokens: 3000,
+      messages: [
+        {
+          role: 'system',
+          content: '당신은 전문적인 사이클링 코치이자 데이터 분석가입니다. 라이더의 활동 데이터를 분석하여 인사이트를 제공하고, 개선을 위한 조언을 해주세요.'
+        },
+        {
+          role: 'user',
+          content: `주어진 템플릿의 형식을 정확히 유지하면서, [ ] 안의 내용을 실제 데이터로 채워주세요.
 아래는 채워야 할 템플릿입니다:
 
 ${template}
@@ -140,65 +149,38 @@ ${
 주의사항:
 1. 템플릿의 모든 이모지와 포맷을 정확히 유지해주세요.
 2. [ ] 안의 내용만 교체하고, 나머지 구조는 그대로 유지해주세요.
-3. 순위를 표기할때는, 3위, 1위 등으로 순위만 표기해주세요. 지역구 순위, 도시 순위 이렇게 부가설명하지 않아도 됩니다. 
-3. 소수점 아래 데이터는 버림으로 처리해주세요. 예를 들어, 평균속도가 20.5km/h라면 20km/h로 처리해주세요.
-4. 랭킹 데이터가 있는 경우 "[지역1]"은 "서울시"로, "[지역2]"는 실제 지역구 이름으로 교체해주세요.
-5. 파워, 심박수, 케이던스 등 데이터가 없는 경우 다른 데이터를 기반으로 추정하여 적어주시고 '(추정)' 이라고 표시해주세요.
-6. 훈련포커스, 회복 가이드, 다음 훈련 추천 등은 데이터를 분석하여 의미있는 인사이트를 제공해주세요. 이때 구체적으로 내용을 적어주고, '~~을 해라'와 같은 표현으로 단호하게 해주세요. 자전거 전용 앱이므로, 자전거 훈련에 특화된 것들로 아주 구체적으로 작성해주세요.
-7. 격려와 동기부여가 되는 내용을 포함해주세요.`
+3. 순위를 표기할때는, 3위, 1위 등으로 순위만 표기해주세요.
+4. 소수점 아래 데이터는 버림으로 처리해주세요.
+5. 랭킹 데이터가 있는 경우 "[지역1]"은 "서울시"로, "[지역2]"는 실제 지역구 이름으로 교체해주세요.
+6. 파워, 심박수, 케이던스 등 데이터가 없는 경우 다른 데이터를 기반으로 추정하여 적어주시고 '(추정)' 이라고 표시해주세요.
+7. 훈련포커스, 회복 가이드, 다음 훈련 추천 등은 데이터를 분석하여 의미있는 인사이트를 제공해주세요.`
+        }
+      ]
+    })
 
-    try {
-      // ChatGPT API 호출
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content:
-              '당신은 전문적인 사이클링 코치이자 데이터 분석가입니다. 라이더의 활동 데이터를 분석하여 인사이트를 제공하고, 개선을 위한 조언을 해주세요.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.3,
-        max_tokens: 3000,
+    if (!text) {
+      logError('AI SDK가 빈 응답을 반환함', {
+        functionName: 'generateActivityDescriptionWithGPT',
       })
+      throw new Error(ERROR_CODES.OPENAI.DESCRIPTION_GENERATION_FAILED)
+    }
 
-      // 생성된 디스크립션 반환
-      const description = completion.choices[0].message.content
-      if (!description) {
-        logError('OpenAI API가 빈 응답을 반환함', {
-          functionName: 'generateActivityDescriptionWithGPT',
-        })
-        throw new Error(ERROR_CODES.OPENAI.DESCRIPTION_GENERATION_FAILED)
-      }
-
-      return description
-    } catch (error: any) {
-      // API 호출 한도 초과 에러 처리
-      if (error.status === 429) {
-        logError('OpenAI API 호출 한도 초과', {
-          error,
-          functionName: 'generateActivityDescriptionWithGPT',
-        })
-        throw new Error(ERROR_CODES.OPENAI.API_LIMIT_EXCEEDED)
-      }
-
-      // 기타 API 에러 처리
-      logError('OpenAI API 호출 중 오류 발생', {
+    return text
+  } catch (error: any) {
+    // API 호출 한도 초과 에러 처리
+    if (error.status === 429) {
+      logError('OpenAI API 호출 한도 초과', {
         error,
         functionName: 'generateActivityDescriptionWithGPT',
       })
-      throw new Error(ERROR_CODES.OPENAI.API_ERROR)
+      throw new Error(ERROR_CODES.OPENAI.API_LIMIT_EXCEEDED)
     }
-  } catch (error) {
-    // 최상위 에러 처리
-    logError('디스크립션 생성 중 오류 발생', {
+
+    // 기타 API 에러 처리
+    logError('OpenAI API 호출 중 오류 발생', {
       error,
       functionName: 'generateActivityDescriptionWithGPT',
     })
-    throw error
+    throw new Error(ERROR_CODES.OPENAI.API_ERROR)
   }
 }
