@@ -108,7 +108,12 @@ export async function generateActivityDescriptionWithGPT(
 🏆 Powered by STRANK`
 
     // AI SDK를 사용한 텍스트 생성
-    const { text } = await generateText({
+    console.log('🤖 GPT API 호출 시작:', {
+      model: 'gpt-4.1-mini',
+      time: new Date().toISOString()
+    })
+
+    const { text, response } = await generateText({
       model: openai('gpt-4.1-mini'),
       temperature: 0.75,
       maxTokens: 2048,
@@ -259,6 +264,13 @@ ${
  STRANK와 함께한 오늘, 굿라이드였습니다! 🚴`
         }
       ]
+    })
+
+    console.log('✓ GPT API 응답 수신:', {
+      modelId: response?.modelId,
+      responseTime: new Date().toISOString(),
+      textLength: text?.length || 0,
+      responseData: response
     })
 
     if (!text) {
