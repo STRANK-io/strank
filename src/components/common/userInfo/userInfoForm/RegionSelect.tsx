@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils/cn'
-import { DISTRICTS, PROVINCES } from '@/lib/constants/region'
+import { REGION_DATA, PROVINCES, Province } from '@/lib/constants/region'
 
 interface RegionSelectProps {
   provinceValue: string | null
@@ -24,12 +24,21 @@ export const RegionSelect = ({
   onProvinceChange,
   onDistrictChange,
 }: RegionSelectProps) => {
+  // 선택된 시/도의 구/군/구 목록
+  const availableDistricts = provinceValue ? REGION_DATA[provinceValue as Province] : []
+
+  // 시/도가 변경되면 구/군/구 선택을 초기화
+  const handleProvinceChange = (newProvince: string) => {
+    onProvinceChange(newProvince)
+    onDistrictChange('')  // 구/군/구 선택 초기화
+  }
+
   return (
     <div className={cn('space-y-2')}>
       <Label className="text-base font-bold leading-[20.8px]">내 거주지</Label>
       
       <div className="flex gap-2">
-        <Select value={provinceValue ?? ''} onValueChange={onProvinceChange}>
+        <Select value={provinceValue ?? ''} onValueChange={handleProvinceChange}>
           <SelectTrigger
             className={cn(
               'h-[58px] bg-[#F3F3F3]',
@@ -67,7 +76,7 @@ export const RegionSelect = ({
             <SelectValue placeholder="시/군/구" />
           </SelectTrigger>
           <SelectContent className="bg-[#F3F3F3]">
-            {DISTRICTS.map(district => (
+            {availableDistricts.map(district => (
               <SelectItem key={district} value={district}>
                 {district}
               </SelectItem>
