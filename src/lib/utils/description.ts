@@ -29,10 +29,11 @@ export async function generateActivityDescription(
         elevation: activity.total_elevation_gain || 0,
         averageSpeed: (activity.average_speed || 0) * 3.6, // m/s를 km/h로 변환
         maxSpeed: (activity.max_speed || 0) * 3.6, // m/s를 km/h로 변환
-        averageWatts: activity.average_watts || undefined,
-        maxWatts: activity.max_watts || undefined,
-        maxHeartrate: activity.max_heartrate || undefined,
-        averageCadence: activity.average_cadence || undefined,
+        // 값이 0이거나 없는 경우 undefined 처리
+        averageWatts: activity.average_watts && activity.average_watts > 0 ? activity.average_watts : undefined,
+        maxWatts: activity.max_watts && activity.max_watts > 0 ? activity.max_watts : undefined,
+        maxHeartrate: activity.max_heartrate && activity.max_heartrate > 0 ? activity.max_heartrate : undefined,
+        averageCadence: activity.average_cadence && activity.average_cadence > 0 ? activity.average_cadence : undefined,
       },
       rankingsWithDistrict && rankingsWithDistrict.rankings
         ? {

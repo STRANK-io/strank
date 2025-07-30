@@ -133,7 +133,7 @@ export async function generateActivityDescriptionWithGPT(
 ${template}
 *템플릿 끝*
 
-채워 넣어야 할 데이터:
+※템플릿에 사용 될 데이터
 활동 데이터:
 - 날짜: ${activityData.date}
 - 총거리: ${activityData.distance}km
@@ -176,6 +176,7 @@ ${
 
 ■라이딩 분석 정보
 주의사항: 템플릿을 반드시 지키고 데이터 변경이 없도록 해줘. 만약, 라이딩 분석 데이터가 없다면, 해당 line을 삭제하고 데이터가 있는 것만 표시해줘.
+데이터는 소수점을 제거하고 정수로 표시해줘.
 데이터:
 총거리: 143km
 총고도: 567m
