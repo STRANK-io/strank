@@ -70,7 +70,7 @@ function generateBasicDescription(
     generateAnalysisSection(activity),
   ]
 
-  return sections.join('\n\n')
+  return sections.join('\n\n\n\n')
 }
 
 /**
