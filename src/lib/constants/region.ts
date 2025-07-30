@@ -1,3 +1,23 @@
+export const PROVINCES = [
+  '서울시',
+  '부산시',
+  '대구시',
+  '인천시',
+  '광주시',
+  '대전시',
+  '울산시',
+  '세종시',
+  '경기도',
+  '강원도',
+  '충청북도',
+  '충청남도',
+  '전라북도',
+  '전라남도',
+  '경상북도',
+  '경상남도',
+  '제주도',
+] as const
+
 export const DISTRICTS = [
   '강남구',
   '강동구',
@@ -26,4 +46,10 @@ export const DISTRICTS = [
   '중랑구',
 ] as const
 
+export type Province = (typeof PROVINCES)[number]
 export type District = (typeof DISTRICTS)[number]
+
+export interface RegionValue {
+  province: Province
+  district: District
+}

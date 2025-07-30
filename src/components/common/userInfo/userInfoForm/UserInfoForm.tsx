@@ -17,10 +17,12 @@ export const UserInfoForm = ({ userId }: { userId: string }) => {
   const {
     imagePreviewUrl,
     nickname,
+    province,
     district,
     setProfileImage,
     setImagePreviewUrl,
     setNickname,
+    setProvince,
     setDistrict,
   } = useUserInfoStore()
 
@@ -28,9 +30,10 @@ export const UserInfoForm = ({ userId }: { userId: string }) => {
     if (userInfo) {
       if (userInfo.profile) setImagePreviewUrl(userInfo.profile)
       if (userInfo.name) setNickname(userInfo.name)
+      if (userInfo.province) setProvince(userInfo.province)
       if (userInfo.district) setDistrict(userInfo.district)
     }
-  }, [userInfo, setImagePreviewUrl, setNickname, setDistrict])
+  }, [userInfo, setImagePreviewUrl, setNickname, setProvince, setDistrict])
 
   const handleImageChange = async (file: File) => {
     try {
@@ -61,7 +64,12 @@ export const UserInfoForm = ({ userId }: { userId: string }) => {
           }}
         />
       </div>
-      <RegionSelect value={district} onChange={setDistrict} />
+      <RegionSelect 
+        provinceValue={province}
+        districtValue={district}
+        onProvinceChange={setProvince}
+        onDistrictChange={setDistrict}
+      />
     </div>
   )
 }
