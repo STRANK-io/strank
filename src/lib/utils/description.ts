@@ -25,10 +25,10 @@ export async function generateActivityDescription(
     const description = await generateActivityDescriptionWithGPT(
       {
         date: activity.start_date_local,
-        distance: activity.distance || 0,
+        distance: (activity.distance || 0) / 1000, // m를 km로 변환
         elevation: activity.total_elevation_gain || 0,
-        averageSpeed: activity.average_speed || 0,
-        maxSpeed: activity.max_speed || 0,
+        averageSpeed: (activity.average_speed || 0) * 3.6, // m/s를 km/h로 변환
+        maxSpeed: (activity.max_speed || 0) * 3.6, // m/s를 km/h로 변환
         averageWatts: activity.average_watts || undefined,
         maxWatts: activity.max_watts || undefined,
         maxHeartrate: activity.max_heartrate || undefined,

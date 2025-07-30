@@ -1,42 +1,74 @@
 import { NextResponse } from 'next/server'
-import { STRAVA_API_URL } from '@/lib/constants/strava'
+import { STRAVA_API_URL, STRAVA_ACTIVITY_BY_ID_ENDPOINT } from '@/lib/constants/strava'
+import { StravaActivity } from '@/lib/types/strava'
 
-// 테스트 엔드포인트는 인증을 우회합니다
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const accessToken = searchParams.get('accessToken')
+    const activityId = searchParams.get('activityId')
 
-    if (!accessToken) {
+    if (!accessToken || !activityId) {
       return NextResponse.json(
-        { success: false, error: 'accessToken이 필요합니다.' },
+        { success: false, error: 'accessToken과 activityId가 필요합니다.' },
         { status: 400 }
       )
     }
 
     console.log('🚀 활동 업로드 테스트 시작...')
 
-    // 테스트용 활동 데이터
-    const testActivity = {
-      name: 'STRANK 테스트 라이딩',
-      type: 'Ride',
-      sport_type: 'Ride',
-      start_date_local: new Date().toISOString(),
-      elapsed_time: 3600, // 1시간
-      description: '',
-      distance: 30000, // 30km
-      trainer: 0,
-      commute: 0,
-      hide_from_home: false,
-      visibility: 'everyone',
+    // 실제 활동 데이터 가져오기
+    const response = await fetch(
+      `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(parseInt(activityId))}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch activity: ' + await response.text())
     }
 
-    console.log('\n📊 업로드할 활동 데이터:', testActivity)
+    const sourceActivity: StravaActivity = await response.json()
+
+    // 새로운 활동 데이터 생성
+    const testActivity = {
+      name: `GPT TEST ${sourceActivity.name}`,
+      type: sourceActivity.type,
+      sport_type: sourceActivity.sport_type,
+      start_date_local: new Date().toISOString(),
+      elapsed_time: sourceActivity.elapsed_time,
+      moving_time: sourceActivity.moving_time,
+      description: '',
+      distance: sourceActivity.distance,
+      total_elevation_gain: sourceActivity.total_elevation_gain,
+      average_speed: sourceActivity.average_speed,
+      max_speed: sourceActivity.max_speed,
+      average_watts: sourceActivity.average_watts,
+      weighted_average_watts: sourceActivity.weighted_average_watts,
+      max_watts: sourceActivity.max_watts,
+      average_heartrate: sourceActivity.average_heartrate,
+      max_heartrate: sourceActivity.max_heartrate,
+      average_cadence: sourceActivity.average_cadence,
+      trainer: sourceActivity.trainer ? 1 : 0,
+      commute: sourceActivity.commute ? 1 : 0,
+      hide_from_home: false,
+      visibility: 'everyone',
+      calories: sourceActivity.calories,
+    }
+
+    console.log('\n📊 업로드할 활동 데이터:', {
+      name: testActivity.name,
+      distance: testActivity.distance,
+      elevation: testActivity.total_elevation_gain,
+    })
 
     // 스트라바 API를 통해 활동 생성
-    const response = await fetch(`${STRAVA_API_URL}/activities`, {
+    const createResponse = await fetch(`${STRAVA_API_URL}/activities`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -45,19 +77,19 @@ export async function POST(request: Request) {
       body: JSON.stringify(testActivity),
     })
 
-    if (!response.ok) {
-      throw new Error('Failed to create activity: ' + await response.text())
+    if (!createResponse.ok) {
+      throw new Error('Failed to create activity: ' + await createResponse.text())
     }
 
-    const createdActivity = await response.json()
+    const createdActivity = await createResponse.json()
 
     console.log('\n✅ 활동 업로드 완료:', {
       id: createdActivity.id,
       name: createdActivity.name,
     })
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       activity: {
         id: createdActivity.id,
         name: createdActivity.name,
