@@ -149,10 +149,10 @@ ${
   rankingData
     ? `랭킹 데이터:
 - 지역: ${rankingData.district}
-- 도시 거리 순위: ${rankingData.distanceRankCity || 'N/A'}
-- 지역구 거리 순위: ${rankingData.distanceRankDistrict || 'N/A'}
-- 도시 고도 순위: ${rankingData.elevationRankCity || 'N/A'}
-- 지역구 고도 순위: ${rankingData.elevationRankDistrict || 'N/A'}\n`
+- 도시 거리 순위: ${rankingData.distanceRankCity || ''}
+- 지역구 거리 순위: ${rankingData.distanceRankDistrict || ''}
+- 도시 고도 순위: ${rankingData.elevationRankCity || ''}
+- 지역구 고도 순위: ${rankingData.elevationRankDistrict || ''}\n`
     : ''
 }
 
