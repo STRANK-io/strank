@@ -21,13 +21,14 @@ interface CompleteButtonProps {
 export const CompleteButton = ({ userId, text, isMypage }: CompleteButtonProps) => {
   const router = useRouter()
 
-  const { profileImage, nickname, district } = useUserInfoStore()
+  const { profileImage, nickname, province, district } = useUserInfoStore()
   const { mutate, isPending } = useUpdateUserInfo()
   const { refetch: checkNickname } = useCheckNicknameExistQuery(nickname)
 
   const initialValuesRef = useRef<{
     profileImage: File | null
     nickname: string
+    province: string | null
     district: string | null
   } | null>(null)
   const isInitializedRef = useRef(false)
@@ -37,6 +38,7 @@ export const CompleteButton = ({ userId, text, isMypage }: CompleteButtonProps) 
       initialValuesRef.current = {
         profileImage,
         nickname,
+        province,
         district,
       }
       isInitializedRef.current = true
@@ -70,12 +72,13 @@ export const CompleteButton = ({ userId, text, isMypage }: CompleteButtonProps) 
         return
       }
 
-      if (!district) return
+      if (!district || !province) return
 
       mutate(
         {
           user_id: userId,
           nickname,
+          province,
           district,
           profileImage,
         },
@@ -85,6 +88,7 @@ export const CompleteButton = ({ userId, text, isMypage }: CompleteButtonProps) 
               initialValuesRef.current = {
                 profileImage,
                 nickname,
+                province,
                 district,
               }
             } else {

@@ -7,6 +7,7 @@ import { logError } from '@/lib/utils/log'
 interface UpdateUserInfoParams {
   user_id: string
   nickname: string
+  province: string
   district: string
   profileImage: File | null
 }
@@ -16,7 +17,7 @@ const useUpdateUserInfo = () => {
   const queryClient = useQueryClient()
 
   return useMutation<void, { message: ErrorMessageCode }, UpdateUserInfoParams>({
-    mutationFn: async ({ user_id, nickname, district, profileImage }: UpdateUserInfoParams) => {
+    mutationFn: async ({ user_id, nickname, province, district, profileImage }: UpdateUserInfoParams) => {
       let uploadedFileName: string | null = null
       let profileImageUrl: string | null = null
 
@@ -44,6 +45,7 @@ const useUpdateUserInfo = () => {
 
         const { error: rpcError } = await supabase.rpc('update_user_info', {
           nickname,
+          province,
           district,
           profile_image_url: profileImageUrl ?? undefined,
         })

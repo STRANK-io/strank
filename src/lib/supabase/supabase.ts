@@ -332,6 +332,7 @@ export type Database = {
       update_user_info: {
         Args: {
           nickname?: string
+          province?: string
           district?: string
           profile_image_url?: string
         }
