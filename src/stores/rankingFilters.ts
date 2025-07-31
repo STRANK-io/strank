@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { RankingFilters } from '@/lib/types/ranking'
+import { useUserContext } from '@/contexts/UserContext'
 
 type FilterOption<T> = {
   left: { label: string; value: T }
