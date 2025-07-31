@@ -30,7 +30,10 @@ export default function FilterSwitch({ type }: { type: keyof RankingFilters }) {
     setFilters(type, position)
   }
 
-  const isRight = filters[type] === 'users' // district 필터의 경우 users일 때만 오른쪽 활성화
+  // 각 필터 타입에 따라 isRight 상태 결정
+  const isRight = type === 'district'
+    ? filters[type] === 'users'  // district 필터의 경우 users일 때만 오른쪽 활성화
+    : filters[type] === FILTER_OPTIONS[type].right.value  // 다른 필터는 FILTER_OPTIONS의 right.value와 비교
 
   return (
     <div className="flex items-center gap-1 rounded-[40px] bg-[#f9f9f9] p-2">
