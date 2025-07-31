@@ -31,9 +31,10 @@ export const FILTER_OPTIONS: FilterOptionsType = {
 interface RankingFiltersState {
   filters: RankingFilters
   setFilters: (type: keyof RankingFilters, position: 'left' | 'right') => void
+  set: (fn: (state: RankingFiltersState) => Partial<RankingFiltersState>) => void
 }
 
-export const useRankingFilters = create<RankingFiltersState>(set => ({
+export const useRankingFilters = create<RankingFiltersState>((set) => ({
   filters: {
     criteria: FILTER_OPTIONS.criteria.right.value,
     district: FILTER_OPTIONS.district.right.value,
@@ -46,4 +47,5 @@ export const useRankingFilters = create<RankingFiltersState>(set => ({
         [type]: FILTER_OPTIONS[type][position].value,
       },
     })),
+  set: fn => set(fn),
 }))

@@ -2,7 +2,7 @@ import { Database } from '@/lib/supabase/supabase'
 
 export type RankingFilters = {
   criteria: 'distance' | 'elevation'
-  district: 'all' | 'users'
+  district: 'all' | 'province' | 'users' // all: 전체, province: 시/도 기준, users: 지역구 기준
   period: 'lastweek' | 'now'
 }
 
