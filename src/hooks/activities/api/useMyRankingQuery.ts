@@ -38,6 +38,7 @@ const fetchMyRanking = async (
       nickname: activity.result_user_name || '이름 없음',
       imageUrl: activity.result_user_profile || undefined,
       district: activity.result_user_district || '지역 없음',
+      province: activity.result_user_province || '도/시 없음',  
       athleteId: activity.result_athlete_id || 0,
     },
   }

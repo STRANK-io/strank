@@ -296,6 +296,7 @@ export type Database = {
           result_user_name: string
           result_user_profile: string
           result_user_district: string
+          result_user_province: string
           result_athlete_id: number
         }[]
       }
