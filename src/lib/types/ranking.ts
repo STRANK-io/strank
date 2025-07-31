@@ -11,7 +11,7 @@ export type ActivityWithUser = Pick<
   Database['public']['Tables']['activities']['Row'],
   'id' | 'name' | 'distance' | 'total_elevation_gain' | 'start_date'
 > & {
-  users: Pick<Database['public']['Tables']['users']['Row'], 'id' | 'name' | 'district' | 'profile'>
+  users: Pick<Database['public']['Tables']['users']['Row'], 'id' | 'name' | 'district' | 'province' | 'profile'>
 }
 
 // 프론트엔드에서 사용할 타입
@@ -19,7 +19,7 @@ export type ActivityWithRanking = {
   rank: number
   totalDistance: number
   totalElevationGain: number
-  user: { id: string; nickname: string; imageUrl?: string; district: string; athleteId: number }
+  user: { id: string; nickname: string; imageUrl?: string; district: string; province: string; athleteId: number }
 }
 
 export type MyRankingResponse = ActivityWithRanking

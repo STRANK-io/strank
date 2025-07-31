@@ -19,18 +19,15 @@ export default function FilterSwitch({ type }: { type: keyof RankingFilters }) {
     rightLabel = userInfo?.district || '지역구'
   }
 
-  // district 필터의 경우 province 값에 따라 다른 value 사용
+  // 모든 필터에 대해 setFilters 사용
   const handleClick = (position: 'left' | 'right') => {
-    if (type === 'district' && position === 'left' && userInfo?.province) {
-      set(state => ({
-        filters: {
-          ...state.filters,
-          district: 'province',
-        },
-      }))
-    } else {
-      setFilters(type, position)
-    }
+    console.log('Filter click:', {
+      type,
+      position,
+      value: FILTER_OPTIONS[type][position].value,
+      userInfo,
+    });
+    setFilters(type, position)
   }
 
   const isRight = filters[type] === 'users' // district 필터의 경우 users일 때만 오른쪽 활성화

@@ -19,7 +19,7 @@ export const FILTER_OPTIONS: FilterOptionsType = {
     right: { label: '거리 기준', value: 'distance' },
   },
   district: {
-    left: { label: '서울시', value: 'all' },
+    left: { label: '도/시', value: 'province' },
     right: { label: '지역구', value: 'users' },
   },
   period: {
