@@ -3,6 +3,7 @@ import { logError } from '@/lib/utils/log'
 import { generateText } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { z } from 'zod'
+import { generateRankingSection } from '@/lib/utils/description'
 
 // API 키 확인
 if (!process.env.OPENAI_API_KEY) {
@@ -24,11 +25,11 @@ const activityDataSchema = z.object({
 
 // 랭킹 데이터 스키마 정의
 const rankingDataSchema = z.object({
-  distanceRankCity: z.number().nullable().optional(),
-  distanceRankDistrict: z.number().nullable().optional(),
-  elevationRankCity: z.number().nullable().optional(),
-  elevationRankDistrict: z.number().nullable().optional(),
-  district: z.string().optional(),
+  distanceRankCity: z.number().nullable(),
+  distanceRankDistrict: z.number().nullable(),
+  elevationRankCity: z.number().nullable(),
+  elevationRankDistrict: z.number().nullable(),
+  district: z.string(),
 })
 
 export async function generateActivityDescriptionWithGPT(
@@ -49,15 +50,7 @@ export async function generateActivityDescriptionWithGPT(
 🚴 STRANK AI 라이딩 리포트
 📅 [년-월-일-요일]
 
-◾ 랭킹 정보 ◾
-
-🥇 거리 랭킹
-📍[지역1] ([순위1]위)
-📍[지역2] ([순위2]위)
-
-🥇 고도 랭킹
-📍[지역1] ([순위1]위)
-📍[지역2] ([순위2]위)
+${rankingData ? generateRankingSection({ rankings: rankingData, district: rankingData.district || '' }) : ''}
 
 ◾ 라이딩 분석 정보 ◾
 🚴총거리: [총거리] km
@@ -147,17 +140,6 @@ ${activityData.averageWatts ? `- 평균파워: ${activityData.averageWatts}W\n` 
 ${activityData.maxWatts ? `- 최대파워: ${activityData.maxWatts}W\n` : ''}
 ${activityData.maxHeartrate ? `- 최고심박수: ${activityData.maxHeartrate}bpm\n` : ''}
 ${activityData.averageCadence ? `- 평균케이던스: ${activityData.averageCadence}rpm\n` : ''}
-
-${
-  rankingData
-    ? `랭킹 데이터:
-- 지역: ${rankingData.district}
-- 도시 거리 순위: ${rankingData.distanceRankCity || ''}
-- 지역구 거리 순위: ${rankingData.distanceRankDistrict || ''}
-- 도시 고도 순위: ${rankingData.elevationRankCity || ''}
-- 지역구 고도 순위: ${rankingData.elevationRankDistrict || ''}\n`
-    : ''
-}
 
 ※전체 주의사항
 템플릿의 모든 이모지와 포맷, 그리고 정확한 단위 표기를 정확히 유지해줘.

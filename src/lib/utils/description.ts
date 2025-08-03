@@ -97,7 +97,7 @@ function generateDateSection(startDate: string): string {
  * @param rankingsWithDistrict - 랭킹 데이터
  * @returns 랭킹 섹션
  */
-function generateRankingSection(
+export function generateRankingSection(
   rankingsWithDistrict: CalculateActivityRankingReturn | null
 ): string {
   if (!rankingsWithDistrict || !rankingsWithDistrict.rankings) return ''
