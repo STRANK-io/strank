@@ -195,12 +195,22 @@ export async function processCreateActivityEvent(body: StravaWebhookEventRespons
     // * 활동 데이터 DB에 저장 (activity_hash 포함)
     await processActivities([{ ...activity, activity_hash: activityHash }], user_id, supabase)
 
+    // DB에 데이터가 완전히 저장될 때까지 잠시 대기
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
     let rankingsWithDistrict: CalculateActivityRankingReturn | null = null
 
     const isEveryone = activity.visibility === STRAVA_VISIBILITY.EVERYONE
     // * 랭킹 정보 계산
     // activity.visibility가 everyone이 아닌 경우는 랭킹 데이터 계산 생략 및 디스크립션에 넣지 않음
     if (isEveryone) {
+      console.log('🔍 랭킹 계산 전 활동 확인:', {
+        activityId: activity.id,
+        distance: activity.distance,
+        elevation: activity.total_elevation_gain,
+        visibility: activity.visibility,
+        time: new Date().toISOString()
+      })
       rankingsWithDistrict = await calculateActivityRanking(activity, user_id, supabase)
     }
 
@@ -264,6 +274,22 @@ export async function calculateActivityRanking(
     district: user.district,
     time: new Date().toISOString()
   })
+
+  // 이번 주 활동 통계 조회
+  const { data: weeklyStats, error: statsError } = await supabase
+    .from('activities')
+    .select('distance, total_elevation_gain')
+    .eq('user_id', userId)
+    .eq('visibility', 'everyone')
+    .is('deleted_at', null)
+    .gte('start_date', new Date(new Date().setDate(new Date().getDate() - 7)).toISOString());
+
+  console.log('📊 이번 주 활동 통계:', {
+    weeklyStats,
+    totalDistance: weeklyStats?.reduce((sum, act) => sum + (act.distance || 0), 0),
+    totalElevation: weeklyStats?.reduce((sum, act) => sum + (act.total_elevation_gain || 0), 0),
+    time: new Date().toISOString()
+  });
 
   const { data: rankings, error } = await supabase.rpc('get_activity_rankings', {
     p_activity_id: stravaActivity.id,

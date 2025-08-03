@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       name: `GPT TEST ${sourceActivity.name}`,
       type: sourceActivity.type,
       sport_type: sourceActivity.sport_type,
-      start_date_local: new Date().toISOString(),
+      start_date: new Date('2025-08-04T02:00:00Z').toISOString(), // 현재 시간으로 고정
       elapsed_time: sourceActivity.elapsed_time,
       moving_time: sourceActivity.moving_time,
       description: '',
@@ -65,6 +65,8 @@ export async function POST(request: Request) {
       name: testActivity.name,
       distance: testActivity.distance,
       elevation: testActivity.total_elevation_gain,
+      start_date: testActivity.start_date,
+      current_time: new Date().toISOString(),
     })
 
     // 스트라바 API를 통해 활동 생성
