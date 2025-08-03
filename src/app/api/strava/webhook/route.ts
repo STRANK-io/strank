@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     switch (webhookBody.aspect_type) {
       case 'create':
         // * 2.5초 후 진행 (서드파티 서비스와의 디스크립션 수정 충돌을 피하기 위함)
-        await new Promise(resolve => setTimeout(resolve, 2500))
+        await new Promise(resolve => setTimeout(resolve, 1500))
 
         await processCreateActivityEvent(webhookBody)
         break
