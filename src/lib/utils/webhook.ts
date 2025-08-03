@@ -259,9 +259,21 @@ export async function calculateActivityRanking(
     return null
   }
 
+  console.log('🎯 랭킹 계산 시작:', {
+    activityId: stravaActivity.id,
+    district: user.district,
+    time: new Date().toISOString()
+  })
+
   const { data: rankings, error } = await supabase.rpc('get_activity_rankings', {
     p_activity_id: stravaActivity.id,
     p_user_district: user.district,
+  })
+
+  console.log('📊 get_activity_rankings 결과:', {
+    rankings,
+    error,
+    time: new Date().toISOString()
   })
 
   if (error) {
@@ -274,6 +286,11 @@ export async function calculateActivityRanking(
   }
 
   const ranking = rankings[0]
+
+  console.log('🏆 최종 랭킹 데이터:', {
+    ranking,
+    time: new Date().toISOString()
+  })
 
   return {
     rankings: {
