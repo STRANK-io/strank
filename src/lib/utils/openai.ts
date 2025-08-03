@@ -45,12 +45,27 @@ export async function generateActivityDescriptionWithGPT(
       throw new Error(ERROR_CODES.OPENAI.API_ERROR)
     }
 
+    // 랭킹 데이터 로깅
+    console.log('📊 랭킹 데이터:', {
+      rankingData,
+      time: new Date().toISOString()
+    })
+
+    // 랭킹 섹션 미리 생성
+    const rankingSection = rankingData ? generateRankingSection({ rankings: rankingData, district: rankingData.district || '' }) : ''
+    
+    // 생성된 랭킹 섹션 로깅
+    console.log('📝 생성된 랭킹 섹션:', {
+      rankingSection,
+      time: new Date().toISOString()
+    })
+
     // 템플릿 준비
     const template = `
 🚴 STRANK AI 라이딩 리포트
 📅 [년-월-일-요일]
 
-${rankingData ? generateRankingSection({ rankings: rankingData, district: rankingData.district || '' }) : ''}
+${rankingSection}
 
 ◾ 라이딩 분석 정보 ◾
 🚴총거리: [총거리] km
@@ -104,6 +119,7 @@ ${rankingData ? generateRankingSection({ rankings: rankingData, district: rankin
     // AI SDK를 사용한 텍스트 생성
     console.log('🤖 GPT API 호출 시작:', {
       model: 'gpt-4.1-mini',
+      template: template.substring(0, 500) + '...', // 템플릿의 앞부분만 로깅
       time: new Date().toISOString()
     })
 
@@ -323,6 +339,12 @@ Z4: [H_Z4]bpm / Z5+: [H_Z5+]bpm
       })
       throw new Error(ERROR_CODES.OPENAI.DESCRIPTION_GENERATION_FAILED)
     }
+
+    // 최종 생성된 텍스트 로깅
+    console.log('✅ GPT 응답 완료:', {
+      generatedText: text.substring(0, 500) + '...', // 생성된 텍스트의 앞부분만 로깅
+      time: new Date().toISOString()
+    })
 
     return text
   } catch (error: any) {
