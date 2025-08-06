@@ -13,7 +13,10 @@ export const logError = (message: string, context: LogContext = {}) => {
   const timestamp = new Date().toISOString()
   const errorLocation = new Error().stack?.split('\n')[2]?.trim() // 호출 위치 추출
 
-  console.error(`[Error] ${timestamp} - ${message}`, {
+  // 개발 환경에서는 console.log 사용, 프로덕션에서는 console.error 사용
+  const logFunction = process.env.NODE_ENV === 'development' ? console.log : console.error
+  
+  logFunction(`[Error] ${timestamp} - ${message}`, {
     timestamp,
     location: errorLocation,
     ...context,

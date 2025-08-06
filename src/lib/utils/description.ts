@@ -42,6 +42,7 @@ export async function generateActivityDescription(
             elevationRankCity: rankingsWithDistrict.rankings.elevationRankCity,
             elevationRankDistrict: rankingsWithDistrict.rankings.elevationRankDistrict,
             district: rankingsWithDistrict.district,
+            province: rankingsWithDistrict.province,
           }
         : undefined
     )
@@ -102,14 +103,14 @@ export function generateRankingSection(
 ): string {
   if (!rankingsWithDistrict || !rankingsWithDistrict.rankings) return ''
 
-  const { rankings, district } = rankingsWithDistrict
+  const { rankings, district, province } = rankingsWithDistrict
   const sections = []
 
   // 거리 랭킹 섹션
   if (rankings.distanceRankCity || rankings.distanceRankDistrict) {
     sections.push(
       `🥇 거리 랭킹${
-        rankings.distanceRankCity ? `\n📍서울시 (${rankings.distanceRankCity}위)` : ''
+        rankings.distanceRankCity ? `\n📍${province} (${rankings.distanceRankCity}위)` : ''
       }${rankings.distanceRankDistrict ? `\n📍${district} (${rankings.distanceRankDistrict}위)` : ''}`
     )
   }
@@ -117,7 +118,7 @@ export function generateRankingSection(
   // 고도 랭킹 섹션
   if (rankings.elevationRankCity || rankings.elevationRankDistrict) {
     sections.push(
-      `🧗 고도 랭킹${rankings.elevationRankCity ? `\n📍서울시 (${rankings.elevationRankCity}위)` : ''}${
+      `🧗 고도 랭킹${rankings.elevationRankCity ? `\n📍${province} (${rankings.elevationRankCity}위)` : ''}${
         rankings.elevationRankDistrict
           ? `\n📍${district} (${rankings.elevationRankDistrict}위)`
           : ''

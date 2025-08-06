@@ -1,0 +1,88 @@
+get_my_best_ranking
+
+DECLARE
+  v_user_district TEXT;
+  v_user_province TEXT;
+BEGIN
+  -- 사용자의 district와 province 모두 조회
+  SELECT district, province INTO v_user_district, v_user_province
+  FROM users
+  WHERE id = p_user_id AND deleted_at IS NULL;
+
+  RETURN QUERY
+  WITH user_totals AS (
+    SELECT 
+      u.id as user_id,
+      u.name as user_name,
+      u.profile as user_profile,
+      u.district as user_district,
+      sut.strava_athlete_id as athlete_id,
+      SUM(CASE WHEN p_criteria = 'distance' THEN a.distance ELSE a.total_elevation_gain END) as total_value,
+      SUM(a.distance) as total_distance,
+      SUM(a.total_elevation_gain) as total_elevation
+    FROM activities a
+    JOIN users u ON a.user_id = u.id
+    JOIN strava_user_tokens sut ON u.id = sut.user_id
+    WHERE 
+      a.visibility = 'everyone'
+      AND a.deleted_at IS NULL
+      AND u.deleted_at IS NULL
+      AND sut.deleted_at IS NULL
+      AND (
+        CASE 
+          WHEN p_period = 'lastweek' THEN 
+            a.start_date::timestamptz AT TIME ZONE 'Asia/Seoul' >= 
+              date_trunc('week', now() AT TIME ZONE 'Asia/Seoul' - interval '1 week')
+            AND 
+            a.start_date::timestamptz AT TIME ZONE 'Asia/Seoul' < 
+              date_trunc('week', now() AT TIME ZONE 'Asia/Seoul')
+          WHEN p_period = 'now' THEN
+            a.start_date::timestamptz AT TIME ZONE 'Asia/Seoul' >= 
+              date_trunc('week', now() AT TIME ZONE 'Asia/Seoul')
+          ELSE true
+        END
+      )
+      AND (
+        CASE 
+          WHEN p_district = 'users' AND v_user_district IS NOT NULL THEN 
+            u.district = v_user_district
+          WHEN p_district = 'province' AND v_user_province IS NOT NULL THEN  -- province 필터링 추가
+            u.province = v_user_province
+          ELSE true
+        END
+      )
+    GROUP BY u.id, u.name, u.profile, u.district, u.province, sut.strava_athlete_id
+    HAVING 
+      CASE 
+        WHEN p_criteria = 'distance' THEN 
+          SUM(a.distance) >= 1000
+        ELSE 
+          SUM(a.total_elevation_gain) >= 1
+      END
+  ),
+  ranked_totals AS (
+    SELECT 
+      user_id,
+      user_name,
+      user_profile,
+      user_district,
+      athlete_id,
+      total_distance,
+      total_elevation,
+      total_value,
+      DENSE_RANK() OVER (ORDER BY total_value DESC) as rank
+    FROM user_totals
+  )
+  SELECT 
+    rt.user_id as result_user_id,
+    rt.rank::integer as result_rank,
+    rt.total_distance as result_distance,
+    rt.total_elevation as result_elevation,
+    rt.user_name as result_user_name,
+    rt.user_profile as result_user_profile,
+    rt.user_district as result_user_district,
+    rt.athlete_id::bigint as result_athlete_id
+  FROM ranked_totals rt
+  WHERE rt.user_id = p_user_id
+  LIMIT 1;
+END;

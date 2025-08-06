@@ -257,7 +257,7 @@ export async function calculateActivityRanking(
 ): Promise<CalculateActivityRankingReturn | null> {
   const { data: user } = await supabase
     .from('users')
-    .select('id, name, district, profile')
+    .select('id, name, district, province, profile')
     .eq('id', userId)
     .single()
 
@@ -272,6 +272,7 @@ export async function calculateActivityRanking(
   console.log('🎯 랭킹 계산 시작:', {
     activityId: stravaActivity.id,
     district: user.district,
+    province: user.province,
     time: new Date().toISOString()
   })
 
@@ -326,6 +327,7 @@ export async function calculateActivityRanking(
       elevationRankDistrict: ranking.district_elevation_rank || null,
     },
     district: user.district,
+    province: user.province || '지역 없음',
   }
 }
 

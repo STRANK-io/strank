@@ -30,6 +30,7 @@ const rankingDataSchema = z.object({
   elevationRankCity: z.number().nullable(),
   elevationRankDistrict: z.number().nullable(),
   district: z.string(),
+  province: z.string(),
 })
 
 export async function generateActivityDescriptionWithGPT(
@@ -52,7 +53,7 @@ export async function generateActivityDescriptionWithGPT(
     })
 
     // 랭킹 섹션 미리 생성
-    const rankingSection = rankingData ? generateRankingSection({ rankings: rankingData, district: rankingData.district || '' }) : ''
+    const rankingSection = rankingData ? generateRankingSection({ rankings: rankingData, district: rankingData.district || '', province: rankingData.province || '지역 없음' }) : ''
     
     // 생성된 랭킹 섹션 로깅
     console.log('📝 생성된 랭킹 섹션:', {

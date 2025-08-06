@@ -19,6 +19,14 @@ const fetchMyRanking = async (
   })
 
   if (error) {
+    console.error('🚨 Supabase RPC 에러 상세:', {
+      error,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      functionName: 'fetchMyRanking',
+    })
     logError('Error fetching my ranking:', {
       error,
       functionName: 'fetchMyRanking',
@@ -29,6 +37,14 @@ const fetchMyRanking = async (
   if (!result || result.length === 0) return null
 
   const activity = result[0]
+  
+  // 디버깅: province 데이터 확인
+  console.log('🔍 MyRanking 데이터 확인:', {
+    result_user_province: activity.result_user_province,
+    full_activity: activity,
+    time: new Date().toISOString()
+  })
+
   return {
     rank: activity.result_rank,
     totalDistance: activity.result_distance || 0,

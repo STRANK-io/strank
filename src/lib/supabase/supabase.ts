@@ -300,6 +300,25 @@ export type Database = {
           result_athlete_id: number
         }[]
       }
+      get_my_best_ranking_v2: {
+        Args: {
+          p_user_id: string
+          p_criteria: string
+          p_period?: string
+          p_district?: string
+        }
+        Returns: {
+          result_user_id: string
+          result_rank: number
+          result_distance: number
+          result_elevation: number
+          result_user_name: string
+          result_user_profile: string
+          result_user_district: string
+          result_user_province?: string  // 옵셔널로 변경
+          result_athlete_id: number
+        }[]
+      }
       get_total_rankings: {
         Args: {
           p_user_id: string

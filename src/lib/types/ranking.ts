@@ -38,4 +38,5 @@ export interface GetActivityRankingsResponse {
 export interface CalculateActivityRankingReturn {
   rankings: GetActivityRankingsResponse | null
   district: string
+  province: string
 }

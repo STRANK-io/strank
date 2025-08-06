@@ -27,7 +27,7 @@ export default function SharePreview({
     rank,
     totalDistance,
     totalElevationGain,
-    user: { nickname, district },
+    user: { nickname, district, province },
   } = myRankingActivity
 
   const criteriaText = criteriaFilter === 'distance' ? '거리' : '고도'
@@ -108,7 +108,13 @@ export default function SharePreview({
             </span>
           </div>
           <div className="flex items-center justify-between text-sm font-medium leading-[18.2px]">
-            <span>{`${districtFilter === 'users' ? `서울시 ${district}` : '서울시'}`}</span>
+            <span>
+              {districtFilter === 'users' 
+                ? `${province} ${district}` 
+                : districtFilter === 'province' 
+                ? province 
+                : '전체'}
+            </span>
             <span>strank.io</span>
           </div>
         </div>
