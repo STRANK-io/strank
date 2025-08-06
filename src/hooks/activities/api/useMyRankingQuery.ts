@@ -9,6 +9,8 @@ const fetchMyRanking = async (
   filters: RankingFilters,
   userId: string
 ): Promise<MyRankingResponse | null> => {
+  console.log('🚀 fetchMyRanking 시작:', { filters, userId, time: new Date().toISOString() })
+  
   const supabase = createClient()
 
   const { data: result, error } = await supabase.rpc('get_my_best_ranking', {
@@ -17,6 +19,8 @@ const fetchMyRanking = async (
     p_period: filters.period,
     p_district: filters.district,
   })
+
+  console.log('🎯 fetchMyRanking RPC 결과:', { result, error, userId })
 
   if (error) {
     console.error('🚨 Supabase RPC 에러 상세:', {
