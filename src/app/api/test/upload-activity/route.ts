@@ -37,10 +37,10 @@ export async function POST(request: Request) {
 
     // 새로운 활동 데이터 생성
     const testActivity = {
-      name: `GPT TEST ${sourceActivity.name}`,
+      name: `GPT TEST ${sourceActivity.name} ${new Date().toLocaleTimeString()}`,
       type: sourceActivity.type,
       sport_type: sourceActivity.sport_type,
-      start_date: new Date('2025-08-04T02:00:00Z').toISOString(), // 현재 시간으로 고정
+      start_date: new Date().toISOString(), // 현재 시간 사용
       elapsed_time: sourceActivity.elapsed_time,
       moving_time: sourceActivity.moving_time,
       description: '',
@@ -67,6 +67,7 @@ export async function POST(request: Request) {
       elevation: testActivity.total_elevation_gain,
       start_date: testActivity.start_date,
       current_time: new Date().toISOString(),
+      full_data: testActivity
     })
 
     // 스트라바 API를 통해 활동 생성
@@ -80,7 +81,13 @@ export async function POST(request: Request) {
     })
 
     if (!createResponse.ok) {
-      throw new Error('Failed to create activity: ' + await createResponse.text())
+      const errorText = await createResponse.text()
+      console.error('Strava API 응답:', {
+        status: createResponse.status,
+        statusText: createResponse.statusText,
+        error: errorText
+      })
+      throw new Error('Failed to create activity: ' + errorText)
     }
 
     const createdActivity = await createResponse.json()

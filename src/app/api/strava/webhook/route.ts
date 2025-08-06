@@ -10,7 +10,7 @@ import {
   processUpdateActivityEvent,
 } from '@/lib/utils/webhook'
 
-export const maxDuration = 20 // hobby 플랜 max duration은 기본 10, 최대 60초
+export const maxDuration = 30 // Pro 플랜 Edge Function max duration은 30초
 
 // * 1. 웹훅 검증을 위한 GET 요청 처리
 export async function GET(request: Request) {
