@@ -70,6 +70,7 @@ export async function POST(request: Request) {
         elevationRankCity: 89,
         elevationRankDistrict: 9,
         district: '구로구',
+        province: '서울시',
       }
     )
 

@@ -84,6 +84,7 @@ export async function POST(request: Request) {
         elevationRankDistrict: 9,
       },
       district: '구로구',
+      province: '서울시',
     }
 
     // 디스크립션 생성

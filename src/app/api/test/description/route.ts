@@ -64,6 +64,7 @@ export async function GET(request: Request) {
         elevationRankCity: 89,
         elevationRankDistrict: 9,
         district: '신사동',
+        province: '서울시',
       }
     )
 
