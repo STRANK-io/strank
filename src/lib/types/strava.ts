@@ -51,3 +51,23 @@ export interface StravaActivity {
 }
 
 export type StravaVisibility = (typeof STRAVA_VISIBILITY)[keyof typeof STRAVA_VISIBILITY]
+
+export interface StravaStreamData {
+  type: string
+  data: number[]
+  series_type: string
+  original_size: number
+  resolution: string
+}
+
+export interface StravaStreamsResponse {
+  distance?: StravaStreamData
+  time?: StravaStreamData
+  latlng?: StravaStreamData
+  altitude?: StravaStreamData
+  velocity_smooth?: StravaStreamData
+  heartrate?: StravaStreamData
+  cadence?: StravaStreamData
+  watts?: StravaStreamData
+  grade_smooth?: StravaStreamData
+}

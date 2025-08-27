@@ -7,7 +7,7 @@ import {
   STRAVA_ATHLETE_ACTIVITIES_ENDPOINT,
   SYNC_CONFIG,
 } from '@/lib/constants/strava'
-import { StravaActivity } from '@/lib/types/strava'
+import { StravaActivity, StravaStreamsResponse } from '@/lib/types/strava'
 import { convertUTCToKoreanTime } from '@/lib/utils/date'
 import { logError } from '@/lib/utils/log'
 import { retryFetch } from '@/lib/utils/fetch'
@@ -275,4 +275,59 @@ export async function processActivities(
   )
 
   if (error) throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
+}
+
+/**
+ * 스트라바 액티비티의 스트림 데이터를 가져오는 함수
+ * 
+ * @param activityId - 스트라바 액티비티 ID
+ * @param accessToken - 사용자의 스트라바 액세스 토큰
+ * @param keys - 가져올 스트림 데이터 키들 (기본값: distance,time,latlng,altitude,velocity_smooth,heartrate,cadence,watts,grade_smooth)
+ * @returns {Promise<StravaStreamsResponse>} 스트림 데이터 응답
+ */
+export async function fetchStravaActivityStreams(
+  activityId: number,
+  accessToken: string,
+  keys: string[] = ['distance', 'time', 'latlng', 'altitude', 'velocity_smooth', 'heartrate', 'cadence', 'watts', 'grade_smooth']
+): Promise<StravaStreamsResponse> {
+  try {
+    console.log(`[스트림 API] 액티비티 ${activityId}의 스트림 데이터 요청 시작`)
+    
+    const keysParam = keys.join(',')
+    const url = `${STRAVA_API_URL}/activities/${activityId}/streams?keys=${keysParam}&key_by_type=true`
+    
+    console.log(`[스트림 API] 요청 URL: ${url}`)
+    
+    const response = await retryFetch(url, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`[스트림 API] HTTP 오류: ${response.status} - ${errorText}`)
+      throw new Error(`스트림 데이터 요청 실패: ${response.status} ${errorText}`)
+    }
+
+    const streamsData: StravaStreamsResponse = await response.json()
+    
+    console.log(`[스트림 API] 액티비티 ${activityId}의 스트림 데이터 성공적으로 가져옴:`, {
+      availableKeys: Object.keys(streamsData),
+      totalDataPoints: Object.values(streamsData).reduce((total, stream) => {
+        return total + (stream?.data?.length || 0)
+      }, 0)
+    })
+    
+    return streamsData
+  } catch (error) {
+    console.error(`[스트림 API] 액티비티 ${activityId}의 스트림 데이터 요청 중 오류 발생:`, error)
+    logError('Error fetching Strava activity streams:', {
+      error,
+      activityId,
+      functionName: 'fetchStravaActivityStreams',
+    })
+    throw error
+  }
 }

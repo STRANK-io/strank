@@ -24,4 +24,9 @@ export const QUERY_KEYS = {
     DEFAULT: ['timeline'] as const,
     ACTIVITIES: () => [...QUERY_KEYS.TIMELINE.DEFAULT, 'activities'] as const,
   },
+  STRAVA: {
+    DEFAULT: ['strava'] as const,
+    STREAMS: (activityId: number, keys: string[]) =>
+      [...QUERY_KEYS.STRAVA.DEFAULT, 'streams', activityId, keys] as const,
+  },
 } as const
