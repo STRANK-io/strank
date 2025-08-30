@@ -38,6 +38,25 @@ export async function GET(request: Request) {
 
     const activity: StravaActivity = await response.json()
 
+    // 스트림 데이터 가져오기
+    console.log('\n📡 스트림 데이터 가져오는 중...')
+    const streamsResponse = await fetch(
+      `${STRAVA_API_URL}/activities/${activityId}/streams?keys=time,latlng,distance,altitude,velocity_smooth,heartrate,watts,cadence,grade_smooth&key_by_type=true`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    )
+
+    let streamsData = null
+    if (streamsResponse.ok) {
+      streamsData = await streamsResponse.json()
+      console.log('✅ 스트림 데이터 가져오기 성공')
+    } else {
+      console.log('⚠️ 스트림 데이터 가져오기 실패:', streamsResponse.status)
+    }
+
     console.log('\n📊 활동 데이터:', {
       id: activity.id,
       name: activity.name,
@@ -57,6 +76,7 @@ export async function GET(request: Request) {
         maxWatts: activity.max_watts || undefined,
         maxHeartrate: activity.max_heartrate || undefined,
         averageCadence: activity.average_cadence || undefined,
+        streamsData: streamsData, // 스트림 데이터 추가
       },
       {
         distanceRankCity: 84,

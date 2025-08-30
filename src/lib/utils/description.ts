@@ -21,6 +21,39 @@ export async function generateActivityDescription(
   rankingsWithDistrict: CalculateActivityRankingReturn | null
 ): Promise<string> {
   try {
+    // 스트림 데이터 가져오기
+    console.log('\n📡 스트림 데이터 가져오는 중...')
+    let streamsData = null
+    
+    try {
+      // 액세스 토큰이 필요하므로 환경변수에서 가져오거나 다른 방법으로 획득
+      // 여기서는 스트림 데이터 가져오기를 시도하되, 실패해도 계속 진행
+      const accessToken = process.env.STRAVA_ACCESS_TOKEN // 또는 다른 방법으로 토큰 획득
+      
+      if (accessToken) {
+        const streamsResponse = await fetch(
+          `${STRAVA_API_URL}/activities/${activity.id}/streams?keys=time,latlng,distance,altitude,velocity_smooth,heartrate,watts,cadence,grade_smooth&key_by_type=true`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        )
+
+        if (streamsResponse.ok) {
+          streamsData = await streamsResponse.json()
+          console.log('✅ 스트림 데이터 가져오기 성공')
+        } else {
+          console.log('⚠️ 스트림 데이터 가져오기 실패:', streamsResponse.status)
+        }
+      } else {
+        console.log('⚠️ 액세스 토큰이 없어 스트림 데이터를 가져올 수 없습니다.')
+      }
+    } catch (streamError) {
+      console.log('⚠️ 스트림 데이터 가져오기 중 오류:', streamError)
+      // 스트림 데이터 가져오기 실패해도 계속 진행
+    }
+
     // ChatGPT API를 통해 디스크립션 생성
     const description = await generateActivityDescriptionWithGPT(
       {
@@ -34,6 +67,7 @@ export async function generateActivityDescription(
         maxWatts: activity.max_watts && activity.max_watts > 0 ? activity.max_watts : undefined,
         maxHeartrate: activity.max_heartrate && activity.max_heartrate > 0 ? activity.max_heartrate : undefined,
         averageCadence: activity.average_cadence && activity.average_cadence > 0 ? activity.average_cadence : undefined,
+        streamsData: streamsData, // 스트림 데이터 추가
       },
       rankingsWithDistrict && rankingsWithDistrict.rankings
         ? {

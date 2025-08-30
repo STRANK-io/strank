@@ -21,6 +21,7 @@ const activityDataSchema = z.object({
   maxWatts: z.number().optional(),
   maxHeartrate: z.number().optional(),
   averageCadence: z.number().optional(),
+  streamsData: z.any().optional(), // 스트림 데이터 전체 포함
 })
 
 // 랭킹 데이터 스키마 정의
@@ -37,6 +38,40 @@ export async function generateActivityDescriptionWithGPT(
   activityData: z.infer<typeof activityDataSchema>,
   rankingData?: z.infer<typeof rankingDataSchema>
 ): Promise<string> {
+  
+  // 스트림 데이터가 있으면 상세 로깅
+  if (activityData.streamsData) {
+    console.log('\n📊 스트림 데이터 분석 시작...')
+    console.log('='.repeat(60))
+    console.log('🔍 스트림 데이터 요약:')
+    console.log(`   총 데이터 포인트: ${Object.values(activityData.streamsData).reduce((total: number, stream: any) => total + (stream?.data?.length || 0), 0).toLocaleString()}개`)
+    console.log(`   사용 가능한 스트림: ${Object.keys(activityData.streamsData).join(', ')}`)
+    console.log(`   데이터 해상도: ${(Object.values(activityData.streamsData)[0] as any)?.resolution || 'high'}`)
+
+    // 각 스트림별 상세 정보 로깅
+    Object.entries(activityData.streamsData).forEach(([key, streamData]) => {
+      if (streamData) {
+        console.log(`\n📈 ${key}:`)
+        console.log(`   데이터 포인트: ${(streamData as any).data?.length || 0}개`)
+        console.log(`   해상도: ${(streamData as any).resolution || 'unknown'}`)
+        console.log(`   시리즈 타입: ${(streamData as any).series_type || 'unknown'}`)
+        console.log(`   샘플 데이터: ${(streamData as any).data?.slice(0, 5).join(', ')}...`)
+      }
+    })
+
+    // 전체 스트림 데이터 크기 로깅
+    const totalDataSizeBytes = JSON.stringify(activityData.streamsData).length
+    const totalDataSizeKB = (totalDataSizeBytes / 1024).toFixed(2)
+    const estimatedTokens = Math.ceil(totalDataSizeBytes / 4)
+
+    console.log('\n' + '='.repeat(60))
+    console.log('📊 스트림 데이터 크기 분석:')
+    console.log(`   총 데이터 크기: ${totalDataSizeBytes.toLocaleString()} bytes (${totalDataSizeKB} KB)`)
+    console.log(`   예상 GPT 토큰 수: ${estimatedTokens.toLocaleString()}개`)
+    console.log('='.repeat(60))
+    console.log('✅ 스트림 데이터 로깅 완료\n')
+  }
+
   try {
     // API 키 확인
     if (!process.env.OPENAI_API_KEY) {
@@ -162,6 +197,15 @@ ${activityData.averageWatts ? `- 평균파워: ${activityData.averageWatts}W\n` 
 ${activityData.maxWatts ? `- 최대파워: ${activityData.maxWatts}W\n` : ''}
 ${activityData.maxHeartrate ? `- 최고심박수: ${activityData.maxHeartrate}bpm\n` : ''}
 ${activityData.averageCadence ? `- 평균케이던스: ${activityData.averageCadence}rpm\n` : ''}
+
+※스트림 데이터 (전체 상세 데이터)
+${activityData.streamsData ? `
+스트림 데이터는 이번 라이딩의 모든 구간별 상세 정보를 포함합니다:
+- 총 데이터 포인트: ${Object.values(activityData.streamsData).reduce((total: number, stream: any) => total + (stream?.data?.length || 0), 0).toLocaleString()}개
+- 사용 가능한 스트림: ${Object.keys(activityData.streamsData).join(', ')}
+- 데이터 해상도: ${(Object.values(activityData.streamsData)[0] as any)?.resolution || 'high'}
+- 전체 스트림 데이터: ${JSON.stringify(activityData.streamsData, null, 2)}
+` : ''}
 
 ※전체 주의사항
 템플릿의 모든 이모지와 포맷, 그리고 정확한 단위 표기를 정확히 유지해줘.

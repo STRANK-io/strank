@@ -51,6 +51,30 @@ export async function POST(request: Request) {
       elevation: activity.total_elevation_gain,
     })
 
+    // 스트림 데이터 가져오기
+    console.log('\n📡 스트림 데이터 가져오는 중...')
+    let streamsData = null
+    
+    try {
+      const streamsResponse = await fetch(
+        `${STRAVA_API_URL}/activities/${activity.id}/streams?keys=time,latlng,distance,altitude,velocity_smooth,heartrate,watts,cadence,grade_smooth&key_by_type=true`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      )
+
+      if (streamsResponse.ok) {
+        streamsData = await streamsResponse.json()
+        console.log('✅ 스트림 데이터 가져오기 성공')
+      } else {
+        console.log('⚠️ 스트림 데이터 가져오기 실패:', streamsResponse.status)
+      }
+    } catch (streamError) {
+      console.log('⚠️ 스트림 데이터 가져오기 중 오류:', streamError)
+    }
+
     // OpenAI를 사용하여 디스크립션 생성
     const description = await generateActivityDescriptionWithGPT(
       {
@@ -63,6 +87,7 @@ export async function POST(request: Request) {
         maxWatts: activity.max_watts || undefined,
         maxHeartrate: activity.max_heartrate || undefined,
         averageCadence: activity.average_cadence || undefined,
+        streamsData: streamsData, // 스트림 데이터 추가
       },
       {
         distanceRankCity: 84,

@@ -13,6 +13,24 @@ describe('Description Generation Test', () => {
       maxWatts: 450,
       maxHeartrate: 175,
       averageCadence: 85,
+      streamsData: {
+        // 테스트용 스트림 데이터
+        time: {
+          data: [0, 1, 2, 3, 4, 5],
+          resolution: 'high',
+          series_type: 'time'
+        },
+        distance: {
+          data: [0, 100, 200, 300, 400, 500],
+          resolution: 'high',
+          series_type: 'distance'
+        },
+        altitude: {
+          data: [100, 105, 110, 108, 112, 115],
+          resolution: 'high',
+          series_type: 'altitude'
+        }
+      }
     }
 
     // 테스트용 랭킹 데이터
