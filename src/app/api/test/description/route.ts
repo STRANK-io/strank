@@ -64,8 +64,9 @@ export async function GET(request: Request) {
       elevation: activity.total_elevation_gain,
     })
 
-    // 디스크립션 생성
-    const description = await generateActivityDescriptionWithGPT(
+    // 1. 스트림 데이터 없이 디스크립션 생성 (기존 방식)
+    console.log('\n🔍 1단계: 스트림 데이터 없이 디스크립션 생성...')
+    const descriptionWithoutStreams = await generateActivityDescriptionWithGPT(
       {
         date: activity.start_date_local,
         distance: (activity.distance || 0) / 1000, // m를 km로 변환
@@ -76,7 +77,7 @@ export async function GET(request: Request) {
         maxWatts: activity.max_watts || undefined,
         maxHeartrate: activity.max_heartrate || undefined,
         averageCadence: activity.average_cadence || undefined,
-        streamsData: streamsData, // 스트림 데이터 추가
+        // streamsData: undefined (스트림 데이터 없음)
       },
       {
         distanceRankCity: 84,
@@ -88,18 +89,94 @@ export async function GET(request: Request) {
       }
     )
 
-    // 디스크립션을 섹션별로 분리하여 포맷팅
-    const sections = description.split('\n\n')
-    const formattedDescription = sections.map(section => section.trim()).join('\n\n')
+    // 2. 스트림 데이터와 함께 디스크립션 생성 (새로운 방식)
+    console.log('\n🔍 2단계: 스트림 데이터와 함께 디스크립션 생성...')
+    const descriptionWithStreams = await generateActivityDescriptionWithGPT(
+      {
+        date: activity.start_date_local,
+        distance: (activity.distance || 0) / 1000, // m를 km로 변환
+        elevation: activity.total_elevation_gain || 0,
+        averageSpeed: (activity.average_speed || 0) * 3.6, // m/s를 km/h로 변환
+        maxSpeed: (activity.max_speed || 0) * 3.6, // m/s를 km/h로 변환
+        averageWatts: activity.average_watts || undefined,
+        maxWatts: activity.max_watts || undefined,
+        maxHeartrate: activity.max_heartrate || undefined,
+        averageCadence: activity.average_cadence || undefined,
+        streamsData: streamsData, // 스트림 데이터 포함
+      },
+      {
+        distanceRankCity: 84,
+        distanceRankDistrict: 9,
+        elevationRankCity: 89,
+        elevationRankDistrict: 9,
+        district: '신사동',
+        province: '서울시',
+      }
+    )
 
-    console.log('\n✅ 생성된 디스크립션:')
-    console.log(formattedDescription)
+    // 결과 비교 분석
+    console.log('\n' + '='.repeat(80))
+    console.log('📊 GPT 응답 비교 분석')
+    console.log('='.repeat(80))
+
+    // 1. 스트림 데이터 없는 경우
+    const sectionsWithoutStreams = descriptionWithoutStreams.split('\n\n')
+    const formattedDescriptionWithoutStreams = sectionsWithoutStreams.map(section => section.trim()).join('\n\n')
+
+    console.log('\n🔴 스트림 데이터 없이 생성된 디스크립션:')
+    console.log(formattedDescriptionWithoutStreams)
+
+    // 2. 스트림 데이터 있는 경우
+    const sectionsWithStreams = descriptionWithStreams.split('\n\n')
+    const formattedDescriptionWithStreams = sectionsWithStreams.map(section => section.trim()).join('\n\n')
+
+    console.log('\n🟢 스트림 데이터와 함께 생성된 디스크립션:')
+    console.log(formattedDescriptionWithStreams)
+
+    // 3. 차이점 분석
+    console.log('\n' + '='.repeat(80))
+    console.log('📈 응답 차이점 분석')
+    console.log('='.repeat(80))
+    console.log(`🔴 스트림 데이터 없음: ${descriptionWithoutStreams.length}자`)
+    console.log(`🟢 스트림 데이터 있음: ${descriptionWithStreams.length}자`)
+    console.log(`📊 차이: ${Math.abs(descriptionWithStreams.length - descriptionWithoutStreams.length)}자`)
+    
+    // 주요 섹션별 비교
+    const compareSections = (without: string, withStreams: string, sectionName: string) => {
+      const withoutSection = without.includes(sectionName) ? without.split(sectionName)[1]?.split('\n\n')[0] || '' : ''
+      const withStreamsSection = withStreams.includes(sectionName) ? withStreams.split(sectionName)[1]?.split('\n\n')[0] || '' : ''
+      
+      if (withoutSection !== withStreamsSection) {
+        console.log(`\n📝 ${sectionName} 섹션 비교:`)
+        console.log(`🔴 없음: ${withoutSection.substring(0, 100)}...`)
+        console.log(`🟢 있음: ${withStreamsSection.substring(0, 100)}...`)
+      }
+    }
+
+    compareSections(descriptionWithoutStreams, descriptionWithStreams, '📝 간단한분석')
+    compareSections(descriptionWithoutStreams, descriptionWithStreams, '📊 훈련 분석')
+    compareSections(descriptionWithoutStreams, descriptionWithStreams, '📈 파워·심박 존 훈련 분석')
+
+    console.log('\n' + '='.repeat(80))
+    console.log('✅ 비교 분석 완료')
+    console.log('='.repeat(80))
 
     return NextResponse.json({
       success: true,
       data: {
-        description: formattedDescription,
-        sections: sections.map(section => section.trim())
+        comparison: {
+          withoutStreams: {
+            description: formattedDescriptionWithoutStreams,
+            sections: sectionsWithoutStreams.map(section => section.trim()),
+            length: descriptionWithoutStreams.length
+          },
+          withStreams: {
+            description: formattedDescriptionWithStreams,
+            sections: sectionsWithStreams.map(section => section.trim()),
+            length: descriptionWithStreams.length
+          },
+          difference: Math.abs(descriptionWithStreams.length - descriptionWithoutStreams.length)
+        }
       }
     })
   } catch (error) {
