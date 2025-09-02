@@ -4,6 +4,7 @@ import { generateText } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { z } from 'zod'
 import { generateRankingSection } from '@/lib/utils/description'
+import { analyzeStreamData } from '@/lib/utils/streamAnalyzer'
 
 // API 키 확인
 if (!process.env.OPENAI_API_KEY) {
@@ -39,37 +40,20 @@ export async function generateActivityDescriptionWithGPT(
   rankingData?: z.infer<typeof rankingDataSchema>
 ): Promise<string> {
   
-  // 스트림 데이터가 있으면 상세 로깅
+  // 요청 메시지 배열 선언 (전역)
+  const messages: Array<{ role: 'system' | 'user'; content: string }> = []
+  
+  // 스트림 데이터 분석
+  let streamAnalysis = null
   if (activityData.streamsData) {
-    console.log('\n📊 스트림 데이터 분석 시작...')
-    console.log('='.repeat(60))
-    console.log('🔍 스트림 데이터 요약:')
-    console.log(`   총 데이터 포인트: ${Object.values(activityData.streamsData).reduce((total: number, stream: any) => total + (stream?.data?.length || 0), 0).toLocaleString()}개`)
-    console.log(`   사용 가능한 스트림: ${Object.keys(activityData.streamsData).join(', ')}`)
-    console.log(`   데이터 해상도: ${(Object.values(activityData.streamsData)[0] as any)?.resolution || 'high'}`)
-
-    // 각 스트림별 상세 정보 로깅
-    Object.entries(activityData.streamsData).forEach(([key, streamData]) => {
-      if (streamData) {
-        console.log(`\n📈 ${key}:`)
-        console.log(`   데이터 포인트: ${(streamData as any).data?.length || 0}개`)
-        console.log(`   해상도: ${(streamData as any).resolution || 'unknown'}`)
-        console.log(`   시리즈 타입: ${(streamData as any).series_type || 'unknown'}`)
-        console.log(`   샘플 데이터: ${(streamData as any).data?.slice(0, 5).join(', ')}...`)
-      }
-    })
-
-    // 전체 스트림 데이터 크기 로깅
-    const totalDataSizeBytes = JSON.stringify(activityData.streamsData).length
-    const totalDataSizeKB = (totalDataSizeBytes / 1024).toFixed(2)
-    const estimatedTokens = Math.ceil(totalDataSizeBytes / 4)
-
-    console.log('\n' + '='.repeat(60))
-    console.log('📊 스트림 데이터 크기 분석:')
-    console.log(`   총 데이터 크기: ${totalDataSizeBytes.toLocaleString()} bytes (${totalDataSizeKB} KB)`)
-    console.log(`   예상 GPT 토큰 수: ${estimatedTokens.toLocaleString()}개`)
-    console.log('='.repeat(60))
-    console.log('✅ 스트림 데이터 로깅 완료\n')
+    try {
+      console.log('\n📊 스트림 데이터 분석 시작...')
+      streamAnalysis = analyzeStreamData(activityData.streamsData)
+      console.log('✅ 스트림 데이터 분석 완료\n')
+    } catch (error) {
+      console.log('❌ 스트림 데이터 분석 실패:', error)
+      console.log('📝 원본 데이터로 진행합니다\n')
+    }
   }
 
   try {
@@ -97,6 +81,13 @@ export async function generateActivityDescriptionWithGPT(
     })
 
     // 템플릿 준비
+    console.log('🔍 템플릿 생성 전 스트림 데이터 확인:', {
+      hasStreamsData: !!activityData.streamsData,
+      streamsDataType: typeof activityData.streamsData,
+      streamsDataKeys: activityData.streamsData ? Object.keys(activityData.streamsData) : 'undefined',
+      time: new Date().toISOString()
+    })
+    
     const template = `
 🚴 STRANK AI 라이딩 리포트
 📅 [년-월-일-요일]
@@ -158,21 +149,18 @@ Z4: [H_Z4]bpm / Z5+: [H_Z5+]bpm
 
     // AI SDK를 사용한 텍스트 생성
     console.log('🤖 GPT API 호출 시작:', {
-      model: 'gpt-4.1-mini',
+      model: 'gpt-5',
       template: template.substring(0, 500) + '...', // 템플릿의 앞부분만 로깅
       time: new Date().toISOString()
     })
 
-    const { text, response } = await generateText({
-      model: openai('gpt-4.1-mini'),
-      temperature: 0.75,
-      maxTokens: 2048,
-      messages: [
-        {
-          role: 'system',
-          content: '당신은 사이클링 전문 코치이자 퍼포먼스 데이터 분석 전문가입니다. 사용자의 활동 데이터를 기반으로 정밀한 피트니스 인사이트를 제공하고, 준프로급 라이더를 목표로 효율적인 훈련 전략과 개선 방향을 제시합니다. 모든 분석은 실전 주행 데이터를 바탕으로 과학적이며 실용적으로 조금은 위트있게 전달되어야 합니다.'
-        },
-        {
+    // 메시지 배열에 데이터 추가
+    messages.push({
+      role: 'system',
+      content: '당신은 사이클링 전문 코치이자 퍼포먼스 데이터 분석 전문가입니다. 사용자의 활동 데이터를 기반으로 정밀한 피트니스 인사이트를 제공하고, 준프로급 라이더를 목표로 효율적인 훈련 전략과 개선 방향을 제시합니다. 모든 분석은 실전 주행 데이터를 바탕으로 과학적이며 실용적으로 조금은 위트있게 전달되어야 합니다.'
+    })
+    
+    messages.push({
           role: 'user',
           content: `
 모든 분석은 속도가 최우선이야 무조건 최대 빠르게 분석해야해! 필요시 분석을 생략해.
@@ -198,13 +186,31 @@ ${activityData.maxWatts ? `- 최대파워: ${activityData.maxWatts}W\n` : ''}
 ${activityData.maxHeartrate ? `- 최고심박수: ${activityData.maxHeartrate}bpm\n` : ''}
 ${activityData.averageCadence ? `- 평균케이던스: ${activityData.averageCadence}rpm\n` : ''}
 
-※스트림 데이터 (전체 상세 데이터)
-${activityData.streamsData ? `
-스트림 데이터는 이번 라이딩의 모든 구간별 상세 정보를 포함합니다:
-- 총 데이터 포인트: ${Object.values(activityData.streamsData).reduce((total: number, stream: any) => total + (stream?.data?.length || 0), 0).toLocaleString()}개
-- 사용 가능한 스트림: ${Object.keys(activityData.streamsData).join(', ')}
-- 데이터 해상도: ${(Object.values(activityData.streamsData)[0] as any)?.resolution || 'high'}
-- 전체 스트림 데이터: ${JSON.stringify(activityData.streamsData, null, 2)}
+※스트림 데이터 분석 결과
+${streamAnalysis ? `
+스트림 데이터를 분석한 결과입니다:
+- 총거리: ${streamAnalysis.총거리}km
+- 총고도: ${streamAnalysis.총고도}m  
+- 평균속도: ${streamAnalysis.평균속도}km/h
+- 최고속도: ${streamAnalysis.최고속도}km/h
+- 평균파워: ${streamAnalysis.평균파워}W
+- 최대파워: ${streamAnalysis.최대파워}W
+- 최고심박수: ${streamAnalysis.최고심박수}bpm
+- 평균케이던스: ${streamAnalysis.평균케이던스}rpm
+
+파워존 분포:
+- Z1: ${streamAnalysis.powerZoneRatios.Z1}% / Z2: ${streamAnalysis.powerZoneRatios.Z2}% / Z3: ${streamAnalysis.powerZoneRatios.Z3}% / Z4: ${streamAnalysis.powerZoneRatios.Z4}% / Z5: ${streamAnalysis.powerZoneRatios.Z5}%
+
+심박존 분포:
+- Z1: ${streamAnalysis.hrZoneRatios.Z1}% / Z2: ${streamAnalysis.hrZoneRatios.Z2}% / Z3: ${streamAnalysis.hrZoneRatios.Z3}% / Z4: ${streamAnalysis.hrZoneRatios.Z4}% / Z5: ${streamAnalysis.hrZoneRatios.Z5}%
+
+피크파워 분석:
+- 5초: ${streamAnalysis.peakPowers['5s']}W / 1분: ${streamAnalysis.peakPowers['1min']}W / 2분: ${streamAnalysis.peakPowers['2min']}W
+- 5분: ${streamAnalysis.peakPowers['5min']}W / 10분: ${streamAnalysis.peakPowers['10min']}W / 30분: ${streamAnalysis.peakPowers['30min']}W / 1시간: ${streamAnalysis.peakPowers['1h']}W
+
+심박존 평균:
+- Z1: ${streamAnalysis.hrZoneAverages.Z1}bpm / Z2: ${streamAnalysis.hrZoneAverages.Z2}bpm / Z3: ${streamAnalysis.hrZoneAverages.Z3}bpm
+- Z4: ${streamAnalysis.hrZoneAverages.Z4}bpm / Z5: ${streamAnalysis.hrZoneAverages.Z5}bpm
 ` : ''}
 
 ※전체 주의사항
@@ -323,12 +329,50 @@ Z4: [H_Z4]bpm / Z5+: [H_Z5+]bpm
  “오늘도 페달을 밟았다는 것만으로, 내일은 더 강해집니다.”
  STRANK와 함께한 오늘, 굿라이드였습니다! 🚴
 (아래 3줄 빈줄을 넣어줘)`
-        }
-      ]
     })
 
+    // 요청 메시지 전체 출력
+    console.log('\n' + '='.repeat(80))
+    console.log('📤 GPT API 요청 메시지:')
+    console.log('='.repeat(80))
+    console.log(JSON.stringify(messages, null, 2))
+    console.log('='.repeat(80))
+    console.log('📤 요청 메시지 출력 완료\n')
+
+    // GPT-5는 새로운 API 방식 사용
+    const OpenAI = require('openai')
+    const client = new OpenAI()
+    
+    // 메시지를 GPT-5 형식으로 변환 (스트림 데이터 분석 결과 포함)
+    const gpt5Input = messages.map(msg => `${msg.role}: ${msg.content}`).join('\n\n')
+    
+    console.log('📊 토큰 수 줄이기:', {
+      원본길이: messages.map(m => m.content.length).reduce((a, b) => a + b, 0),
+      간소화길이: gpt5Input.length,
+      절약률: `${Math.round((1 - gpt5Input.length / messages.map(m => m.content.length).reduce((a, b) => a + b, 0)) * 100)}%`
+    })
+    
+    const response = await client.responses.create({
+      model: "gpt-5",
+      input: gpt5Input,
+      reasoning: { effort: "low" },  // 추론 노력 낮게 설정
+      text: { verbosity: "low" }     // 출력 간결하게 설정
+    })
+    
+    const text = response.output_text
+
+
+
+    // 생성된 텍스트 전체 출력
+    console.log('\n' + '='.repeat(80))
+    console.log('📝 생성된 텍스트 전체 내용:')
+    console.log('='.repeat(80))
+    console.log(text)
+    console.log('='.repeat(80))
+    console.log('📝 텍스트 출력 완료\n')
+
     console.log('✓ GPT API 응답 수신:', {
-      modelId: response?.modelId,
+      model: 'gpt-5',
       responseTime: new Date().toISOString(),
       textLength: text?.length || 0,
       responseData: response
