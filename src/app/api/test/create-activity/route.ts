@@ -87,8 +87,8 @@ export async function POST(request: Request) {
       province: '서울시',
     }
 
-    // 디스크립션 생성
-    const description = await generateActivityDescription(testActivity, rankingData)
+    // 디스크립션 생성 (테스트용 더미 토큰 사용)
+    const description = await generateActivityDescription(testActivity, rankingData, 'test-token')
 
     console.log('\n📝 생성된 디스크립션:', description)
 

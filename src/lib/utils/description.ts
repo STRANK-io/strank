@@ -12,13 +12,16 @@ import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
  * @param activity - 업데이트할 활동 데이터
  * @param rankingsWithDistrict - 업데이트할 활동의 랭킹 데이터
+ * @param accessToken - 스트라바 액세스 토큰 (액티비티와 동일한 토큰 사용)
  *
  * @remarks
  * - STRANK.io와 같이 도메인으로 인식되는 텍스트는 스트라바에서 표시되지 않습니다. (STRANK.io 표시 불가 -> STRANK 표시 가능)
+ * - 액티비티 데이터를 가져올 때 사용한 동일한 토큰을 스트림 데이터 가져오기에도 사용합니다.
  */
 export async function generateActivityDescription(
   activity: StravaActivity,
-  rankingsWithDistrict: CalculateActivityRankingReturn | null
+  rankingsWithDistrict: CalculateActivityRankingReturn | null,
+  accessToken: string
 ): Promise<string> {
   try {
     // 스트림 데이터 가져오기
@@ -26,28 +29,22 @@ export async function generateActivityDescription(
     let streamsData = null
     
     try {
-      // 액세스 토큰이 필요하므로 환경변수에서 가져오거나 다른 방법으로 획득
-      // 여기서는 스트림 데이터 가져오기를 시도하되, 실패해도 계속 진행
-      const accessToken = process.env.STRAVA_ACCESS_TOKEN // 또는 다른 방법으로 토큰 획득
-      
-      if (accessToken) {
-        const streamsResponse = await fetch(
-          `${STRAVA_API_URL}/activities/${activity.id}/streams?keys=time,latlng,distance,altitude,velocity_smooth,heartrate,watts,cadence,grade_smooth&key_by_type=true`,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        )
-
-        if (streamsResponse.ok) {
-          streamsData = await streamsResponse.json()
-          console.log('✅ 스트림 데이터 가져오기 성공')
-        } else {
-          console.log('⚠️ 스트림 데이터 가져오기 실패:', streamsResponse.status)
+      // 액티비티 데이터를 가져올 때 사용한 동일한 액세스 토큰으로 스트림 데이터 요청
+      console.log('🔑 액티비티와 동일한 액세스 토큰으로 스트림 데이터 요청 중...')
+      const streamsResponse = await fetch(
+        `${STRAVA_API_URL}/activities/${activity.id}/streams?keys=time,latlng,distance,altitude,velocity_smooth,heartrate,watts,cadence,grade_smooth&key_by_type=true`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
+      )
+
+      if (streamsResponse.ok) {
+        streamsData = await streamsResponse.json()
+        console.log('✅ 스트림 데이터 가져오기 성공 (액티비티와 동일한 토큰 사용)')
       } else {
-        console.log('⚠️ 액세스 토큰이 없어 스트림 데이터를 가져올 수 없습니다.')
+        console.log('⚠️ 스트림 데이터 가져오기 실패:', streamsResponse.status, await streamsResponse.text())
       }
     } catch (streamError) {
       console.log('⚠️ 스트림 데이터 가져오기 중 오류:', streamError)

@@ -214,8 +214,8 @@ export async function processCreateActivityEvent(body: StravaWebhookEventRespons
       rankingsWithDistrict = await calculateActivityRanking(activity, user_id, supabase)
     }
 
-    // * 디스크립션 생성
-    const description = await generateActivityDescription(activity, rankingsWithDistrict)
+    // * 디스크립션 생성 (액티비티와 동일한 액세스 토큰 사용)
+    const description = await generateActivityDescription(activity, rankingsWithDistrict, accessToken)
 
     // * 스트라바 활동 업데이트
     await updateStravaActivityDescription(accessToken, activity, description)
@@ -457,8 +457,8 @@ export async function processUpdateActivityEvent(body: StravaWebhookEventRespons
       rankingsWithDistrict = await calculateActivityRanking(activity, user_id, supabase)
     }
 
-    // * 디스크립션 생성
-    const strankDescription = await generateActivityDescription(activity, rankingsWithDistrict)
+    // * 디스크립션 생성 (액티비티와 동일한 액세스 토큰 사용)
+    const strankDescription = await generateActivityDescription(activity, rankingsWithDistrict, accessToken)
 
     // * 스트라바 활동 업데이트
     await updateStravaActivityDescription(accessToken, activity, strankDescription)
