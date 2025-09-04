@@ -4,6 +4,8 @@ import { STRAVA_ACTIVITY_BY_ID_ENDPOINT, STRAVA_API_URL } from '@/lib/constants/
 import { StravaActivity } from '@/lib/types/strava'
 import { ERROR_CODES } from '@/lib/constants/error'
 
+export const maxDuration = 300
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)

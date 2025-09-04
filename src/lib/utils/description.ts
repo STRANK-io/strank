@@ -31,20 +31,70 @@ export async function generateActivityDescription(
     try {
       // 액티비티 데이터를 가져올 때 사용한 동일한 액세스 토큰으로 스트림 데이터 요청
       console.log('🔑 액티비티와 동일한 액세스 토큰으로 스트림 데이터 요청 중...')
-      const streamsResponse = await fetch(
-        `${STRAVA_API_URL}/activities/${activity.id}/streams?keys=time,latlng,distance,altitude,velocity_smooth,heartrate,watts,cadence,grade_smooth&key_by_type=true`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      )
+      console.log('📊 액티비티 정보:', {
+        id: activity.id,
+        name: activity.name,
+        visibility: activity.visibility,
+        type: activity.type,
+        hasHeartrate: activity.has_heartrate,
+        hasWatts: activity.device_watts,
+      })
+      
+      const streamsUrl = `${STRAVA_API_URL}/activities/${activity.id}/streams?keys=time,latlng,distance,altitude,velocity_smooth,heartrate,watts,cadence,grade_smooth&key_by_type=true`
+      console.log('🌐 스트림 요청 URL:', streamsUrl)
+      
+      const streamsResponse = await fetch(streamsUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
 
       if (streamsResponse.ok) {
         streamsData = await streamsResponse.json()
         console.log('✅ 스트림 데이터 가져오기 성공 (액티비티와 동일한 토큰 사용)')
+        console.log('📈 스트림 데이터 키들:', Object.keys(streamsData))
       } else {
-        console.log('⚠️ 스트림 데이터 가져오기 실패:', streamsResponse.status, await streamsResponse.text())
+        const errorText = await streamsResponse.text()
+        console.log('⚠️ 스트림 데이터 가져오기 실패:', {
+          status: streamsResponse.status,
+          statusText: streamsResponse.statusText,
+          error: errorText,
+          activityId: activity.id,
+          visibility: activity.visibility,
+        })
+        
+        // 404 오류의 경우 상세한 원인 분석
+        if (streamsResponse.status === 404) {
+          console.log('🔍 404 오류 원인 분석:')
+          console.log('- 액티비티가 공개되지 않았을 수 있습니다 (visibility:', activity.visibility, ')')
+          console.log('- 액티비티가 삭제되었을 수 있습니다')
+          console.log('- 토큰이 해당 액티비티에 접근할 권한이 없을 수 있습니다')
+          console.log('- 스트림 데이터가 존재하지 않을 수 있습니다 (GPS 데이터 없음)')
+          
+          // 404 오류 시 대안적 접근 방법 시도
+          if (activity.visibility === 'everyone') {
+            console.log('🔄 공개 액티비티이므로 기본 스트림 키로 재시도...')
+            try {
+              const fallbackResponse = await fetch(
+                `${STRAVA_API_URL}/activities/${activity.id}/streams?keys=time,distance,altitude&key_by_type=true`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                  },
+                }
+              )
+              
+              if (fallbackResponse.ok) {
+                streamsData = await fallbackResponse.json()
+                console.log('✅ 기본 스트림 데이터 가져오기 성공 (fallback)')
+              } else {
+                console.log('⚠️ fallback 스트림 데이터 요청도 실패:', fallbackResponse.status)
+              }
+            } catch (fallbackError) {
+              console.log('⚠️ fallback 스트림 데이터 요청 중 오류:', fallbackError)
+            }
+          }
+        }
       }
     } catch (streamError) {
       console.log('⚠️ 스트림 데이터 가져오기 중 오류:', streamError)

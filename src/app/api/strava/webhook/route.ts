@@ -10,7 +10,7 @@ import {
   processUpdateActivityEvent,
 } from '@/lib/utils/webhook'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 // * 1. 웹훅 검증을 위한 GET 요청 처리
 export async function GET(request: Request) {

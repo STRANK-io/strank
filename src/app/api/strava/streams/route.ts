@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { fetchStravaActivityStreams } from '@/lib/utils/strava'
 import { logError } from '@/lib/utils/log'
 
+export const maxDuration = 300
+
 /**
  * 스트라바 액티비티의 스트림 데이터를 가져오는 API 엔드포인트
  * 

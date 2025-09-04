@@ -8,6 +8,7 @@ import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
 // 테스트 엔드포인트는 인증을 우회합니다
 export const dynamic = 'force-dynamic'
+export const maxDuration = 300
 
 export async function POST(request: Request) {
   try {
