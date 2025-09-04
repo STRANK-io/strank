@@ -38,6 +38,14 @@ export async function generateActivityDescription(
         type: activity.type,
         hasHeartrate: activity.has_heartrate,
         hasWatts: activity.device_watts,
+        startLatlng: activity.start_latlng,
+        endLatlng: activity.end_latlng,
+        trainer: activity.trainer,
+        manual: activity.manual,
+        commute: activity.commute,
+        hasKudoed: activity.has_kudoed,
+        prCount: activity.pr_count,
+        achievementCount: activity.achievement_count,
       })
       
       const streamsUrl = `${STRAVA_API_URL}/activities/${activity.id}/streams?keys=time,latlng,distance,altitude,velocity_smooth,heartrate,watts,cadence,grade_smooth&key_by_type=true`
@@ -71,6 +79,24 @@ export async function generateActivityDescription(
           console.log('- 토큰이 해당 액티비티에 접근할 권한이 없을 수 있습니다')
           console.log('- 스트림 데이터가 존재하지 않을 수 있습니다 (GPS 데이터 없음)')
           
+          // 특별한 경우들 분석
+          console.log('🔍 특별한 경우 분석:')
+          if (activity.manual) {
+            console.log('⚠️ 수동으로 입력된 액티비티입니다 (GPS 데이터 없음)')
+          }
+          if (activity.trainer) {
+            console.log('⚠️ 실내 훈련 액티비티입니다 (GPS 데이터 없음)')
+          }
+          if (!activity.start_latlng || activity.start_latlng.length === 0) {
+            console.log('⚠️ 시작 위치 데이터가 없습니다 (GPS 데이터 없음)')
+          }
+          if (!activity.end_latlng || activity.end_latlng.length === 0) {
+            console.log('⚠️ 종료 위치 데이터가 없습니다 (GPS 데이터 없음)')
+          }
+          if (activity.commute) {
+            console.log('⚠️ 출퇴근 액티비티입니다 (스트림 데이터 제한 가능)')
+          }
+          
           // 404 오류 시 대안적 접근 방법 시도
           if (activity.visibility === 'everyone') {
             console.log('🔄 공개 액티비티이므로 기본 스트림 키로 재시도...')
@@ -89,6 +115,29 @@ export async function generateActivityDescription(
                 console.log('✅ 기본 스트림 데이터 가져오기 성공 (fallback)')
               } else {
                 console.log('⚠️ fallback 스트림 데이터 요청도 실패:', fallbackResponse.status)
+                
+                // 최종 fallback: time만 요청
+                console.log('🔄 최종 fallback: time 스트림만 요청...')
+                try {
+                  const timeOnlyResponse = await fetch(
+                    `${STRAVA_API_URL}/activities/${activity.id}/streams?keys=time&key_by_type=true`,
+                    {
+                      headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                      },
+                    }
+                  )
+                  
+                  if (timeOnlyResponse.ok) {
+                    streamsData = await timeOnlyResponse.json()
+                    console.log('✅ time 스트림 데이터 가져오기 성공 (최종 fallback)')
+                  } else {
+                    console.log('⚠️ time 스트림 데이터 요청도 실패:', timeOnlyResponse.status)
+                    console.log('💡 결론: 이 액티비티는 스트림 데이터가 전혀 없습니다')
+                  }
+                } catch (timeError) {
+                  console.log('⚠️ time 스트림 데이터 요청 중 오류:', timeError)
+                }
               }
             } catch (fallbackError) {
               console.log('⚠️ fallback 스트림 데이터 요청 중 오류:', fallbackError)
@@ -278,10 +327,41 @@ export async function updateStravaActivityDescription(
   stravaActivity: StravaActivity,
   strankDescription: string
 ): Promise<void> {
+  // * 기존 디스크립션 상태 상세 분석
+  console.log('📝 디스크립션 결합 로직 분석:', {
+    activityId: stravaActivity.id,
+    hasExistingDescription: !!stravaActivity.description,
+    existingDescriptionLength: stravaActivity.description?.length || 0,
+    existingDescriptionPreview: stravaActivity.description?.substring(0, 100) || '없음',
+    strankDescriptionLength: strankDescription.length,
+  })
+
   // * Strank 디스크립션을 최상단에 배치, 나머지 디스크립션을 하위에 추가
-  const combinedDescription = stravaActivity.description
-    ? `${strankDescription}\n\n${stravaActivity.description}`
-    : strankDescription
+  let combinedDescription: string
+  
+  if (stravaActivity.description && stravaActivity.description.trim().length > 0) {
+    // 기존 디스크립션이 있고 비어있지 않은 경우
+    console.log('✅ 기존 디스크립션과 결합:', {
+      existingLength: stravaActivity.description.length,
+      willCombine: true,
+    })
+    
+    console.log('✅ 기존 디스크립션에 새 디스크립션 추가')
+    combinedDescription = `${strankDescription}\n\n${stravaActivity.description}`
+  } else {
+    // 기존 디스크립션이 없거나 비어있는 경우
+    console.log('ℹ️ 기존 디스크립션 없음, 새 디스크립션만 사용:', {
+      existingDescription: stravaActivity.description,
+      willCombine: false,
+    })
+    combinedDescription = strankDescription
+  }
+
+  console.log('📤 최종 디스크립션 업데이트:', {
+    activityId: stravaActivity.id,
+    finalDescriptionLength: combinedDescription.length,
+    finalDescriptionPreview: combinedDescription.substring(0, 200) + '...',
+  })
 
   const updateResponse = await fetch(
     `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
