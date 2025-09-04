@@ -30,78 +30,270 @@ interface AnalysisResult {
 
 // 파워 존 정의 (Python 스크립트와 동일)
 const POWER_ZONES = {
-  Z1: [0, 110],
-  Z2: [111, 150],
+  Z1: [0, 105],
+  Z2: [106, 150],
   Z3: [151, 180],
   Z4: [181, 210],
-  Z5: [211, 2000],
+  Z5: [211, 240],
+  Z6: [241, 300],
+  Z7: [301, 2000],
+}
+
+// FTP 기반 파워 존 정의
+const FTP_RESET = 130
+const POWER_ZONES_FTP = {
+  Z1: [0, Math.round(FTP_RESET * 0.55)],
+  Z2: [Math.round(FTP_RESET * 0.56), Math.round(FTP_RESET * 0.75)],
+  Z3: [Math.round(FTP_RESET * 0.76), Math.round(FTP_RESET * 0.90)],
+  Z4: [Math.round(FTP_RESET * 0.91), Math.round(FTP_RESET * 1.05)],
+  Z5: [Math.round(FTP_RESET * 1.06), Math.round(FTP_RESET * 1.20)],
+  Z6: [Math.round(FTP_RESET * 1.21), Math.round(FTP_RESET * 1.50)],
+  Z7: [Math.round(FTP_RESET * 1.51), 2000],
 }
 
 // 심박 존 정의 (Python 스크립트와 동일)
 const HR_ZONES = {
-  Z1: [0, 129],
-  Z2: [130, 148],
-  Z3: [149, 168],
-  Z4: [169, 180],
+  Z1: [0, 119],
+  Z2: [120, 145],
+  Z3: [146, 165],
+  Z4: [166, 180],
   Z5: [181, 250],
 }
 
 /**
- * 파워 추정 함수
+ * 이동평균 계산 함수
+ */
+function rollingMean(data: number[], window: number, center = true, minPeriods = 1): number[] {
+  const result: number[] = []
+  const halfWindow = Math.floor(window / 2)
+  
+  for (let i = 0; i < data.length; i++) {
+    let start: number, end: number
+    
+    if (center) {
+      start = Math.max(0, i - halfWindow)
+      end = Math.min(data.length, i + halfWindow + 1)
+    } else {
+      start = Math.max(0, i - window + 1)
+      end = i + 1
+    }
+    
+    const windowData = data.slice(start, end).filter(d => d != null && !isNaN(d))
+    
+    if (windowData.length >= minPeriods) {
+      const sum = windowData.reduce((s, d) => s + d, 0)
+      result.push(sum / windowData.length)
+    } else {
+      result.push(data[i] || 0)
+    }
+  }
+  
+  return result
+}
+
+/**
+ * 중앙값 필터 함수
+ */
+function medianFilter(data: number[], kernelSize: number): number[] {
+  const result: number[] = []
+  const halfKernel = Math.floor(kernelSize / 2)
+  
+  for (let i = 0; i < data.length; i++) {
+    const start = Math.max(0, i - halfKernel)
+    const end = Math.min(data.length, i + halfKernel + 1)
+    const window = data.slice(start, end).filter(d => d != null && !isNaN(d))
+    
+    if (window.length > 0) {
+      window.sort((a, b) => a - b)
+      const mid = Math.floor(window.length / 2)
+      result.push(window.length % 2 === 0 
+        ? (window[mid - 1] + window[mid]) / 2 
+        : window[mid])
+    } else {
+      result.push(data[i] || 0)
+    }
+  }
+  
+  return result
+}
+
+/**
+ * 파워 추정 함수 (Python 스크립트와 동일)
  */
 function estimatePower(
-  speedMps: number[],
+  distanceM: number[],
   altitudeM: number[],
   dt: number[],
+  velocitySmooth?: number[],
   mass = 75,
   cda = 0.3,
   cr = 0.004,
   rho = 1.226,
   g = 9.81
 ): number[] {
-  const power: number[] = []
+  // 거리 기반 속도 계산 (5점 이동평균)
+  const distSmooth = rollingMean(distanceM, 5, true, 1)
+  const dDist: number[] = []
+  for (let i = 0; i < distSmooth.length; i++) {
+    if (i === 0) {
+      dDist.push(0)
+    } else {
+      dDist.push(distSmooth[i] - distSmooth[i - 1])
+    }
+  }
   
-  for (let i = 0; i < speedMps.length; i++) {
-    const speed = speedMps[i] || 0
-    const alt = altitudeM[i] || 0
-    const prevAlt = i > 0 ? altitudeM[i - 1] || 0 : alt
+  const speedFromDist = dDist.map((dd, i) => dd / (dt[i] || 1))
+  
+  // 속도 결정 (velocity_smooth와 거리 기반 속도의 평균)
+  let speed: number[]
+  if (velocitySmooth && velocitySmooth.some(v => v != null && !isNaN(v) && v > 0)) {
+    speed = velocitySmooth.map((vs, i) => {
+      const vsVal = vs || 0
+      const sdVal = speedFromDist[i] || 0
+      return (vsVal + sdVal) / 2.0
+    })
+  } else {
+    speed = speedFromDist
+  }
+  
+  // 고도 스무딩 (8점 이동평균)
+  const altSmooth = rollingMean(altitudeM, 8, true, 1)
+  const dAlt: number[] = []
+  for (let i = 0; i < altSmooth.length; i++) {
+    if (i === 0) {
+      dAlt.push(0)
+    } else {
+      const diff = altSmooth[i] - altSmooth[i - 1]
+      dAlt.push(Math.abs(diff) > 0.3 ? diff : 0)
+    }
+  }
+  
+  // 파워 계산
+  const power: number[] = []
+  for (let i = 0; i < speed.length; i++) {
+    const s = speed[i] || 0
     const deltaTime = dt[i] || 1
+    const deltaAlt = dAlt[i] || 0
     
-    const dAlt = alt - prevAlt
-    const slope = dAlt / (deltaTime * speed + 1e-6)
+    const gradPower = mass * g * deltaAlt / deltaTime
+    const rollPower = mass * g * cr * s
+    const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
     
-    const fAero = 0.5 * rho * cda * speed * speed
-    const fRoll = mass * g * cr
-    const fGrav = mass * g * slope
-    
-    const powerValue = (fAero + fRoll + fGrav) * speed
-    power.push(Math.max(0, powerValue))
+    const totalPower = gradPower + rollPower + aeroPower
+    power.push(Math.max(0, totalPower))
   }
   
   return power
 }
 
 /**
- * 심박수 추정 함수
+ * 심박수 추정 함수 (Python 스크립트와 동일 - GPS/고도 기반)
  */
-function estimateHrFromPower(power: number[], ftp = 250, hrMax = 190): number[] {
-  return power.map(p => {
-    const rel = p / ftp
-    return Math.min(hrMax, 100 + (hrMax - 100) * rel)
+function estimateHrFromGpsAlt(
+  distanceM: number[],
+  altitudeM: number[],
+  dt: number[],
+  hrMax = 190,
+  hrRest = 60
+): number[] {
+  // 거리 스무딩 (5점 이동평균)
+  const distSmooth = rollingMean(distanceM, 5, true, 1)
+  const dDist: number[] = []
+  for (let i = 0; i < distSmooth.length; i++) {
+    if (i === 0) {
+      dDist.push(0)
+    } else {
+      dDist.push(distSmooth[i] - distSmooth[i - 1])
+    }
+  }
+  
+  const speed = dDist.map((dd, i) => dd / (dt[i] || 1))
+  
+  // 고도 스무딩 (8점 이동평균)
+  const altSmooth = rollingMean(altitudeM, 8, true, 1)
+  const dAlt: number[] = []
+  for (let i = 0; i < altSmooth.length; i++) {
+    if (i === 0) {
+      dAlt.push(0)
+    } else {
+      const diff = altSmooth[i] - altSmooth[i - 1]
+      dAlt.push(Math.abs(diff) > 0.3 ? diff : 0)
+    }
+  }
+  
+  // 그래디언트 계산
+  const gradient = dDist.map((dd, i) => {
+    const ddVal = dd || 0
+    const dAltVal = dAlt[i] || 0
+    return Math.max(-0.15, Math.min(0.15, dAltVal / (ddVal + 1e-6)))
   })
+  
+  // 노력 지수 계산
+  const speedNorm = speed.map(s => s / 12.0)
+  const effortIndex = speedNorm.map((sn, i) => sn + (gradient[i] * 5.0))
+  const intensity = effortIndex.map(ei => Math.max(0, Math.min(1.2, ei)))
+  
+  // 심박수 계산
+  const hr = intensity.map(int => hrRest + int * (hrMax - hrRest))
+  
+  // 스무딩 (10점 이동평균)
+  const hrSmooth = rollingMean(hr, 10, true, 1)
+  
+  return hrSmooth.map(h => Math.round(h))
 }
 
 /**
- * 케이던스 추정 함수
+ * 케이던스 추정 함수 (Python 스크립트와 동일 - 특성 기반)
  */
-function estimateCadenceFromSpeed(speedMps: number[]): number[] {
-  return speedMps.map(speed => {
-    const speedKmh = speed * 3.6
-    if (speedKmh < 15) return 70
-    if (speedKmh < 25) return 80
-    if (speedKmh < 35) return 90
-    return 100
+function estimateCadenceFromFeatures(
+  speedMps: number[],
+  altitudeM: number[],
+  distanceM: number[],
+  baseRpm = 60,
+  alpha = 2.0,
+  beta = -150.0,
+  gamma = -0.0001
+): number[] {
+  const s = speedMps.map(sp => sp || 0)
+  
+  // 거리 차이 계산
+  const dDist: number[] = []
+  for (let i = 0; i < distanceM.length; i++) {
+    if (i === 0) {
+      dDist.push(1)
+    } else {
+      dDist.push((distanceM[i] || 0) - (distanceM[i - 1] || 0))
+    }
+  }
+  
+  // 고도 차이 계산
+  const dAlt: number[] = []
+  for (let i = 0; i < altitudeM.length; i++) {
+    if (i === 0) {
+      dAlt.push(0)
+    } else {
+      dAlt.push((altitudeM[i] || 0) - (altitudeM[i - 1] || 0))
+    }
+  }
+  
+  // 그래디언트 계산
+  const gradient = dDist.map((dd, i) => {
+    const ddVal = dd || 1
+    const dAltVal = dAlt[i] || 0
+    return Math.max(-0.15, Math.min(0.15, dAltVal / (ddVal + 1e-6)))
   })
+  
+  // 케이던스 계산
+  const cadence = s.map((speed, i) => {
+    const speedKmh = speed * 3.6
+    const dist = distanceM[i] || 0
+    const grad = gradient[i] || 0
+    
+    const cad = baseRpm + alpha * (speedKmh / 20) + beta * grad + gamma * dist
+    return Math.max(30, Math.min(110, Math.round(cad)))
+  })
+  
+  return cadence
 }
 
 /**
@@ -291,22 +483,28 @@ function countBasedZoneRatios(
 }
 
 /**
- * 피크 파워 계산
+ * 피크 파워 계산 (Python 스크립트와 동일)
  */
-function peakPower(watts: number[], windowSec: number, dt: number[]): number | null {
+function peakPower(watts: number[], windowSec: number, dt: number[], totalTime: number): number | null {
   if (watts.length === 0) return null
+  if (windowSec > totalTime) return null
   
-  const medianDt = dt.sort((a, b) => a - b)[Math.floor(dt.length / 2)]
-  const n = Math.max(1, Math.min(Math.round(windowSec / medianDt), watts.length))
+  const arr = watts
+  const arrDt = dt
+  const medianDt = arrDt.slice().sort((a, b) => a - b)[Math.floor(arrDt.length / 2)]
   
-  let maxPower = 0
-  for (let i = 0; i <= watts.length - n; i++) {
-    const window = watts.slice(i, i + n)
-    const avgPower = window.reduce((sum, w) => sum + (w || 0), 0) / n
-    maxPower = Math.max(maxPower, avgPower)
+  const n = Math.max(1, Math.min(Math.round(windowSec / medianDt), arr.length))
+  
+  let maxAvg = 0
+  for (let i = 0; i <= arr.length - n; i++) {
+    const window = arr.slice(i, i + n)
+    const avg = window.reduce((sum, w) => sum + (w || 0), 0) / n
+    if (avg > maxAvg) {
+      maxAvg = avg
+    }
   }
   
-  return Math.round(maxPower)
+  return Math.round(maxAvg)
 }
 
 /**
@@ -354,20 +552,32 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
     }
   }
   
-  // 누락된 데이터 추정
+  // 누락된 데이터 추정 (Python 스크립트와 동일)
+  let powerZoneRatios: Record<string, number>
+  
   if (!streams.watts || streams.watts.every(w => !w)) {
     console.log('⚡ 파워: 추정값으로 대체')
-    streams.watts = estimatePower(streams.velocity_smooth!, streams.altitude!, dt)
+    streams.watts = estimatePower(streams.distance!, streams.altitude!, dt, streams.velocity_smooth)
+    
+    // 파워 스무딩 (15점 이동평균 + 중앙값 필터)
+    const powerSmooth = rollingMean(streams.watts, 15, true, 1)
+    streams.watts = medianFilter(powerSmooth, 9)
+    
+    // FTP 기반 존 비율 계산
+    powerZoneRatios = timeBasedZoneRatios(streams.watts, dt, POWER_ZONES_FTP, true)
+  } else {
+    // 기존 파워 데이터 사용
+    powerZoneRatios = timeBasedZoneRatios(streams.watts, dt, POWER_ZONES, true)
   }
   
   if (!streams.heartrate || streams.heartrate.every(h => !h)) {
     console.log('❤️ 심박: 추정값으로 대체')
-    streams.heartrate = estimateHrFromPower(streams.watts!)
+    streams.heartrate = estimateHrFromGpsAlt(streams.distance!, streams.altitude!, dt)
   }
   
   if (!streams.cadence || streams.cadence.every(c => !c)) {
     console.log('🔄 케이던스: 추정값으로 대체')
-    streams.cadence = estimateCadenceFromSpeed(streams.velocity_smooth!)
+    streams.cadence = estimateCadenceFromFeatures(streams.velocity_smooth!, streams.altitude!, streams.distance!)
   }
   
   // 분석 실행
@@ -380,7 +590,7 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
     최대파워: computePowerStats(streams.watts!).max,
     최고심박수: computeHrMax(streams.heartrate!),
     평균케이던스: computeCadenceAvg(streams.cadence!),
-    powerZoneRatios: timeBasedZoneRatios(streams.watts!, dt, POWER_ZONES, true),
+    powerZoneRatios: powerZoneRatios,
     hrZoneRatios: countBasedZoneRatios(streams.heartrate!, HR_ZONES, true),
     peakPowers: {},
     hrZoneAverages: {}
@@ -397,8 +607,9 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
     { sec: 3600, label: '1h' }
   ]
   
+  const totalTime = streams.time![streams.time!.length - 1] || 0
   for (const { sec, label } of peakWindows) {
-    results.peakPowers[label] = peakPower(streams.watts!, sec, dt)
+    results.peakPowers[label] = peakPower(streams.watts!, sec, dt, totalTime)
   }
   
   // 심박존 평균 계산
