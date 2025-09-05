@@ -310,10 +310,11 @@ ${analysisInfo}
  * 스트라바 활동의 설명을 업데이트하는 함수
  *
  * @description
- * 기존 설명이 있다면 유지하고 아래에 새로운 설명을 추가합니다
+ * 디스크립션 업데이트 직전에 최신 활동 데이터를 조회하여 기존 설명을 가져오고,
+ * STRANK 디스크립션을 최상단에 배치한 후 기존 설명을 하위에 추가합니다
  *
  * @param accessToken - 스트라바 액세스 토큰
- * @param stravaActivity - 업데이트할 활동 정보
+ * @param stravaActivity - 업데이트할 활동 정보 (기본 데이터만 포함)
  * @param strankDescription - 스트랭크의 디스크립션
  *
  * @throws {Error} API_LIMIT_EXCEEDED - API 호출 한도 초과 시
@@ -321,37 +322,61 @@ ${analysisInfo}
  *
  * @remarks
  * - Rate limit 초과 시 별도의 에러를 발생시킵니다
+ * - 디스크립션 업데이트 직전에 최신 활동 데이터를 조회하여 기존 디스크립션을 가져옵니다
  */
 export async function updateStravaActivityDescription(
   accessToken: string,
   stravaActivity: StravaActivity,
   strankDescription: string
 ): Promise<void> {
+  // * 디스크립션 업데이트 직전에 최신 활동 데이터 조회 (기존 디스크립션 포함)
+  console.log('🔄 디스크립션 업데이트 직전 최신 활동 데이터 조회 중...')
+  
+  const latestActivityResponse = await fetch(
+    `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  )
+
+  if (!latestActivityResponse.ok) {
+    const errorText = await latestActivityResponse.text()
+    logError('최신 활동 데이터 조회 실패:', {
+      error: errorText,
+      functionName: 'updateStravaActivityDescription',
+    })
+    throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
+  }
+
+  const latestActivity: StravaActivity = await latestActivityResponse.json()
+  
   // * 기존 디스크립션 상태 상세 분석
   console.log('📝 디스크립션 결합 로직 분석:', {
     activityId: stravaActivity.id,
-    hasExistingDescription: !!stravaActivity.description,
-    existingDescriptionLength: stravaActivity.description?.length || 0,
-    existingDescriptionPreview: stravaActivity.description?.substring(0, 100) || '없음',
+    hasExistingDescription: !!latestActivity.description,
+    existingDescriptionLength: latestActivity.description?.length || 0,
+    existingDescriptionPreview: latestActivity.description?.substring(0, 100) || '없음',
     strankDescriptionLength: strankDescription.length,
   })
 
   // * Strank 디스크립션을 최상단에 배치, 나머지 디스크립션을 하위에 추가
   let combinedDescription: string
   
-  if (stravaActivity.description && stravaActivity.description.trim().length > 0) {
+  if (latestActivity.description && latestActivity.description.trim().length > 0) {
     // 기존 디스크립션이 있고 비어있지 않은 경우
     console.log('✅ 기존 디스크립션과 결합:', {
-      existingLength: stravaActivity.description.length,
+      existingLength: latestActivity.description.length,
       willCombine: true,
     })
     
     console.log('✅ 기존 디스크립션에 새 디스크립션 추가')
-    combinedDescription = `${strankDescription}\n\n${stravaActivity.description}`
+    combinedDescription = `${strankDescription}\n\n${latestActivity.description}`
   } else {
     // 기존 디스크립션이 없거나 비어있는 경우
     console.log('ℹ️ 기존 디스크립션 없음, 새 디스크립션만 사용:', {
-      existingDescription: stravaActivity.description,
+      existingDescription: latestActivity.description,
       willCombine: false,
     })
     combinedDescription = strankDescription

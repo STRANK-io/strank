@@ -129,7 +129,7 @@ export async function processCreateActivityEvent(body: StravaWebhookEventRespons
       return
     }
 
-    // * 활동 상세 정보 조회
+    // * 활동 기본 정보 조회 (디스크립션 제외 - 나중에 최신 데이터로 조회)
     const response = await fetch(
       `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(body.object_id)}`,
       {
@@ -386,7 +386,7 @@ export async function processUpdateActivityEvent(body: StravaWebhookEventRespons
       return
     }
 
-    // * 활동 상세 정보 조회
+    // * 활동 기본 정보 조회 (디스크립션 제외 - 나중에 최신 데이터로 조회)
     const response = await fetch(
       `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(body.object_id)}`,
       {
