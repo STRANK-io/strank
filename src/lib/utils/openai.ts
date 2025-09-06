@@ -151,7 +151,7 @@ Z4: [H_Z4]bpm / Z5: [H_Z5]bpm
 
     // AI SDK를 사용한 텍스트 생성
     console.log('🤖 GPT API 호출 시작:', {
-      model: 'gpt-5-mini',
+      model: 'gpt-5-mini-2025-08-07',
       template: template.substring(0, 500) + '...', // 템플릿의 앞부분만 로깅
       time: new Date().toISOString()
     })
