@@ -344,7 +344,7 @@ Z4: [H_Z4]bpm / Z5: [H_Z5]bpm
     })
     
     const response = await client.responses.create({
-      model: "gpt-5",
+      model: "gpt-5-mini",
       input: gpt5Input,
       reasoning: { effort: "low" },  // 추론 노력 낮게 설정
       text: { verbosity: "low" }     // 출력 간결하게 설정
