@@ -3,6 +3,14 @@
  * Python 스크립트를 TypeScript로 포팅
  */
 
+// =========================================
+// 설정 (원하는 방식으로 변경 가능)
+// =========================================
+const USE_ABSOLUTE_ZONES = true   // 파워존 기준: 절대 존(true) / FTP 비율(false)
+const ZONE_METHOD = 'count'       // 존 비율 산출 방식: 'count' / 'time'
+const SMOOTH_POWER = false        // 파워 스무딩 적용 여부
+const FTP_RESET = 130             // FTP 기준치 (USE_ABSOLUTE_ZONES=false일 때 사용)
+
 interface StreamData {
   time?: number[]
   distance?: number[]
@@ -26,6 +34,8 @@ interface AnalysisResult {
   hrZoneRatios: Record<string, number>
   peakPowers: Record<string, number | null>
   hrZoneAverages: Record<string, number | null>
+  ftp20: number | null
+  ftp60: number | null
 }
 
 // 파워 존 정의 (Python 스크립트와 동일)
@@ -40,7 +50,6 @@ const POWER_ZONES = {
 }
 
 // FTP 기반 파워 존 정의
-const FTP_RESET = 130
 const POWER_ZONES_FTP = {
   Z1: [0, Math.round(FTP_RESET * 0.55)],
   Z2: [Math.round(FTP_RESET * 0.56), Math.round(FTP_RESET * 0.75)],
@@ -58,6 +67,57 @@ const HR_ZONES = {
   Z3: [146, 165],
   Z4: [166, 180],
   Z5: [181, 250],
+}
+
+/**
+ * FTP 계산 함수 (Python 스크립트와 동일)
+ */
+function computeFtpFromPower(
+  watts: number[], 
+  dt: number[], 
+  totalTime: number, 
+  windowSec = 1200, 
+  factor = 0.95
+): number | null {
+  if (watts.length === 0) return null
+  
+  const arr = watts
+  const arrDt = dt
+  const medianDt = arrDt.slice().sort((a, b) => a - b)[Math.floor(arrDt.length / 2)]
+  
+  const n = Math.max(1, Math.min(Math.round(windowSec / medianDt), arr.length))
+  if (n <= 1 || n > arr.length) return null
+  
+  let maxAvg = 0
+  for (let i = 0; i <= arr.length - n; i++) {
+    const window = arr.slice(i, i + n)
+    const avg = window.reduce((sum, w) => sum + (w || 0), 0) / n
+    if (avg > maxAvg) {
+      maxAvg = avg
+    }
+  }
+  
+  return Math.round(maxAvg * factor * 10) / 10
+}
+
+/**
+ * 파워 데이터가 없을 때 GPS/고도/속도로 추정 FTP
+ */
+function estimateFtpWithoutPower(
+  distanceM: number[],
+  altitudeM: number[],
+  dt: number[],
+  velocitySmooth: number[] | undefined,
+  totalTime: number,
+  estimatePowerFunc: (dist: number[], alt: number[], dt: number[], vel?: number[]) => number[]
+): { ftp20: number | null; ftp60: number | null } {
+  const wattsEst = estimatePowerFunc(distanceM, altitudeM, dt, velocitySmooth)
+  const wattsSmooth = rollingMean(wattsEst, 15, true, 1)
+  
+  const ftp20 = computeFtpFromPower(wattsSmooth, dt, totalTime, 20 * 60, 0.95)
+  const ftp60 = computeFtpFromPower(wattsSmooth, dt, totalTime, 60 * 60, 1.0)
+  
+  return { ftp20, ftp60 }
 }
 
 /**
@@ -552,22 +612,50 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
     }
   }
   
-  // 누락된 데이터 추정 (Python 스크립트와 동일)
+  // 총 시간 계산
+  const totalTime = streams.time![streams.time!.length - 1] || 0
+  
+  // 누락된 데이터 추정 및 FTP 계산 (Python 스크립트와 동일)
   let powerZoneRatios: Record<string, number>
+  let ftp20: number | null = null
+  let ftp60: number | null = null
   
   if (!streams.watts || streams.watts.every(w => !w)) {
     console.log('⚡ 파워: 추정값으로 대체')
     streams.watts = estimatePower(streams.distance!, streams.altitude!, dt, streams.velocity_smooth)
     
-    // 파워 스무딩 (15점 이동평균 + 중앙값 필터)
+    // FTP 추정
+    const ftpResult = estimateFtpWithoutPower(
+      streams.distance!, 
+      streams.altitude!, 
+      dt, 
+      streams.velocity_smooth, 
+      totalTime, 
+      estimatePower
+    )
+    ftp20 = ftpResult.ftp20
+    ftp60 = ftpResult.ftp60
+  } else {
+    // 기존 파워 데이터에서 FTP 계산
+    ftp20 = computeFtpFromPower(streams.watts, dt, totalTime, 20 * 60, 0.95)
+    ftp60 = computeFtpFromPower(streams.watts, dt, totalTime, 60 * 60, 1.0)
+  }
+  
+  // 스무딩 옵션 적용
+  if (SMOOTH_POWER && streams.watts) {
+    console.log('⚡ 파워: 스무딩 적용')
     const powerSmooth = rollingMean(streams.watts, 15, true, 1)
     streams.watts = medianFilter(powerSmooth, 9)
-    
-    // FTP 기반 존 비율 계산
-    powerZoneRatios = timeBasedZoneRatios(streams.watts, dt, POWER_ZONES_FTP, true)
+  }
+  
+  // 존 선택 (설정 기반)
+  const zonesForPower = USE_ABSOLUTE_ZONES ? POWER_ZONES : POWER_ZONES_FTP
+  
+  // 존 비율 계산 (설정 기반)
+  if (ZONE_METHOD === 'count') {
+    powerZoneRatios = countBasedZoneRatios(streams.watts!, zonesForPower, true)
   } else {
-    // 기존 파워 데이터 사용
-    powerZoneRatios = timeBasedZoneRatios(streams.watts, dt, POWER_ZONES, true)
+    powerZoneRatios = timeBasedZoneRatios(streams.watts!, dt, zonesForPower, true)
   }
   
   if (!streams.heartrate || streams.heartrate.every(h => !h)) {
@@ -578,6 +666,14 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
   if (!streams.cadence || streams.cadence.every(c => !c)) {
     console.log('🔄 케이던스: 추정값으로 대체')
     streams.cadence = estimateCadenceFromFeatures(streams.velocity_smooth!, streams.altitude!, streams.distance!)
+  }
+  
+  // 심박존 비율 계산 (설정 기반)
+  let hrZoneRatios: Record<string, number>
+  if (ZONE_METHOD === 'count') {
+    hrZoneRatios = countBasedZoneRatios(streams.heartrate!, HR_ZONES, true)
+  } else {
+    hrZoneRatios = timeBasedZoneRatios(streams.heartrate!, dt, HR_ZONES, true)
   }
   
   // 분석 실행
@@ -591,9 +687,11 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
     최고심박수: computeHrMax(streams.heartrate!),
     평균케이던스: computeCadenceAvg(streams.cadence!),
     powerZoneRatios: powerZoneRatios,
-    hrZoneRatios: countBasedZoneRatios(streams.heartrate!, HR_ZONES, true),
+    hrZoneRatios: hrZoneRatios,
     peakPowers: {},
-    hrZoneAverages: {}
+    hrZoneAverages: {},
+    ftp20: ftp20,
+    ftp60: ftp60
   }
   
   // 피크 파워 계산
@@ -607,7 +705,6 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
     { sec: 3600, label: '1h' }
   ]
   
-  const totalTime = streams.time![streams.time!.length - 1] || 0
   for (const { sec, label } of peakWindows) {
     results.peakPowers[label] = peakPower(streams.watts!, sec, dt, totalTime)
   }
@@ -627,6 +724,8 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
   console.log('🔋최고속도:', results.최고속도, 'km/h')
   console.log('🦵평균파워:', results.평균파워, 'W')
   console.log('🦿최대파워:', results.최대파워, 'W')
+  console.log('⚡20min FTP:', results.ftp20 || 'N/A', 'W')
+  console.log('⚡60min FTP:', results.ftp60 || 'N/A', 'W')
   console.log('❤️최고심박수:', results.최고심박수, 'bpm')
   console.log('💫평균케이던스:', results.평균케이던스, 'rpm\n')
   
