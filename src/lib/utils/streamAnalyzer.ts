@@ -80,6 +80,7 @@ function computeFtpFromPower(
   factor = 0.95
 ): number | null {
   if (watts.length === 0) return null
+  if (totalTime < windowSec) return null   // 전체 주행시간이 윈도우보다 짧으면 계산 불가
   
   const arr = watts
   const arrDt = dt
