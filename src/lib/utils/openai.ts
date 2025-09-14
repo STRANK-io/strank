@@ -198,6 +198,10 @@ ${streamAnalysis ? `
 - 최고심박수: ${streamAnalysis.최고심박수}bpm
 - 평균케이던스: ${streamAnalysis.평균케이던스}rpm
 
+FTP 분석:
+- 20분 FTP: ${streamAnalysis.ftp20 || 'N/A'}W
+- 60분 FTP: ${streamAnalysis.ftp60 || 'N/A'}W
+
 파워존 분포:
 - Z1: ${streamAnalysis.powerZoneRatios.Z1}% / Z2: ${streamAnalysis.powerZoneRatios.Z2}% / Z3: ${streamAnalysis.powerZoneRatios.Z3}% / Z4: ${streamAnalysis.powerZoneRatios.Z4}% / Z5: ${streamAnalysis.powerZoneRatios.Z5}% / Z6: ${streamAnalysis.powerZoneRatios.Z6 || 0}% / Z7: ${streamAnalysis.powerZoneRatios.Z7 || 0}%
 
