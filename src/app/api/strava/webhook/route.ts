@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   try {
     webhookBody = await request.json()
 
-    // * 활동 생성, 삭제, 수정 이벤트만 처리
+    // * 활동 생성, 삭제가 아닌 경우 즉시 응답
     if (
       webhookBody.object_type !== 'activity' ||
       (webhookBody.aspect_type !== 'create' &&
@@ -69,49 +69,36 @@ export async function POST(request: NextRequest) {
       return new NextResponse('Duplicate event', { status: 200 })
     }
 
+    // * 다른 에러가 발생한 경우
     if (insertError) {
       // 웹훅 이벤트 기록에 실패하더라도 처리는 진행
       logError('Failed to record webhook event:', { error: insertError })
     }
 
-    // ✅ 비동기 처리 (응답은 즉시 반환)
+    // 생성, 삭제에 따른 분기 처리
     switch (webhookBody.aspect_type) {
       case 'create':
-        setTimeout(async () => {
-          try {
-            await processCreateActivityEvent(webhookBody)
-          } catch (err) {
-            logError('processCreateActivityEvent failed', {
-              error: err,
-              activityId: webhookBody.object_id,
-            })
-          }
-        }, 2500) // 2.5초 지연 후 실행
+        // * 2.5초 후 진행 (서드파티 서비스와의 디스크립션 수정 충돌을 피하기 위함)
+        await new Promise(resolve => setTimeout(resolve, 2500))
+
+        await processCreateActivityEvent(webhookBody)
         break
 
       case 'delete':
-        setImmediate(async () => {
-          try {
-            await processDeleteActivityEvent(webhookBody)
-          } catch (err) {
-            logError('processDeleteActivityEvent failed', { error: err })
-          }
-        })
+        await processDeleteActivityEvent(webhookBody)
         break
 
       case 'update':
-        setImmediate(async () => {
-          try {
-            await processUpdateActivityEvent(webhookBody)
-          } catch (err) {
-            logError('processUpdateActivityEvent failed', { error: err })
-          }
-        })
+        await processUpdateActivityEvent(webhookBody)
         break
+
+      default:
+        return new NextResponse('Unsupported aspect type', { status: 200 })
     }
 
-    // ✅ 즉시 OK 반환 → Strava 타임아웃 방지
-    return new NextResponse('Success', { status: 200 })
+    return new NextResponse('Success', {
+      status: 200,
+    })
   } catch (error) {
     logError('Webhook request parsing error:', { error })
     return new NextResponse(ERROR_MESSAGES[ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED], {
