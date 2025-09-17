@@ -7,9 +7,9 @@ import { ERROR_CODES } from '@/lib/constants/error'
 import { logError } from '@/lib/utils/log'
 import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
-// =============================================
-// 1) AI 기반 디스크립션 생성
-// =============================================
+/**
+ * 스트랭크 디스크립션 포맷에 맞춰 활동 디스크립션을 생성하는 함수
+ */
 export async function generateActivityDescription(
   activity: StravaActivity,
   rankingsWithDistrict: CalculateActivityRankingReturn | null,
@@ -61,9 +61,9 @@ export async function generateActivityDescription(
   }
 }
 
-// =============================================
-// 2) 기본 디스크립션 (fallback)
-// =============================================
+/**
+ * 기본 디스크립션 (fallback)
+ */
 function generateBasicDescription(
   activity: StravaActivity,
   rankingsWithDistrict: CalculateActivityRankingReturn | null
@@ -73,7 +73,7 @@ function generateBasicDescription(
     generateRankingSection(rankingsWithDistrict),
     generateAnalysisSection(activity),
   ]
-  return sections.join('\n\n')
+  return sections.join('\n\n\n\n')
 }
 
 function generateDateSection(startDate: string): string {
@@ -137,72 +137,87 @@ function generateAnalysisSection(activity: StravaActivity): string {
       : []),
   ]
 
-  return `◾ 라이딩 분석 정보 ◾\n${metrics
-    .map(([label, value, unit]) => `${label} : ${value} ${unit}`)
-    .join('\n')}\n\n🏆 Powered by STRANK`
+  const analysisInfo = metrics.map(([label, value, unit]) => `${label} : ${value} ${unit}`).join('\n')
+
+  return `◾ 라이딩 분석 정보 ◾
+${analysisInfo}
+
+🏆 Powered by STRANK`
 }
 
-// =============================================
-// 3) 디스크립션 업데이트 (라이덕 스타일 + 개선)
-// =============================================
+/**
+ * 스트라바 활동의 설명 업데이트 (라이덕 + STRANK 병합)
+ */
 export async function updateStravaActivityDescription(
   accessToken: string,
   stravaActivity: StravaActivity,
   strankDescription: string
 ): Promise<void> {
-  // 1) 텍스트 클린업
-  let cleanDescription = strankDescription
-    .replace(/[\u200B-\u200D\uFEFF]/g, '') // 보이지 않는 문자 제거
-    .replace(/\n{3,}/g, '\n\n') // 과도한 줄바꿈 정리
+  try {
+    // 1) 대기 (라이덕 반영 시간 확보)
+    await new Promise((res) => setTimeout(res, 1000))
 
-  if (cleanDescription.length > 1999) {
-    cleanDescription = cleanDescription.substring(0, 1999)
-  }
-
-  console.log('📤 디스크립션 업데이트 (overwrite mode):', {
-    activityId: stravaActivity.id,
-    length: cleanDescription.length,
-    preview: cleanDescription.substring(0, 120),
-  })
-
-  // 2) PUT: STRANK 디스크립션만 덮어쓰기
-  const updateResponse = await fetch(
-    `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
-    {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ description: cleanDescription }),
+    // 2) 최신 description 조회
+    const latestActivityResponse = await fetch(
+      `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    )
+    if (!latestActivityResponse.ok) {
+      const errorText = await latestActivityResponse.text()
+      logError('최신 활동 데이터 조회 실패:', {
+        error: errorText,
+        functionName: 'updateStravaActivityDescription',
+      })
+      throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
     }
-  )
+    const latestActivity: StravaActivity = await latestActivityResponse.json()
 
-  if (!updateResponse.ok) {
-    const errorText = await updateResponse.text()
-    if (updateResponse.status === 429) {
-      throw new Error(ERROR_CODES.STRAVA.API_LIMIT_EXCEEDED)
+    // 3) 병합 로직 (중복 방지)
+    let combinedDescription = latestActivity.description || ''
+    if (!combinedDescription.includes('Powered by STRANK')) {
+      combinedDescription = `${strankDescription}\n\n${combinedDescription}`
     }
-    logError('Strava API: Failed to update activity description:', {
-      error: errorText,
+
+    // 4) 텍스트 클린업
+    combinedDescription = combinedDescription
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+    if (combinedDescription.length > 1999) {
+      combinedDescription = combinedDescription.substring(0, 1999)
+    }
+
+    // 5) 최종 PUT
+    const updateResponse = await fetch(
+      `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ description: combinedDescription }),
+      }
+    )
+
+    if (!updateResponse.ok) {
+      const errorText = await updateResponse.text()
+      if (updateResponse.status === 429) {
+        throw new Error(ERROR_CODES.STRAVA.API_LIMIT_EXCEEDED)
+      }
+      logError('Strava API: Failed to update activity description', {
+        error: errorText,
+        functionName: 'updateStravaActivityDescription',
+      })
+      throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
+    }
+
+    const updatedActivity: StravaActivity = await updateResponse.json()
+    console.log('✅ 최종 저장된 description:', updatedActivity.description?.substring(0, 120))
+  } catch (err) {
+    logError('updateStravaActivityDescription 실행 중 오류', {
+      error: err,
       functionName: 'updateStravaActivityDescription',
     })
-    throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
-  }
-
-  // 3) PUT 응답을 그대로 사용 (최신 데이터)
-  const updatedActivity: StravaActivity = await updateResponse.json()
-  console.log('✅ PUT 응답 최신 description:', updatedActivity.description?.substring(0, 120))
-
-  // 4) GET 재호출 (옵션: include_all_efforts=false)
-  const syncResponse = await fetch(
-    `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}?include_all_efforts=false`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  )
-  if (syncResponse.ok) {
-    const synced: StravaActivity = await syncResponse.json()
-    console.log('🔄 동기화 완료, 최신 description:', synced.description?.substring(0, 120))
-  } else {
-    console.log('⚠️ 동기화 GET 실패:', syncResponse.status)
+    throw err
   }
 }
