@@ -8,7 +8,7 @@ import { logError } from '@/lib/utils/log'
 import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
 /**
- * STRANK 디스크립션 생성
+ * 스트랭크 디스크립션 포맷에 맞춰 활동 디스크립션을 생성하는 함수
  */
 export async function generateActivityDescription(
   activity: StravaActivity,
@@ -16,9 +16,10 @@ export async function generateActivityDescription(
   accessToken: string
 ): Promise<string> {
   try {
+    // 스트림 데이터 가져오기
     console.log('\n📡 스트림 데이터 가져오는 중...')
     let streamsData = null
-
+    
     try {
       const streamsUrl = `${STRAVA_API_URL}/activities/${activity.id}/streams?keys=time,latlng,distance,altitude,velocity_smooth,heartrate,watts,cadence,grade_smooth&key_by_type=true`
       const streamsResponse = await fetch(streamsUrl, {
@@ -35,7 +36,7 @@ export async function generateActivityDescription(
       console.log('⚠️ 스트림 데이터 요청 오류:', err)
     }
 
-    // GPT를 통해 디스크립션 생성
+    // ChatGPT API를 통해 디스크립션 생성
     const description = await generateActivityDescriptionWithGPT(
       {
         date: activity.start_date_local,
@@ -49,7 +50,7 @@ export async function generateActivityDescription(
         averageCadence: activity.average_cadence && activity.average_cadence > 0 ? activity.average_cadence : undefined,
         streamsData: streamsData,
       },
-      rankingsWithDistrict && rankingsWithDistrict.rankings
+      rankingsWithDistrict?.rankings
         ? {
             distanceRankCity: rankingsWithDistrict.rankings.distanceRankCity,
             distanceRankDistrict: rankingsWithDistrict.rankings.distanceRankDistrict,
@@ -63,16 +64,13 @@ export async function generateActivityDescription(
 
     return description
   } catch (error) {
-    logError('디스크립션 생성 중 오류 발생:', {
-      error,
-      functionName: 'generateActivityDescription',
-    })
+    logError('디스크립션 생성 중 오류 발생:', { error })
     return generateBasicDescription(activity, rankingsWithDistrict)
   }
 }
 
 /**
- * GPT 실패 시 기본 디스크립션
+ * 기본 디스크립션 (AI 실패 시 fallback)
  */
 function generateBasicDescription(
   activity: StravaActivity,
@@ -99,22 +97,18 @@ function generateDateSection(startDate: string): string {
 export function generateRankingSection(
   rankingsWithDistrict: CalculateActivityRankingReturn | null
 ): string {
-  if (!rankingsWithDistrict || !rankingsWithDistrict.rankings) return ''
+  if (!rankingsWithDistrict?.rankings) return ''
   const { rankings, district, province } = rankingsWithDistrict
   const sections = []
 
   if (rankings.distanceRankCity || rankings.distanceRankDistrict) {
     sections.push(
-      `🥇 거리 랭킹${
-        rankings.distanceRankCity ? `\n📍${province} (${rankings.distanceRankCity}위)` : ''
-      }${rankings.distanceRankDistrict ? `\n📍${district} (${rankings.distanceRankDistrict}위)` : ''}`
+      `🥇 거리 랭킹${rankings.distanceRankCity ? `\n📍${province} (${rankings.distanceRankCity}위)` : ''}${rankings.distanceRankDistrict ? `\n📍${district} (${rankings.distanceRankDistrict}위)` : ''}`
     )
   }
   if (rankings.elevationRankCity || rankings.elevationRankDistrict) {
     sections.push(
-      `🧗 고도 랭킹${rankings.elevationRankCity ? `\n📍${province} (${rankings.elevationRankCity}위)` : ''}${
-        rankings.elevationRankDistrict ? `\n📍${district} (${rankings.elevationRankDistrict}위)` : ''
-      }`
+      `🧗 고도 랭킹${rankings.elevationRankCity ? `\n📍${province} (${rankings.elevationRankCity}위)` : ''}${rankings.elevationRankDistrict ? `\n📍${district} (${rankings.elevationRankDistrict}위)` : ''}`
     )
   }
   return sections.join('\n\n')
@@ -137,28 +131,25 @@ function generateAnalysisSection(activity: StravaActivity): string {
     ['🚵 총고도', formatActivityValue(total_elevation_gain), ACTIVITY_UNITS.ELEVATION],
     ['🪫평균속도', formatActivityValue(average_speed, 'speed'), ACTIVITY_UNITS.SPEED],
     ['🔋최고속도', formatActivityValue(max_speed, 'speed'), ACTIVITY_UNITS.SPEED],
-    ...(average_watts! >= 1 ? [['🦵평균파워', formatActivityValue(average_watts), ACTIVITY_UNITS.POWER]] : []),
-    ...(max_watts! >= 1 ? [['🦿최대파워', formatActivityValue(max_watts), ACTIVITY_UNITS.POWER]] : []),
-    ...(max_heartrate! >= 1 ? [['❤️최고심박수', formatActivityValue(max_heartrate), ACTIVITY_UNITS.HEART_RATE]] : []),
-    ...(average_cadence! >= 1 ? [['💫평균케이던스', formatActivityValue(average_cadence), ACTIVITY_UNITS.CADENCE]] : []),
+    ...(average_watts >= 1 ? [['🦵평균파워', formatActivityValue(average_watts), ACTIVITY_UNITS.POWER]] : []),
+    ...(max_watts >= 1 ? [['🦿최대파워', formatActivityValue(max_watts), ACTIVITY_UNITS.POWER]] : []),
+    ...(max_heartrate >= 1 ? [['❤️최고심박수', formatActivityValue(max_heartrate), ACTIVITY_UNITS.HEART_RATE]] : []),
+    ...(average_cadence >= 1 ? [['💫평균케이던스', formatActivityValue(average_cadence), ACTIVITY_UNITS.CADENCE]] : []),
   ]
 
   const analysisInfo = metrics.map(([label, value, unit]) => `${label} : ${value} ${unit}`).join('\n')
-  return `◾ 라이딩 분석 정보 ◾
-${analysisInfo}
-
-🏆 Powered by STRANK`
+  return `◾ 라이딩 분석 정보 ◾\n${analysisInfo}\n\n🏆 Powered by STRANK`
 }
 
 /**
- * 플레이스홀더 먼저 업데이트
+ * 플레이스홀더 먼저 넣고, 나중에 최종 디스크립션 교체
  */
 export async function setPlaceholderDescription(
   accessToken: string,
   stravaActivity: StravaActivity
 ): Promise<void> {
   const placeholder = 'STRANK AI 리포트 생성 중... ⏳'
-  console.log(`📤 플레이스홀더 디스크립션 업데이트: "${placeholder}"`)
+  console.log(`📤 플레이스홀더 설정: "${placeholder}"`)
 
   const response = await fetch(
     `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
@@ -174,18 +165,15 @@ export async function setPlaceholderDescription(
 
   if (!response.ok) {
     const errorText = await response.text()
-    logError('플레이스홀더 업데이트 실패:', {
-      error: errorText,
-      functionName: 'setPlaceholderDescription',
-    })
+    logError('플레이스홀더 업데이트 실패:', { error: errorText })
     throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
   }
-
   console.log('✅ 플레이스홀더 업데이트 성공')
 }
 
 /**
- * 최종 디스크립션 업데이트
+ * 최종 STRANK 디스크립션 업데이트
+ * - zero-width space를 추가해 캐시 무효화 유도
  */
 export async function updateStravaActivityDescription(
   accessToken: string,
@@ -194,7 +182,9 @@ export async function updateStravaActivityDescription(
 ): Promise<void> {
   console.log('📤 최종 디스크립션 업데이트 시작')
 
-  const safeDescription = strankDescription.trim().substring(0, 1800) // 안전 범위 제한
+  // 캐시 무효화 트릭: zero-width space 추가
+  const safeDescription = (strankDescription.trim() + '\u200B').substring(0, 1800)
+
   const response = await fetch(
     `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
     {
@@ -203,7 +193,11 @@ export async function updateStravaActivityDescription(
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ description: safeDescription }),
+      body: JSON.stringify({
+        description: safeDescription,
+        // dummy toggle로 앱 refresh 유도
+        trainer: stravaActivity.trainer || false,
+      }),
     }
   )
 
@@ -212,10 +206,7 @@ export async function updateStravaActivityDescription(
     if (response.status === 429) {
       throw new Error(ERROR_CODES.STRAVA.API_LIMIT_EXCEEDED)
     }
-    logError('최종 디스크립션 업데이트 실패:', {
-      error: errorText,
-      functionName: 'updateStravaActivityDescription',
-    })
+    logError('최종 디스크립션 업데이트 실패:', { error: errorText })
     throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
   }
 
