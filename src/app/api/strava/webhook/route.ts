@@ -12,7 +12,7 @@ import {
 
 export const maxDuration = 300
 
-// * 1. 웹훅 검증
+// * 1. 웹훅 검증 (Strava 구독 확인 시)
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const mode = searchParams.get('hub.mode')
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
   try {
     webhookBody = await request.json()
 
+    // activity 이벤트만 처리
     if (
       webhookBody.object_type !== 'activity' ||
       (webhookBody.aspect_type !== 'create' &&
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createServiceRoleClient()
 
+    // * 이벤트 기록 (중복 체크용)
     const { error: insertError } = await supabase.from('strava_webhook_events').insert({
       event_time: webhookBody.event_time,
       object_id: webhookBody.object_id,
@@ -55,6 +57,7 @@ export async function POST(request: NextRequest) {
       owner_id: webhookBody.owner_id,
     })
 
+    // * 중복 이벤트 처리
     if (insertError?.code === '23505') {
       logError('Duplicate webhook event:', {
         event_time: webhookBody.event_time,
@@ -63,25 +66,27 @@ export async function POST(request: NextRequest) {
         error: insertError,
       })
 
-      // ✅ create 이벤트만 무시
+      // ✅ create 이벤트는 중복 무시
       if (webhookBody.aspect_type === 'create') {
         return new NextResponse('Duplicate create event ignored', { status: 200 })
       }
-      // ✅ update/delete는 계속 진행
+
+      // ✅ update/delete 이벤트는 계속 진행
     }
 
     if (insertError && insertError.code !== '23505') {
       logError('Failed to record webhook event:', { error: insertError })
     }
 
-    // ✅ 즉시 응답
+    // ✅ 즉시 응답 (Strava 타임아웃 방지)
     const response = new NextResponse('Success', { status: 200 })
 
-    // ✅ 백그라운드 실행
+    // ✅ 백그라운드 실행 (응답 이후에도 처리)
     ;(async () => {
       try {
         switch (webhookBody.aspect_type) {
           case 'create':
+            // 2.5초 대기 (Strava 내부 처리와 충돌 방지)
             await new Promise(resolve => setTimeout(resolve, 2500))
             await processCreateActivityEvent(webhookBody)
             break
