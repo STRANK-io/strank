@@ -8,6 +8,20 @@ import { logError } from '@/lib/utils/log'
 import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
 /**
+ * description 안전 정화 함수
+ */
+function sanitizeDescription(desc: string): string {
+  return desc
+    .replace(/https?:\/\/\S+/g, '') // URL 제거
+    .replace(/\b\w+\.(io|com|net|org)\b/gi, '') // 도메인 제거
+    .replace(/[\u200B-\u200D\uFEFF]/g, '') // zero-width 문자 제거
+    .replace(/\u2028|\u2029/g, '\n') // 줄바꿈 제어문자 교체
+    .replace(/\n{3,}/g, '\n\n') // 과도한 개행 정리
+    .trim()
+    .substring(0, 1500) // 안전하게 1500자 제한
+}
+
+/**
  * 스트랭크 디스크립션 포맷에 맞춰 활동 디스크립션을 생성하는 함수
  */
 export async function generateActivityDescription(
@@ -54,7 +68,7 @@ export async function generateActivityDescription(
         : undefined
     )
 
-    return description
+    return sanitizeDescription(description)
   } catch (error) {
     logError('디스크립션 생성 중 오류 발생:', { error, functionName: 'generateActivityDescription' })
     return generateBasicDescription(activity, rankingsWithDistrict)
@@ -62,7 +76,7 @@ export async function generateActivityDescription(
 }
 
 /**
- * 기본 디스크립션 (fallback)
+ * 기본 디스크립션 생성 함수 (ChatGPT API 호출 실패 시 사용)
  */
 function generateBasicDescription(
   activity: StravaActivity,
@@ -73,7 +87,7 @@ function generateBasicDescription(
     generateRankingSection(rankingsWithDistrict),
     generateAnalysisSection(activity),
   ]
-  return sections.join('\n\n\n\n')
+  return sanitizeDescription(sections.join('\n\n\n\n'))
 }
 
 function generateDateSection(startDate: string): string {
@@ -92,7 +106,6 @@ export function generateRankingSection(
   if (!rankingsWithDistrict?.rankings) return ''
   const { rankings, district, province } = rankingsWithDistrict
   const sections = []
-
   if (rankings.distanceRankCity || rankings.distanceRankDistrict) {
     sections.push(
       `🥇 거리 랭킹${
@@ -138,7 +151,6 @@ function generateAnalysisSection(activity: StravaActivity): string {
   ]
 
   const analysisInfo = metrics.map(([label, value, unit]) => `${label} : ${value} ${unit}`).join('\n')
-
   return `◾ 라이딩 분석 정보 ◾
 ${analysisInfo}
 
@@ -146,7 +158,7 @@ ${analysisInfo}
 }
 
 /**
- * 스트라바 활동의 설명 업데이트 (라이덕 + STRANK 병합)
+ * 스트라바 활동의 설명을 업데이트하는 함수
  */
 export async function updateStravaActivityDescription(
   accessToken: string,
@@ -154,14 +166,12 @@ export async function updateStravaActivityDescription(
   strankDescription: string
 ): Promise<void> {
   try {
-    // 1) 대기 (라이덕 반영 시간 확보)
-    await new Promise((res) => setTimeout(res, 1000))
-
-    // 2) 최신 description 조회
+    // 기존 + 새 STRANK 설명 병합
     const latestActivityResponse = await fetch(
       `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     )
+
     if (!latestActivityResponse.ok) {
       const errorText = await latestActivityResponse.text()
       logError('최신 활동 데이터 조회 실패:', {
@@ -170,23 +180,18 @@ export async function updateStravaActivityDescription(
       })
       throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
     }
+
     const latestActivity: StravaActivity = await latestActivityResponse.json()
 
-    // 3) 병합 로직 (중복 방지)
-    let combinedDescription = latestActivity.description || ''
-    if (!combinedDescription.includes('Powered by STRANK')) {
-      combinedDescription = `${strankDescription}\n\n${combinedDescription}`
+    let combinedDescription: string
+    if (latestActivity.description && latestActivity.description.trim().length > 0) {
+      combinedDescription = `${strankDescription}\n\n${latestActivity.description}`
+    } else {
+      combinedDescription = strankDescription
     }
 
-    // 4) 텍스트 클린업
-    combinedDescription = combinedDescription
-      .replace(/[\u200B-\u200D\uFEFF]/g, '')
-      .replace(/\n{3,}/g, '\n\n')
-    if (combinedDescription.length > 1999) {
-      combinedDescription = combinedDescription.substring(0, 1999)
-    }
+    const safeDescription = sanitizeDescription(combinedDescription)
 
-    // 5) 최종 PUT
     const updateResponse = await fetch(
       `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
       {
@@ -195,7 +200,7 @@ export async function updateStravaActivityDescription(
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ description: combinedDescription }),
+        body: JSON.stringify({ description: safeDescription }),
       }
     )
 
