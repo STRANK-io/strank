@@ -17,17 +17,20 @@ export async function updateStravaActivityDescription(
   if (!latestActivityResponse.ok) {
     const errorText = await latestActivityResponse.text()
     logError('최신 활동 데이터 조회 실패', {
-      status: latestActivityResponse.status,
-      statusText: latestActivityResponse.statusText,
-      error: errorText,
+      error: {
+        status: latestActivityResponse.status,
+        statusText: latestActivityResponse.statusText,
+        body: errorText,
+      },
       functionName: 'updateStravaActivityDescription',
+      activityId: stravaActivity.id,
     })
     throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
   }
 
   const latestActivity: StravaActivity = await latestActivityResponse.json()
 
-  // 기존 디스크립션 결합 로직
+  // 기존 디스크립션 결합
   let combinedDescription: string
   if (latestActivity.description && latestActivity.description.trim().length > 0) {
     combinedDescription = `${strankDescription}\n\n${latestActivity.description}`
@@ -35,7 +38,7 @@ export async function updateStravaActivityDescription(
     combinedDescription = strankDescription
   }
 
-  // ✅ Strava 디스크립션은 최대 2000자 제한
+  // ✅ Strava는 description 2000자 제한
   if (combinedDescription.length > 2000) {
     console.log(`⚠️ 디스크립션이 2000자 초과 (${combinedDescription.length}), 잘라냅니다.`)
     combinedDescription = combinedDescription.slice(0, 1999)
@@ -62,11 +65,12 @@ export async function updateStravaActivityDescription(
 
   if (!updateResponse.ok) {
     const errorText = await updateResponse.text()
-
     logError('Strava API: Failed to update activity description', {
-      status: updateResponse.status,
-      statusText: updateResponse.statusText,
-      body: errorText,
+      error: {
+        status: updateResponse.status,
+        statusText: updateResponse.statusText,
+        body: errorText,
+      },
       activityId: stravaActivity.id,
       descriptionLength: combinedDescription.length,
       functionName: 'updateStravaActivityDescription',
@@ -75,11 +79,9 @@ export async function updateStravaActivityDescription(
     if (updateResponse.status === 429) {
       throw new Error(ERROR_CODES.STRAVA.API_LIMIT_EXCEEDED)
     }
-
     if (updateResponse.status === 401) {
       throw new Error('Unauthorized: Access token may be expired or invalid')
     }
-
     if (updateResponse.status === 400) {
       throw new Error('Bad Request: Description may be invalid or too long')
     }
