@@ -143,7 +143,7 @@ function generateAnalysisSection(activity: StravaActivity): string {
 }
 
 // =============================================
-// 3) 디스크립션 업데이트 (라이덕 스타일, 덮어쓰기 전용)
+// 3) 디스크립션 업데이트 (라이덕 스타일 + 개선)
 // =============================================
 export async function updateStravaActivityDescription(
   accessToken: string,
@@ -190,9 +190,13 @@ export async function updateStravaActivityDescription(
     throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
   }
 
-  // 3) GET: 최신 데이터 강제 동기화
+  // 3) PUT 응답을 그대로 사용 (최신 데이터)
+  const updatedActivity: StravaActivity = await updateResponse.json()
+  console.log('✅ PUT 응답 최신 description:', updatedActivity.description?.substring(0, 120))
+
+  // 4) GET 재호출 (옵션: include_all_efforts=false)
   const syncResponse = await fetch(
-    `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
+    `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}?include_all_efforts=false`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   )
   if (syncResponse.ok) {
