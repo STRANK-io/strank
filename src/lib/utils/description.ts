@@ -7,36 +7,28 @@ import { ERROR_CODES } from '@/lib/constants/error'
 import { logError } from '@/lib/utils/log'
 import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
-/**
- * 스트랭크 디스크립션 포맷에 맞춰 활동 디스크립션을 생성하는 함수
- */
+// =============================================
+// 1) AI 기반 디스크립션 생성
+// =============================================
 export async function generateActivityDescription(
   activity: StravaActivity,
   rankingsWithDistrict: CalculateActivityRankingReturn | null,
   accessToken: string
 ): Promise<string> {
   try {
-    // 스트림 데이터 가져오기
-    console.log('\n📡 스트림 데이터 가져오는 중...')
     let streamsData = null
-
     try {
       const streamsUrl = `${STRAVA_API_URL}/activities/${activity.id}/streams?keys=time,latlng,distance,altitude,velocity_smooth,heartrate,watts,cadence,grade_smooth&key_by_type=true`
       const streamsResponse = await fetch(streamsUrl, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
-
       if (streamsResponse.ok) {
         streamsData = await streamsResponse.json()
-        console.log('✅ 스트림 데이터 가져오기 성공')
-      } else {
-        console.log('⚠️ 스트림 데이터 가져오기 실패:', streamsResponse.status)
       }
-    } catch (streamError) {
-      console.log('⚠️ 스트림 데이터 가져오기 중 오류:', streamError)
+    } catch (err) {
+      console.log('⚠️ 스트림 데이터 가져오기 실패:', err)
     }
 
-    // ChatGPT API를 통해 디스크립션 생성
     const description = await generateActivityDescriptionWithGPT(
       {
         date: activity.start_date_local,
@@ -64,17 +56,14 @@ export async function generateActivityDescription(
 
     return description
   } catch (error) {
-    logError('디스크립션 생성 중 오류 발생:', {
-      error,
-      functionName: 'generateActivityDescription',
-    })
+    logError('디스크립션 생성 중 오류 발생:', { error, functionName: 'generateActivityDescription' })
     return generateBasicDescription(activity, rankingsWithDistrict)
   }
 }
 
-/**
- * 기본 디스크립션 생성 함수
- */
+// =============================================
+// 2) 기본 디스크립션 (fallback)
+// =============================================
 function generateBasicDescription(
   activity: StravaActivity,
   rankingsWithDistrict: CalculateActivityRankingReturn | null
@@ -84,7 +73,7 @@ function generateBasicDescription(
     generateRankingSection(rankingsWithDistrict),
     generateAnalysisSection(activity),
   ]
-  return sections.join('\n\n\n\n')
+  return sections.join('\n\n')
 }
 
 function generateDateSection(startDate: string): string {
@@ -148,56 +137,35 @@ function generateAnalysisSection(activity: StravaActivity): string {
       : []),
   ]
 
-  const analysisInfo = metrics.map(([label, value, unit]) => `${label} : ${value} ${unit}`).join('\n')
-  return `◾ 라이딩 분석 정보 ◾
-${analysisInfo}
-
-🏆 Powered by STRANK`
+  return `◾ 라이딩 분석 정보 ◾\n${metrics
+    .map(([label, value, unit]) => `${label} : ${value} ${unit}`)
+    .join('\n')}\n\n🏆 Powered by STRANK`
 }
 
-/**
- * 스트라바 활동의 설명을 업데이트하는 함수
- */
+// =============================================
+// 3) 디스크립션 업데이트 (라이덕 스타일, 덮어쓰기 전용)
+// =============================================
 export async function updateStravaActivityDescription(
   accessToken: string,
   stravaActivity: StravaActivity,
   strankDescription: string
 ): Promise<void> {
-  console.log('🔄 최신 활동 데이터 조회 중...')
-  const latestActivityResponse = await fetch(
-    `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  )
+  // 1) 텍스트 클린업
+  let cleanDescription = strankDescription
+    .replace(/[\u200B-\u200D\uFEFF]/g, '') // 보이지 않는 문자 제거
+    .replace(/\n{3,}/g, '\n\n') // 과도한 줄바꿈 정리
 
-  if (!latestActivityResponse.ok) {
-    const errorText = await latestActivityResponse.text()
-    logError('최신 활동 데이터 조회 실패:', { error: errorText, functionName: 'updateStravaActivityDescription' })
-    throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
+  if (cleanDescription.length > 1999) {
+    cleanDescription = cleanDescription.substring(0, 1999)
   }
 
-  const latestActivity: StravaActivity = await latestActivityResponse.json()
-
-  let combinedDescription: string
-  if (latestActivity.description?.trim().length) {
-    combinedDescription = `${strankDescription}\n\n${latestActivity.description}`
-  } else {
-    combinedDescription = strankDescription
-  }
-
-  // ✅ 보이지 않는 제어문자 제거
-  combinedDescription = combinedDescription.replace(/[\u200B-\u200D\uFEFF]/g, '')
-
-  // ✅ 길이 제한 (2000자)
-  if (combinedDescription.length > 1999) {
-    combinedDescription = combinedDescription.substring(0, 1999)
-  }
-
-  console.log('📤 최종 디스크립션 업데이트:', {
+  console.log('📤 디스크립션 업데이트 (overwrite mode):', {
     activityId: stravaActivity.id,
-    finalDescriptionLength: combinedDescription.length,
-    preview: combinedDescription.substring(0, 200),
+    length: cleanDescription.length,
+    preview: cleanDescription.substring(0, 120),
   })
 
+  // 2) PUT: STRANK 디스크립션만 덮어쓰기
   const updateResponse = await fetch(
     `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
     {
@@ -206,7 +174,7 @@ export async function updateStravaActivityDescription(
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ description: combinedDescription }),
+      body: JSON.stringify({ description: cleanDescription }),
     }
   )
 
@@ -222,13 +190,15 @@ export async function updateStravaActivityDescription(
     throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
   }
 
-  // ✅ PUT 후 GET 강제 동기화
+  // 3) GET: 최신 데이터 강제 동기화
   const syncResponse = await fetch(
     `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   )
   if (syncResponse.ok) {
-    const synced = await syncResponse.json()
-    console.log('🔄 동기화 완료, 최신 description:', synced.description?.substring(0, 100))
+    const synced: StravaActivity = await syncResponse.json()
+    console.log('🔄 동기화 완료, 최신 description:', synced.description?.substring(0, 120))
+  } else {
+    console.log('⚠️ 동기화 GET 실패:', syncResponse.status)
   }
 }
