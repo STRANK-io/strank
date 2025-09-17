@@ -9,9 +9,9 @@ import {
   processUpdateActivityEvent,
 } from '@/lib/utils/webhook'
 
-export const maxDuration = 300 // Vercel 함수 최대 실행 제한
+export const maxDuration = 300 // 최대 300초 실행 (Vercel 제한)
 
-// * 1. 웹훅 검증 (Strava에서 최초 구독 확인 시)
+// * 1. 웹훅 검증 (Strava 구독 확인용)
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const mode = searchParams.get('hub.mode')
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   try {
     webhookBody = await request.json()
 
-    // * activity 이벤트만 처리
+    // activity 이벤트만 처리
     if (
       webhookBody.object_type !== 'activity' ||
       (webhookBody.aspect_type !== 'create' &&
@@ -56,28 +56,36 @@ export async function POST(request: NextRequest) {
       owner_id: webhookBody.owner_id,
     })
 
+    // * 중복 이벤트 처리
     if (insertError?.code === '23505') {
       logError('Duplicate webhook event:', {
         event_time: webhookBody.event_time,
         object_id: webhookBody.object_id,
+        aspect_type: webhookBody.aspect_type,
         error: insertError,
       })
-      return new NextResponse('Duplicate event', { status: 200 })
+
+      // ✅ create 이벤트면 중복 무시
+      if (webhookBody.aspect_type === 'create') {
+        return new NextResponse('Duplicate create event ignored', { status: 200 })
+      }
+
+      // ✅ update 이벤트는 중복이어도 계속 처리
     }
 
-    if (insertError) {
+    if (insertError && insertError.code !== '23505') {
       logError('Failed to record webhook event:', { error: insertError })
     }
 
-    // ✅ 응답 먼저 반환
+    // ✅ 즉시 응답 (Strava 타임아웃 방지)
     const response = new NextResponse('Success', { status: 200 })
 
-    // ✅ 백그라운드 실행 (응답 이후에도 처리 계속됨)
+    // ✅ 백그라운드 실행 (응답 후에도 처리)
     ;(async () => {
       try {
         switch (webhookBody.aspect_type) {
           case 'create':
-            // 2.5초 대기 (Strava / 서드파티와 충돌 방지)
+            // 2.5초 대기 (Strava/서드파티 충돌 방지)
             await new Promise(resolve => setTimeout(resolve, 2500))
             await processCreateActivityEvent(webhookBody)
             break
