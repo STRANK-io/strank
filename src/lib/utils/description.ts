@@ -8,7 +8,7 @@ import { logError } from '@/lib/utils/log'
 import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
 /**
- * STRANK 디스크립션 포맷에 맞춰 활동 디스크립션을 생성하는 함수
+ * STRANK 디스크립션 생성
  */
 export async function generateActivityDescription(
   activity: StravaActivity,
@@ -35,6 +35,7 @@ export async function generateActivityDescription(
       console.log('⚠️ 스트림 데이터 요청 오류:', err)
     }
 
+    // GPT를 통해 디스크립션 생성
     const description = await generateActivityDescriptionWithGPT(
       {
         date: activity.start_date_local,
@@ -71,7 +72,7 @@ export async function generateActivityDescription(
 }
 
 /**
- * 기본 디스크립션 (GPT 실패 시)
+ * GPT 실패 시 기본 디스크립션
  */
 function generateBasicDescription(
   activity: StravaActivity,
@@ -150,18 +151,51 @@ ${analysisInfo}
 }
 
 /**
- * 스트라바 활동 설명 업데이트 함수 (병합 제거 버전)
+ * 플레이스홀더 먼저 업데이트
+ */
+export async function setPlaceholderDescription(
+  accessToken: string,
+  stravaActivity: StravaActivity
+): Promise<void> {
+  const placeholder = 'STRANK AI 리포트 생성 중... ⏳'
+  console.log(`📤 플레이스홀더 디스크립션 업데이트: "${placeholder}"`)
+
+  const response = await fetch(
+    `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ description: placeholder }),
+    }
+  )
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    logError('플레이스홀더 업데이트 실패:', {
+      error: errorText,
+      functionName: 'setPlaceholderDescription',
+    })
+    throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
+  }
+
+  console.log('✅ 플레이스홀더 업데이트 성공')
+}
+
+/**
+ * 최종 디스크립션 업데이트
  */
 export async function updateStravaActivityDescription(
   accessToken: string,
   stravaActivity: StravaActivity,
   strankDescription: string
 ): Promise<void> {
-  console.log('📤 디스크립션 업데이트 (STRANK만 반영)')
+  console.log('📤 최종 디스크립션 업데이트 시작')
 
-  const safeDescription = strankDescription.trim().substring(0, 1500) // 안전 길이 제한
-
-  const updateResponse = await fetch(
+  const safeDescription = strankDescription.trim().substring(0, 1800) // 안전 범위 제한
+  const response = await fetch(
     `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
     {
       method: 'PUT',
@@ -173,18 +207,17 @@ export async function updateStravaActivityDescription(
     }
   )
 
-  if (!updateResponse.ok) {
-    const errorText = await updateResponse.text()
-    if (updateResponse.status === 429) {
+  if (!response.ok) {
+    const errorText = await response.text()
+    if (response.status === 429) {
       throw new Error(ERROR_CODES.STRAVA.API_LIMIT_EXCEEDED)
     }
-    logError('Strava API: Failed to update activity description:', {
+    logError('최종 디스크립션 업데이트 실패:', {
       error: errorText,
       functionName: 'updateStravaActivityDescription',
     })
     throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
   }
 
-  const updatedActivity: StravaActivity = await updateResponse.json()
-  console.log('✅ 최종 저장된 description:', updatedActivity.description?.substring(0, 120))
+  console.log('✅ 최종 디스크립션 업데이트 성공')
 }
