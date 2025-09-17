@@ -9,9 +9,9 @@ import {
   processUpdateActivityEvent,
 } from '@/lib/utils/webhook'
 
-// ✅ Vercel Edge Runtime 사용
-export const runtime = 'edge'
+export const maxDuration = 300 // Vercel 함수 최대 실행 제한
 
+// * 1. 웹훅 검증 (Strava에서 최초 구독 확인 시)
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const mode = searchParams.get('hub.mode')
@@ -28,12 +28,14 @@ export async function GET(request: Request) {
   return new NextResponse('OK', { status: 200 })
 }
 
+// * 2. 활동 웹훅 이벤트 처리
 export async function POST(request: NextRequest) {
   let webhookBody: StravaWebhookEventResponse
 
   try {
     webhookBody = await request.json()
 
+    // * activity 이벤트만 처리
     if (
       webhookBody.object_type !== 'activity' ||
       (webhookBody.aspect_type !== 'create' &&
@@ -45,6 +47,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createServiceRoleClient()
 
+    // * 이벤트 기록 (중복 체크용)
     const { error: insertError } = await supabase.from('strava_webhook_events').insert({
       event_time: webhookBody.event_time,
       object_id: webhookBody.object_id,
@@ -66,16 +69,16 @@ export async function POST(request: NextRequest) {
       logError('Failed to record webhook event:', { error: insertError })
     }
 
-    // ✅ 즉시 OK 응답 준비
+    // ✅ 응답 먼저 반환
     const response = new NextResponse('Success', { status: 200 })
 
-    // ✅ Background Job 실행 (응답 이후에도 계속 실행됨)
-    request.waitUntil((async () => {
+    // ✅ 백그라운드 실행 (응답 이후에도 처리 계속됨)
+    ;(async () => {
       try {
         switch (webhookBody.aspect_type) {
           case 'create':
-            // 2.5초 딜레이 (Strava/서드파티 충돌 방지)
-            await new Promise(r => setTimeout(r, 2500))
+            // 2.5초 대기 (Strava / 서드파티와 충돌 방지)
+            await new Promise(resolve => setTimeout(resolve, 2500))
             await processCreateActivityEvent(webhookBody)
             break
 
@@ -93,9 +96,8 @@ export async function POST(request: NextRequest) {
           activityId: webhookBody.object_id,
         })
       }
-    })())
+    })()
 
-    // ✅ Strava에 즉시 성공 응답
     return response
   } catch (error) {
     logError('Webhook request parsing error:', { error })
