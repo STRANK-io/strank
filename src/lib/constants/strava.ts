@@ -5,6 +5,7 @@ export const STRAVA_API_URL = 'https://www.strava.com/api/v3'
 export const STRAVA_ATHLETE_ACTIVITIES_ENDPOINT = '/athlete/activities'
 export const STRAVA_ACTIVITY_BY_ID_ENDPOINT = (id: number) => `/activities/${id}`
 
+// ✅ 반드시 포함해야 하는 권한
 export const REQUIRED_SCOPES = ['read', 'profile:read_all', 'activity:read_all', 'activity:write']
 
 export const SYNC_CONFIG = {
