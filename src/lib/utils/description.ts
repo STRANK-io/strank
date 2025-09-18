@@ -166,7 +166,7 @@ function generateAnalysisSection(activity: StravaActivity): string {
 }
 
 /**
- * 🚨 업데이트 함수 (캐시 무력화 포함)
+ * 🚨 업데이트 함수 (라이덕 보존 + 캐시 무력화)
  */
 export async function updateStravaActivityDescription(
   accessToken: string,
@@ -193,17 +193,33 @@ export async function updateStravaActivityDescription(
     const existingDescription = latestActivity.description?.trim() || ''
     const defaultPlaceholders = ['Morning Ride', 'Afternoon Ride', 'Evening Ride']
 
+    // 라이덕 등 기존 서드파티 디스크립션 보존
     const filteredDescription =
       existingDescription && !defaultPlaceholders.includes(existingDescription)
         ? existingDescription
         : ''
 
-    // 캐시 무력화: 항상 zero-width space 추가
+    // STRANK + 기존 디스크립션 합치기
     let combinedDescription = filteredDescription
       ? `${strankDescription}\n\n${filteredDescription}`
       : strankDescription
 
-    combinedDescription = combinedDescription + '\u200B'
+    // 항상 변경되도록 zero-width space 추가
+    combinedDescription += '\u200B'
+
+    // 캐시 무력화: 먼저 빈 description PUT
+    console.log('📤 캐시 초기화 단계 (빈 description PUT)')
+    await fetch(`${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ description: '' }),
+    })
+
+    // 잠시 대기 (캐시 갱신 시간 확보)
+    await new Promise(resolve => setTimeout(resolve, 500))
 
     console.log('📤 최종 업데이트 요청', {
       activityId: stravaActivity.id,
@@ -240,7 +256,7 @@ export async function updateStravaActivityDescription(
       throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
     }
 
-    console.log('✅ 최종 업데이트 성공')
+    console.log('✅ 최종 업데이트 성공 (라이덕 보존 + 캐시 무력화)')
   } catch (error) {
     logError('디스크립션 업데이트 중 예외 발생', { error })
     throw error
