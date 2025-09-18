@@ -166,7 +166,7 @@ function generateAnalysisSection(activity: StravaActivity): string {
 }
 
 /**
- * 🚨 업데이트 함수 (상세 로깅 포함)
+ * 🚨 업데이트 함수 (캐시 무력화 포함)
  */
 export async function updateStravaActivityDescription(
   accessToken: string,
@@ -192,14 +192,18 @@ export async function updateStravaActivityDescription(
     const latestActivity: StravaActivity = await latestActivityResponse.json()
     const existingDescription = latestActivity.description?.trim() || ''
     const defaultPlaceholders = ['Morning Ride', 'Afternoon Ride', 'Evening Ride']
+
     const filteredDescription =
       existingDescription && !defaultPlaceholders.includes(existingDescription)
         ? existingDescription
         : ''
 
-    const combinedDescription = filteredDescription
+    // 캐시 무력화: 항상 zero-width space 추가
+    let combinedDescription = filteredDescription
       ? `${strankDescription}\n\n${filteredDescription}`
       : strankDescription
+
+    combinedDescription = combinedDescription + '\u200B'
 
     console.log('📤 최종 업데이트 요청', {
       activityId: stravaActivity.id,
