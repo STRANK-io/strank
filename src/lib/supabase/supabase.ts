@@ -1,4 +1,10 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
   graphql_public: {
@@ -125,6 +131,7 @@ export type Database = {
           refresh_token: string
           strava_athlete_id: number
           user_id: string
+          scope: string | null   // ✅ scope 추가
         }
         Insert: {
           access_token: string
@@ -133,6 +140,7 @@ export type Database = {
           refresh_token: string
           strava_athlete_id: number
           user_id: string
+          scope?: string | null   // ✅ scope 추가
         }
         Update: {
           access_token?: string
@@ -141,6 +149,7 @@ export type Database = {
           refresh_token?: string
           strava_athlete_id?: number
           user_id?: string
+          scope?: string | null   // ✅ scope 추가
         }
         Relationships: [
           {
@@ -207,7 +216,7 @@ export type Database = {
         Row: {
           created_at: string | null
           deleted_at: string | null
-          province: string | null  // 추가
+          province: string | null
           district: string | null
           email: string
           id: string
@@ -220,7 +229,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           deleted_at?: string | null
-          province?: string | null  // 추가
+          province?: string | null
           district?: string | null
           email: string
           id: string
@@ -233,7 +242,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           deleted_at?: string | null
-          province?: string | null  // 추가
+          province?: string | null
           district?: string | null
           email?: string
           id?: string
@@ -264,16 +273,11 @@ export type Database = {
     }
     Functions: {
       check_nickname_exists: {
-        Args: {
-          p_nickname: string
-        }
+        Args: { p_nickname: string }
         Returns: boolean
       }
       get_activity_rankings: {
-        Args: {
-          p_activity_id: number
-          p_user_district: string
-        }
+        Args: { p_activity_id: number; p_user_district: string }
         Returns: {
           city_distance_rank: number
           district_distance_rank: number
@@ -315,7 +319,7 @@ export type Database = {
           result_user_name: string
           result_user_profile: string
           result_user_district: string
-          result_user_province?: string  // 옵셔널로 변경
+          result_user_province?: string
           result_athlete_id: number
         }[]
       }
@@ -339,9 +343,7 @@ export type Database = {
         }[]
       }
       increment_strava_api_usage: {
-        Args: {
-          is_upload: boolean
-        }
+        Args: { is_upload: boolean }
         Returns: undefined
       }
       save_strava_token_and_update_user: {
@@ -350,6 +352,7 @@ export type Database = {
           p_access_token: string
           p_refresh_token: string
           p_expires_at: string
+          p_scope?: string | null   // ✅ 수정됨
         }
         Returns: string
       }
@@ -367,12 +370,8 @@ export type Database = {
         Returns: Json
       }
     }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+    Enums: { [_ in never]: never }
+    CompositeTypes: { [_ in never]: never }
   }
 }
 
@@ -454,9 +453,7 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof PublicSchema['CompositeTypes']
     | { schema: keyof Database },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
-  }
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
     ? keyof Database[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
