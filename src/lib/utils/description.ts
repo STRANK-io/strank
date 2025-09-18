@@ -16,7 +16,6 @@ export async function generateActivityDescription(
   accessToken: string
 ): Promise<string> {
   try {
-    // 스트림 데이터 가져오기
     console.log('\n📡 스트림 데이터 가져오는 중...')
     let streamsData = null
 
@@ -33,7 +32,7 @@ export async function generateActivityDescription(
         console.log('⚠️ 스트림 데이터 가져오기 실패:', streamsResponse.status)
       }
     } catch (err) {
-      console.log('⚠️ 스트림 데이터 가져오기 중 오류:', err)
+      console.log('⚠️ 스트림 데이터 오류:', err)
     }
 
     // ChatGPT API를 통해 디스크립션 생성
@@ -44,11 +43,11 @@ export async function generateActivityDescription(
         elevation: activity.total_elevation_gain || 0,
         averageSpeed: (activity.average_speed || 0) * 3.6,
         maxSpeed: (activity.max_speed || 0) * 3.6,
-        averageWatts: activity.average_watts || undefined,
-        maxWatts: activity.max_watts || undefined,
-        maxHeartrate: activity.max_heartrate || undefined,
-        averageCadence: activity.average_cadence || undefined,
-        streamsData: streamsData,
+        averageWatts: activity.average_watts ?? undefined,
+        maxWatts: activity.max_watts ?? undefined,
+        maxHeartrate: activity.max_heartrate ?? undefined,
+        averageCadence: activity.average_cadence ?? undefined,
+        streamsData,
       },
       rankingsWithDistrict?.rankings
         ? {
@@ -64,13 +63,13 @@ export async function generateActivityDescription(
 
     return description
   } catch (error) {
-    logError('디스크립션 생성 중 오류 발생:', { error, functionName: 'generateActivityDescription' })
+    logError('디스크립션 생성 중 오류 발생:', { error })
     return generateBasicDescription(activity, rankingsWithDistrict)
   }
 }
 
 /**
- * 기본 디스크립션 (fallback)
+ * 기본 디스크립션 생성 함수 (ChatGPT 실패 시)
  */
 function generateBasicDescription(
   activity: StravaActivity,
@@ -100,6 +99,7 @@ export function generateRankingSection(
   if (!rankingsWithDistrict || !rankingsWithDistrict.rankings) return ''
   const { rankings, district, province } = rankingsWithDistrict
   const sections = []
+
   if (rankings.distanceRankCity || rankings.distanceRankDistrict) {
     sections.push(
       `🥇 거리 랭킹${
@@ -117,35 +117,54 @@ export function generateRankingSection(
   return sections.join('\n\n')
 }
 
+/**
+ * 분석 섹션 생성 함수
+ */
 function generateAnalysisSection(activity: StravaActivity): string {
   const {
     distance = 0,
     total_elevation_gain = 0,
     average_speed = 0,
     max_speed = 0,
-    average_watts = 0,
-    max_watts = 0,
-    max_heartrate = 0,
-    average_cadence = 0,
+    average_watts,
+    max_watts,
+    max_heartrate,
+    average_cadence,
   } = activity
+
+  const safeAvgWatts = average_watts ?? 0
+  const safeMaxWatts = max_watts ?? 0
+  const safeMaxHeartrate = max_heartrate ?? 0
+  const safeAvgCadence = average_cadence ?? 0
 
   const metrics = [
     ['🚴총거리', formatActivityValue(distance, 'distance'), ACTIVITY_UNITS.DISTANCE],
     ['🚵 총고도', formatActivityValue(total_elevation_gain), ACTIVITY_UNITS.ELEVATION],
     ['🪫평균속도', formatActivityValue(average_speed, 'speed'), ACTIVITY_UNITS.SPEED],
     ['🔋최고속도', formatActivityValue(max_speed, 'speed'), ACTIVITY_UNITS.SPEED],
-    ...(average_watts >= 1 ? [['🦵평균파워', formatActivityValue(average_watts), ACTIVITY_UNITS.POWER]] : []),
-    ...(max_watts >= 1 ? [['🦿최대파워', formatActivityValue(max_watts), ACTIVITY_UNITS.POWER]] : []),
-    ...(max_heartrate >= 1 ? [['❤️최고심박수', formatActivityValue(max_heartrate), ACTIVITY_UNITS.HEART_RATE]] : []),
-    ...(average_cadence >= 1 ? [['💫평균케이던스', formatActivityValue(average_cadence), ACTIVITY_UNITS.CADENCE]] : []),
+    ...(safeAvgWatts >= 1
+      ? [['🦵평균파워', formatActivityValue(safeAvgWatts), ACTIVITY_UNITS.POWER]]
+      : []),
+    ...(safeMaxWatts >= 1
+      ? [['🦿최대파워', formatActivityValue(safeMaxWatts), ACTIVITY_UNITS.POWER]]
+      : []),
+    ...(safeMaxHeartrate >= 1
+      ? [['❤️최고심박수', formatActivityValue(safeMaxHeartrate), ACTIVITY_UNITS.HEART_RATE]]
+      : []),
+    ...(safeAvgCadence >= 1
+      ? [['💫평균케이던스', formatActivityValue(safeAvgCadence), ACTIVITY_UNITS.CADENCE]]
+      : []),
   ]
 
   const analysisInfo = metrics.map(([label, value, unit]) => `${label} : ${value} ${unit}`).join('\n')
-  return `◾ 라이딩 분석 정보 ◾\n${analysisInfo}\n\n🏆 Powered by STRANK`
+  return `◾ 라이딩 분석 정보 ◾
+${analysisInfo}
+
+🏆 Powered by STRANK`
 }
 
 /**
- * 안전하게 설명 업데이트 (재시도 1회 지원)
+ * 안전한 PUT 요청 (재시도 포함)
  */
 async function safeUpdateDescription(
   url: string,
@@ -171,9 +190,9 @@ async function safeUpdateDescription(
     console.log(`❌ 업데이트 실패 (시도 ${attempt + 1}):`, errorText)
 
     if (attempt < retries) {
-      const wait = 2000 * (attempt + 1) // 2초 대기 후 재시도
+      const wait = 2000 * (attempt + 1)
       console.log(`⏳ ${wait / 1000}초 후 재시도...`)
-      await new Promise(r => setTimeout(r, wait))
+      await new Promise((r) => setTimeout(r, wait))
       continue
     }
 
@@ -182,7 +201,11 @@ async function safeUpdateDescription(
 }
 
 /**
- * 스트라바 활동 설명 2단계 업데이트 (placeholder → 최종)
+ * 스트라바 활동의 설명을 업데이트하는 함수
+ *
+ * - 1단계: "🏆 STRANK Writing..." 플레이스홀더 기록
+ * - 3초 대기
+ * - 2단계: 최종 디스크립션 업데이트 (실패 시 1회 재시도)
  */
 export async function updateStravaActivityDescription(
   accessToken: string,
@@ -191,15 +214,16 @@ export async function updateStravaActivityDescription(
 ): Promise<void> {
   const url = `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`
 
-  // 1단계: placeholder 업데이트
-  console.log('✍️ 1단계: placeholder 업데이트...')
+  // 1단계
+  console.log('✍️ [1단계] 플레이스홀더 업데이트 실행...')
   await safeUpdateDescription(url, accessToken, '🏆 STRANK Writing...')
 
-  // 2단계: 3초 후 최종 업데이트
-  console.log('⏳ 3초 대기 후 최종 업데이트 시작...')
-  await new Promise(r => setTimeout(r, 3000))
+  // 대기
+  console.log('⏳ 3초 대기 후 최종 업데이트 실행 예정...')
+  await new Promise((resolve) => setTimeout(resolve, 3000))
 
-  console.log('✍️ 2단계: 최종 디스크립션 업데이트...')
+  // 2단계
+  console.log('✍️ [2단계] 최종 디스크립션 업데이트 실행...')
   await safeUpdateDescription(url, accessToken, strankDescription, 1)
 
   console.log('✅ 최종 디스크립션 업데이트 완료')
