@@ -16,7 +16,6 @@ export async function generateActivityDescription(
   accessToken: string
 ): Promise<string> {
   try {
-    // 스트림 데이터 가져오기
     let streamsData = null
     try {
       const streamsUrl = `${STRAVA_API_URL}/activities/${activity.id}/streams?keys=time,latlng,distance,altitude,velocity_smooth,heartrate,watts,cadence,grade_smooth&key_by_type=true`
@@ -37,7 +36,6 @@ export async function generateActivityDescription(
       logError('스트림 데이터 요청 중 오류', { err, activityId: activity.id })
     }
 
-    // GPT를 통한 디스크립션 생성
     const description = await generateActivityDescriptionWithGPT(
       {
         date: activity.start_date_local,
@@ -71,7 +69,7 @@ export async function generateActivityDescription(
 }
 
 /**
- * 기본 디스크립션 생성 함수 (GPT 실패 시 사용)
+ * GPT 실패 시 기본 디스크립션 생성
  */
 function generateBasicDescription(
   activity: StravaActivity,
@@ -226,11 +224,4 @@ export async function updateStravaActivityDescription(
   }
 
   console.log('✅ 디스크립션 업데이트 성공', { activityId: stravaActivity.id })
-}
-
-// ✅ export 모음
-export {
-  generateActivityDescription,
-  generateRankingSection,
-  updateStravaActivityDescription,
 }
