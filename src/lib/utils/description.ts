@@ -10,7 +10,7 @@ import { CalculateActivityRankingReturn } from '@/lib/types/ranking'
 export function generateRankingSection(
   rankingsWithDistrict: CalculateActivityRankingReturn | null
 ): string {
-  if (!rankingsWithDistrict || !rankingsWithDistrict.rankings) return ''
+  if (!rankingsWithDistrict?.rankings) return ''
 
   const { rankings, district, province } = rankingsWithDistrict
   const sections: string[] = []
@@ -28,7 +28,9 @@ export function generateRankingSection(
       `🧗 고도 랭킹${
         rankings.elevationRankCity ? `\n📍${province} (${rankings.elevationRankCity}위)` : ''
       }${
-        rankings.elevationRankDistrict ? `\n📍${district} (${rankings.elevationRankDistrict}위)` : ''
+        rankings.elevationRankDistrict
+          ? `\n📍${district} (${rankings.elevationRankDistrict}위)`
+          : ''
       }`
     )
   }
@@ -37,7 +39,7 @@ export function generateRankingSection(
 }
 
 /**
- * GPT 기반 디스크립션을 감싸는 래퍼 함수
+ * GPT 기반 디스크립션 래퍼
  * (실제 생성은 openai.ts 의 generateActivityDescriptionWithGPT 가 담당)
  */
 export async function generateActivityDescription(
@@ -59,12 +61,12 @@ export async function generateActivityDescription(
       maxHeartrate: activity.max_heartrate || undefined,
       averageCadence: activity.average_cadence || undefined,
     },
-    rankingsWithDistrict
+    rankingsWithDistrict?.rankings
       ? {
-          distanceRankCity: rankingsWithDistrict.rankings.distanceRankCity,
-          distanceRankDistrict: rankingsWithDistrict.rankings.distanceRankDistrict,
-          elevationRankCity: rankingsWithDistrict.rankings.elevationRankCity,
-          elevationRankDistrict: rankingsWithDistrict.rankings.elevationRankDistrict,
+          distanceRankCity: rankingsWithDistrict.rankings?.distanceRankCity ?? null,
+          distanceRankDistrict: rankingsWithDistrict.rankings?.distanceRankDistrict ?? null,
+          elevationRankCity: rankingsWithDistrict.rankings?.elevationRankCity ?? null,
+          elevationRankDistrict: rankingsWithDistrict.rankings?.elevationRankDistrict ?? null,
           district: rankingsWithDistrict.district,
           province: rankingsWithDistrict.province,
         }
@@ -80,6 +82,7 @@ export async function updateStravaActivityDescription(
   stravaActivity: StravaActivity,
   strankDescription: string
 ): Promise<void> {
+  // 업로드 직후 충돌 방지용 대기
   await new Promise(resolve => setTimeout(resolve, 4000))
 
   console.log('🔄 디스크립션 업데이트 직전 최신 활동 데이터 조회 중...')
@@ -87,9 +90,7 @@ export async function updateStravaActivityDescription(
   const latestActivityResponse = await fetch(
     `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
     {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+      headers: { Authorization: `Bearer ${accessToken}` },
     }
   )
 
@@ -105,6 +106,7 @@ export async function updateStravaActivityDescription(
 
   const latestActivity: StravaActivity = await latestActivityResponse.json()
 
+  // 기존 디스크립션 확인
   const existingDescription = latestActivity.description?.trim() || ''
   const defaultPlaceholders = ['Morning Ride', 'Afternoon Ride', 'Evening Ride']
 
@@ -113,6 +115,7 @@ export async function updateStravaActivityDescription(
     filteredDescription = existingDescription
   }
 
+  // 최종 결합 (STRANK 위 + 기존/서드파티 아래)
   const combinedDescription = filteredDescription
     ? `${strankDescription}\n\n${filteredDescription}`
     : strankDescription
