@@ -13,7 +13,7 @@ export default function RankingsPage() {
         <RankingsFilter />
         <div className="rounded-xl bg-white px-4 py-2 shadow-[0px_8px_16px_0px_#00000017]">
           <Link
-            href="https://strank.framer.website/notice/description-error"
+            href="https://strank.framer.website/notice/strank-beta-update3"
             className="flex items-center text-sm text-gray-600"
           >
             디스크립션 오류 해결 방법
