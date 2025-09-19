@@ -16,14 +16,7 @@ export async function generateActivityDescription(
   accessToken: string
 ): Promise<string> {
   try {
-    // 1) 임시 디스크립션 먼저 업데이트
-    await updateStravaActivityDescription(
-      accessToken,
-      activity,
-      "⏳ STRANK 분석 중\n(잠시 후 [EDIT Activity] 버튼을 통해 최신화 해주세요.)"
-    )
-
-    // 2) 스트림 데이터 가져오기
+    // 스트림 데이터 가져오기
     console.log('\n📡 스트림 데이터 가져오는 중...')
     let streamsData = null
 
@@ -46,7 +39,7 @@ export async function generateActivityDescription(
       console.log('⚠️ 스트림 요청 오류', e)
     }
 
-    // 3) GPT로 설명 생성
+    // GPT로 설명 생성
     const description = await generateActivityDescriptionWithGPT(
       {
         date: activity.start_date_local,
@@ -81,9 +74,6 @@ export async function generateActivityDescription(
           }
         : undefined
     )
-
-    // 4) 최종 디스크립션 업데이트
-    await updateStravaActivityDescription(accessToken, activity, description)
 
     return description
   } catch (error) {
@@ -199,7 +189,6 @@ export async function updateStravaActivityDescription(
       throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
     }
 
-    // 기존 설명 유지 여부 체크
     const latestActivity: StravaActivity = await latestActivityResponse.json()
     const existingDescription = latestActivity.description?.trim() || ''
     const defaultPlaceholders = ['Morning Ride', 'Afternoon Ride', 'Evening Ride']
@@ -252,4 +241,4 @@ export async function updateStravaActivityDescription(
     logError('디스크립션 업데이트 중 예외 발생', { error })
     throw error
   }
-}
+     }
