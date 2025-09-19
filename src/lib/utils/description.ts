@@ -166,7 +166,7 @@ function generateAnalysisSection(activity: StravaActivity): string {
 }
 
 /**
- * 🚨 업데이트 함수 (name + description 동시 PUT)
+ * 🚨 업데이트 함수 (상세 로깅 포함)
  */
 export async function updateStravaActivityDescription(
   accessToken: string,
@@ -201,12 +201,8 @@ export async function updateStravaActivityDescription(
       ? `${strankDescription}\n\n${filteredDescription}`
       : strankDescription
 
-    // 이름도 함께 PUT (캐시 무효화 트릭)
-    const updatedName = `${latestActivity.name || 'Afternoon Ride'} ✨`
-
     console.log('📤 최종 업데이트 요청', {
       activityId: stravaActivity.id,
-      name: updatedName,
       preview: combinedDescription.substring(0, 200) + '...',
     })
 
@@ -218,10 +214,7 @@ export async function updateStravaActivityDescription(
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: updatedName,
-          description: combinedDescription,
-        }),
+        body: JSON.stringify({ description: combinedDescription }),
       }
     )
 
