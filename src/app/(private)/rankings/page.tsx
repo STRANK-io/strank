@@ -14,6 +14,8 @@ export default function RankingsPage() {
         <div className="rounded-xl bg-white px-4 py-2 shadow-[0px_8px_16px_0px_#00000017]">
           <Link
             href="https://strank.framer.website/notice/strank-beta-update3"
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center text-sm text-gray-600"
           >
             디스크립션 오류 해결 방법
