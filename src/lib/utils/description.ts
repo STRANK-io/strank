@@ -9,15 +9,18 @@ import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
 /**
  * ✅ Strava 앱과 동일한 방식:
- * moving=true인 순간들의 watts만 단순 평균
+ * moving=true 구간의 watt만 단순 평균
  */
 function calculateAverageWatts(streamsData: any): number | undefined {
   if (!streamsData?.watts?.data || !streamsData?.moving?.data) return undefined
 
   const watts: number[] = streamsData.watts.data
-  const moving: boolean[] = streamsData.moving.data
+  const movingRaw: any[] = streamsData.moving.data
 
-  if (!watts.length || watts.length !== moving.length) return undefined
+  if (!watts.length || watts.length !== movingRaw.length) return undefined
+
+  // 0/1 또는 true/false → boolean 변환
+  const moving: boolean[] = movingRaw.map(v => v === true || v === 1)
 
   const movingWatts = watts.filter((_, i) => moving[i])
   if (movingWatts.length === 0) return undefined
@@ -75,7 +78,7 @@ export async function generateActivityDescription(
         elevation: activity.total_elevation_gain || 0,
         averageSpeed: (activity.average_speed || 0) * 3.6,
         maxSpeed: (activity.max_speed || 0) * 3.6,
-        averageWatts: avgWatts, // ✅ 이제 91W 들어감
+        averageWatts: avgWatts, // ✅ 91W 들어감
         maxWatts: activity.max_watts ?? undefined,
         maxHeartrate: activity.max_heartrate ?? undefined,
         averageCadence: activity.average_cadence ?? undefined,
