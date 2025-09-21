@@ -8,10 +8,10 @@ import { logError } from '@/lib/utils/log'
 import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
 /**
- * ✅ Strava weighted_average_watts와 동일한 방식:
+ * ✅ Strava 앱과 동일한 방식:
  * moving=true인 순간들의 watts만 단순 평균
  */
-function calculateWeightedAverageWatts(streamsData: any): number | undefined {
+function calculateAverageWatts(streamsData: any): number | undefined {
   if (!streamsData?.watts?.data || !streamsData?.moving?.data) return undefined
 
   const watts: number[] = streamsData.watts.data
@@ -61,7 +61,7 @@ export async function generateActivityDescription(
 
     // ✅ 평균 파워: moving 기반 평균 → 없으면 average_watts
     const avgWatts: number | undefined =
-      calculateWeightedAverageWatts(streamsData) ??
+      calculateAverageWatts(streamsData) ??
       (activity.average_watts ?? undefined)
 
     // 계산된 값을 activity에 저장 → generateAnalysisSection에서도 동일 사용
