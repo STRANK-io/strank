@@ -8,48 +8,23 @@ import { logError } from '@/lib/utils/log'
 import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
 /**
- * ✅ Strava 방식 weighted 평균 파워 계산
- * 원리: moving 시간 동안 (watt × 구간 지속시간)의 합 / 전체 moving 시간
+ * ✅ Strava weighted_average_watts와 동일한 방식:
+ * moving=true인 순간들의 watts만 단순 평균
  */
 function calculateWeightedAverageWatts(streamsData: any): number | undefined {
-  if (
-    !streamsData?.watts?.data ||
-    !streamsData?.time?.data ||
-    !streamsData?.moving?.data
-  )
-    return undefined
+  if (!streamsData?.watts?.data || !streamsData?.moving?.data) return undefined
 
   const watts: number[] = streamsData.watts.data
-  const time: number[] = streamsData.time.data
   const moving: boolean[] = streamsData.moving.data
 
-  if (
-    !watts.length ||
-    !time.length ||
-    !moving.length ||
-    watts.length !== time.length ||
-    watts.length !== moving.length
-  ) {
-    return undefined
-  }
+  if (!watts.length || watts.length !== moving.length) return undefined
 
-  // 구간 시간 (초 단위)
-  const dt: number[] = time.map((t, i) =>
-    i === 0 ? 1 : Math.max(1, t - time[i - 1])
+  const movingWatts = watts.filter((_, i) => moving[i])
+  if (movingWatts.length === 0) return undefined
+
+  return Math.round(
+    movingWatts.reduce((a, b) => a + b, 0) / movingWatts.length
   )
-
-  // weighted 합 (moving 상태만)
-  let weightedSum = 0
-  let totalMovingTime = 0
-  for (let i = 0; i < watts.length; i++) {
-    if (moving[i]) {
-      weightedSum += watts[i] * dt[i]
-      totalMovingTime += dt[i]
-    }
-  }
-
-  if (totalMovingTime === 0) return undefined
-  return Math.round(weightedSum / totalMovingTime)
 }
 
 /**
@@ -84,7 +59,7 @@ export async function generateActivityDescription(
       console.log('⚠️ 스트림 요청 오류', e)
     }
 
-    // ✅ 평균 파워: weighted → 없으면 average_watts → 마지막 fallback undefined
+    // ✅ 평균 파워: moving 기반 평균 → 없으면 average_watts
     const avgWatts: number | undefined =
       calculateWeightedAverageWatts(streamsData) ??
       (activity.average_watts ?? undefined)
@@ -183,7 +158,7 @@ function generateAnalysisSection(activity: StravaActivity): string {
     average_cadence = 0,
   } = activity
 
-  // ✅ 디스크립션 출력에서도 weighted 평균 사용
+  // ✅ 디스크립션 출력에서도 moving 기반 평균 사용
   const avgWatts: number | undefined =
     (activity as any).calculated_avg_watts ?? (activity.average_watts ?? undefined)
 
