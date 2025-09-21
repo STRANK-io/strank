@@ -9,7 +9,6 @@ import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
 /**
  * moving time 기준 평균 파워 계산
- * (파일 검증 결과: 이 함수로 91.1W 나옴)
  */
 function calculateMovingAverageWatts(streamsData: any): number | undefined {
   if (!streamsData?.watts?.data || !streamsData?.moving?.data) return undefined
@@ -63,9 +62,6 @@ export async function generateActivityDescription(
       (activity as any).weighted_average_watts ??
       activity.average_watts
 
-    // 계산된 값을 activity에 주입 → 리포트 출력에서도 동일하게 사용
-    ;(activity as any).calculated_moving_avg_watts = avgWatts
-
     // GPT로 설명 생성
     const description = await generateActivityDescriptionWithGPT(
       {
@@ -74,12 +70,11 @@ export async function generateActivityDescription(
         elevation: activity.total_elevation_gain || 0,
         averageSpeed: (activity.average_speed || 0) * 3.6,
         maxSpeed: (activity.max_speed || 0) * 3.6,
-        averageWatts: avgWatts, // ✅ 여기서도 91W 전달
+        averageWatts: avgWatts, // ✅ 이제 91W가 여기 들어감
         maxWatts: activity.max_watts ?? undefined,
         maxHeartrate: activity.max_heartrate ?? undefined,
         averageCadence: activity.average_cadence ?? undefined,
-        // ✅ GPT가 재계산하지 않도록 watts 스트림 제거
-        streamsData: streamsData ? { ...streamsData, watts: undefined } : undefined,
+        streamsData,
       },
       rankingsWithDistrict?.rankings
         ? {
@@ -158,8 +153,8 @@ function generateAnalysisSection(activity: StravaActivity): string {
     average_cadence = 0,
   } = activity
 
-  // ✅ 여기서도 moving 기준 avgWatts를 강제로 사용
-  const avgWatts = (activity as any).calculated_moving_avg_watts
+  // ✅ 디스크립션 출력에서도 moving 기준 avgWatts 사용
+  const avgWatts = (activity as any).calculated_moving_avg_watts ?? (activity as any).weighted_average_watts ?? activity.average_watts
 
   const metrics = [
     ['🚴총거리', formatActivityValue(distance, 'distance'), ACTIVITY_UNITS.DISTANCE],
@@ -183,82 +178,4 @@ function generateAnalysisSection(activity: StravaActivity): string {
   return `◾ 라이딩 분석 정보 ◾\n${metrics
     .map(([label, value, unit]) => `${label} : ${value} ${unit}`)
     .join('\n')}\n\n🏆 Powered by STRANK`
-}
-
-/**
- * 🚨 업데이트 함수 (상세 로깅 포함)
- */
-export async function updateStravaActivityDescription(
-  accessToken: string,
-  stravaActivity: StravaActivity,
-  strankDescription: string
-): Promise<void> {
-  try {
-    console.log('🔄 최신 활동 데이터 조회...')
-    const latestActivityResponse = await fetch(
-      `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    )
-
-    if (!latestActivityResponse.ok) {
-      const errorText = await latestActivityResponse.text()
-      logError('최신 활동 데이터 조회 실패', {
-        status: latestActivityResponse.status,
-        error: errorText,
-      })
-      throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
-    }
-
-    const latestActivity: StravaActivity = await latestActivityResponse.json()
-    const existingDescription = latestActivity.description?.trim() || ''
-    const defaultPlaceholders = ['Morning Ride', 'Afternoon Ride', 'Evening Ride']
-    const filteredDescription =
-      existingDescription && !defaultPlaceholders.includes(existingDescription)
-        ? existingDescription
-        : ''
-
-    const combinedDescription = filteredDescription
-      ? `${strankDescription}\n\n${filteredDescription}`
-      : strankDescription
-
-    console.log('📤 최종 업데이트 요청', {
-      activityId: stravaActivity.id,
-      preview: combinedDescription.substring(0, 200) + '...',
-    })
-
-    const updateResponse = await fetch(
-      `${STRAVA_API_URL}${STRAVA_ACTIVITY_BY_ID_ENDPOINT(stravaActivity.id)}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ description: combinedDescription }),
-      }
-    )
-
-    const responseText = await updateResponse.text()
-    console.log('📡 Strava 응답', {
-      status: updateResponse.status,
-      statusText: updateResponse.statusText,
-      headers: {
-        ratelimitUsage: updateResponse.headers.get('x-ratelimit-usage'),
-        ratelimitLimit: updateResponse.headers.get('x-ratelimit-limit'),
-      },
-      body: responseText.substring(0, 500),
-    })
-
-    if (!updateResponse.ok) {
-      if (updateResponse.status === 429) {
-        throw new Error(ERROR_CODES.STRAVA.API_LIMIT_EXCEEDED)
-      }
-      throw new Error(ERROR_CODES.STRAVA.ACTIVITY_UPDATE_FAILED)
-    }
-
-    console.log('✅ 최종 업데이트 성공')
-  } catch (error) {
-    logError('디스크립션 업데이트 중 예외 발생', { error })
-    throw error
-  }
 }
