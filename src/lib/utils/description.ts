@@ -84,11 +84,12 @@ export async function generateActivityDescription(
       console.log('⚠️ 스트림 요청 오류', e)
     }
 
-    // ✅ 평균 파워: weighted → 없으면 average_watts
-    const avgWatts =
-      calculateWeightedAverageWatts(streamsData) ?? activity.average_watts
+    // ✅ 평균 파워: weighted → 없으면 average_watts → 마지막 fallback undefined
+    const avgWatts: number | undefined =
+      calculateWeightedAverageWatts(streamsData) ??
+      (activity.average_watts ?? undefined)
 
-    // 계산된 값을 activity에 저장 → generateAnalysisSection에서도 사용
+    // 계산된 값을 activity에 저장 → generateAnalysisSection에서도 동일 사용
     ;(activity as any).calculated_avg_watts = avgWatts
 
     // GPT로 설명 생성
@@ -99,7 +100,7 @@ export async function generateActivityDescription(
         elevation: activity.total_elevation_gain || 0,
         averageSpeed: (activity.average_speed || 0) * 3.6,
         maxSpeed: (activity.max_speed || 0) * 3.6,
-        averageWatts: avgWatts, // ✅ 91W 들어감
+        averageWatts: avgWatts, // ✅ 이제 91W 들어감
         maxWatts: activity.max_watts ?? undefined,
         maxHeartrate: activity.max_heartrate ?? undefined,
         averageCadence: activity.average_cadence ?? undefined,
@@ -183,8 +184,8 @@ function generateAnalysisSection(activity: StravaActivity): string {
   } = activity
 
   // ✅ 디스크립션 출력에서도 weighted 평균 사용
-  const avgWatts =
-    (activity as any).calculated_avg_watts ?? activity.average_watts
+  const avgWatts: number | undefined =
+    (activity as any).calculated_avg_watts ?? (activity.average_watts ?? undefined)
 
   const metrics = [
     ['🚴총거리', formatActivityValue(distance, 'distance'), ACTIVITY_UNITS.DISTANCE],
