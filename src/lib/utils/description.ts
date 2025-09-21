@@ -8,28 +8,7 @@ import { logError } from '@/lib/utils/log'
 import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
 /**
- * ✅ Python 검산식 그대로:
- * moving==1인 watt 값만 평균
- */
-function calculateAverageWatts(streamsData: any): number | undefined {
-  if (!streamsData?.watts?.data || !streamsData?.moving?.data) return undefined
-
-  const watts: number[] = streamsData.watts.data
-  const movingRaw: any[] = streamsData.moving.data
-
-  if (!watts.length || watts.length !== movingRaw.length) return undefined
-
-  // np.array(moving_raw) == 1 과 동일
-  const moving: boolean[] = movingRaw.map(v => v === 1)
-
-  const movingWatts = watts.filter((_, i) => moving[i])
-  if (movingWatts.length === 0) return undefined
-
-  return Math.round(movingWatts.reduce((a, b) => a + b, 0) / movingWatts.length)
-}
-
-/**
- * 스트랭크 디스크립션 생성
+ * 스트랭크 디스크립션 포맷에 맞춰 활동 디스크립션을 생성하는 함수
  */
 export async function generateActivityDescription(
   activity: StravaActivity,
@@ -39,10 +18,10 @@ export async function generateActivityDescription(
   try {
     // 스트림 데이터 가져오기
     console.log('\n📡 스트림 데이터 가져오는 중...')
-    let streamsData: any = null
+    let streamsData = null
 
     try {
-      const streamsUrl = `${STRAVA_API_URL}/activities/${activity.id}/streams?keys=time,latlng,distance,altitude,velocity_smooth,heartrate,watts,cadence,grade_smooth,moving&key_by_type=true`
+      const streamsUrl = `${STRAVA_API_URL}/activities/${activity.id}/streams?keys=time,latlng,distance,altitude,velocity_smooth,heartrate,watts,cadence,grade_smooth&key_by_type=true`
       const streamsResponse = await fetch(streamsUrl, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
@@ -50,12 +29,6 @@ export async function generateActivityDescription(
       if (streamsResponse.ok) {
         streamsData = await streamsResponse.json()
         console.log('✅ 스트림 데이터 가져오기 성공')
-
-        // ✅ moving 스트림 상태 로깅
-        if (streamsData?.moving?.data) {
-          console.log('📊 moving 스트림 샘플:', streamsData.moving.data.slice(0, 50))
-          console.log('📊 moving 고유값:', Array.from(new Set(streamsData.moving.data)))
-        }
       } else {
         console.log('⚠️ 스트림 데이터 가져오기 실패', {
           status: streamsResponse.status,
@@ -66,12 +39,6 @@ export async function generateActivityDescription(
       console.log('⚠️ 스트림 요청 오류', e)
     }
 
-    // ✅ 평균 파워: Python 계산식 기반
-    const avgWatts: number | undefined = calculateAverageWatts(streamsData)
-
-    // 확정 값 저장 (다른 함수에서 일관되게 사용)
-    ;(activity as any).calculated_avg_watts = avgWatts
-
     // GPT로 설명 생성
     const description = await generateActivityDescriptionWithGPT(
       {
@@ -80,10 +47,20 @@ export async function generateActivityDescription(
         elevation: activity.total_elevation_gain || 0,
         averageSpeed: (activity.average_speed || 0) * 3.6,
         maxSpeed: (activity.max_speed || 0) * 3.6,
-        averageWatts: avgWatts, // ✅ 91W 들어감
-        maxWatts: activity.max_watts ?? undefined,
-        maxHeartrate: activity.max_heartrate ?? undefined,
-        averageCadence: activity.average_cadence ?? undefined,
+        averageWatts:
+          activity.average_watts && activity.average_watts > 0
+            ? activity.average_watts
+            : undefined,
+        maxWatts:
+          activity.max_watts && activity.max_watts > 0 ? activity.max_watts : undefined,
+        maxHeartrate:
+          activity.max_heartrate && activity.max_heartrate > 0
+            ? activity.max_heartrate
+            : undefined,
+        averageCadence:
+          activity.average_cadence && activity.average_cadence > 0
+            ? activity.average_cadence
+            : undefined,
         streamsData,
       },
       rankingsWithDistrict?.rankings
@@ -106,7 +83,7 @@ export async function generateActivityDescription(
 }
 
 /**
- * GPT 실패 시 기본 디스크립션
+ * 기본 디스크립션 (GPT 실패 시)
  */
 function generateBasicDescription(
   activity: StravaActivity,
@@ -158,21 +135,19 @@ function generateAnalysisSection(activity: StravaActivity): string {
     total_elevation_gain = 0,
     average_speed = 0,
     max_speed = 0,
+    average_watts = 0,
     max_watts = 0,
     max_heartrate = 0,
     average_cadence = 0,
   } = activity
-
-  // ✅ 일관된 avgWatts 사용
-  const avgWatts: number | undefined = (activity as any).calculated_avg_watts
 
   const metrics = [
     ['🚴총거리', formatActivityValue(distance, 'distance'), ACTIVITY_UNITS.DISTANCE],
     ['🚵 총고도', formatActivityValue(total_elevation_gain), ACTIVITY_UNITS.ELEVATION],
     ['🪫평균속도', formatActivityValue(average_speed, 'speed'), ACTIVITY_UNITS.SPEED],
     ['🔋최고속도', formatActivityValue(max_speed, 'speed'), ACTIVITY_UNITS.SPEED],
-    ...(avgWatts && avgWatts >= 1
-      ? [['🦵평균파워', formatActivityValue(avgWatts), ACTIVITY_UNITS.POWER]]
+    ...(average_watts && average_watts >= 1
+      ? [['🦵평균파워', formatActivityValue(average_watts), ACTIVITY_UNITS.POWER]]
       : []),
     ...(max_watts && max_watts >= 1
       ? [['🦿최대파워', formatActivityValue(max_watts), ACTIVITY_UNITS.POWER]]
@@ -191,7 +166,7 @@ function generateAnalysisSection(activity: StravaActivity): string {
 }
 
 /**
- * 🚨 Strava 디스크립션 업데이트
+ * 🚨 업데이트 함수 (상세 로깅 포함)
  */
 export async function updateStravaActivityDescription(
   accessToken: string,
@@ -266,4 +241,4 @@ export async function updateStravaActivityDescription(
     logError('디스크립션 업데이트 중 예외 발생', { error })
     throw error
   }
-}
+     }
