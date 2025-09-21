@@ -49,7 +49,7 @@ export async function generateActivityDescription(
         maxSpeed: (activity.max_speed || 0) * 3.6,
         averageWatts:
           activity.average_watts && activity.average_watts > 0
-            ? activity.average_watts
+            ? activity.average_watts // ✅ Strava 공식 평균파워 사용
             : undefined,
         maxWatts:
           activity.max_watts && activity.max_watts > 0 ? activity.max_watts : undefined,
@@ -135,7 +135,7 @@ function generateAnalysisSection(activity: StravaActivity): string {
     total_elevation_gain = 0,
     average_speed = 0,
     max_speed = 0,
-    average_watts = 0,
+    average_watts = 0,   // ✅ Strava 제공 평균파워 사용
     max_watts = 0,
     max_heartrate = 0,
     average_cadence = 0,
@@ -241,4 +241,4 @@ export async function updateStravaActivityDescription(
     logError('디스크립션 업데이트 중 예외 발생', { error })
     throw error
   }
-     }
+}
