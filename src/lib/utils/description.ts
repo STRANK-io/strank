@@ -9,7 +9,7 @@ import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
 /**
  * ✅ Strava 앱과 동일한 방식:
- * moving=true 구간의 watt만 단순 평균
+ * moving=true 구간의 watts 값만 단순 평균
  */
 function calculateAverageWatts(streamsData: any): number | undefined {
   if (!streamsData?.watts?.data || !streamsData?.moving?.data) return undefined
