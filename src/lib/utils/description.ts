@@ -39,7 +39,7 @@ export async function generateActivityDescription(
       console.log('⚠️ 스트림 요청 오류', e)
     }
 
-    // GPT로 설명 생성 (Strava 평균파워만 사용)
+    // GPT로 설명 생성
     const description = await generateActivityDescriptionWithGPT(
       {
         date: activity.start_date_local,
@@ -47,14 +47,21 @@ export async function generateActivityDescription(
         elevation: activity.total_elevation_gain || 0,
         averageSpeed: (activity.average_speed || 0) * 3.6,
         maxSpeed: (activity.max_speed || 0) * 3.6,
-        averageWatts: activity.average_watts ?? undefined, // ✅ 무조건 Strava average_watts 사용
-        maxWatts: activity.max_watts ?? undefined,
-        maxHeartrate: activity.max_heartrate ?? undefined,
-        averageCadence: activity.average_cadence ?? undefined,
-        // ✅ 파워 스트림은 제거해서 GPT가 재계산 못하게 함
-        streamsData: streamsData
-          ? { ...streamsData, watts: undefined }
-          : undefined,
+        averageWatts:
+          activity.average_watts && activity.average_watts > 0
+            ? activity.average_watts
+            : undefined,
+        maxWatts:
+          activity.max_watts && activity.max_watts > 0 ? activity.max_watts : undefined,
+        maxHeartrate:
+          activity.max_heartrate && activity.max_heartrate > 0
+            ? activity.max_heartrate
+            : undefined,
+        averageCadence:
+          activity.average_cadence && activity.average_cadence > 0
+            ? activity.average_cadence
+            : undefined,
+        streamsData,
       },
       rankingsWithDistrict?.rankings
         ? {
@@ -128,7 +135,7 @@ function generateAnalysisSection(activity: StravaActivity): string {
     total_elevation_gain = 0,
     average_speed = 0,
     max_speed = 0,
-    average_watts = 0,   // ✅ Strava 제공 average_watts 사용
+    average_watts = 0,
     max_watts = 0,
     max_heartrate = 0,
     average_cadence = 0,
@@ -234,4 +241,4 @@ export async function updateStravaActivityDescription(
     logError('디스크립션 업데이트 중 예외 발생', { error })
     throw error
   }
-}
+     }
