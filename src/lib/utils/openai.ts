@@ -35,6 +35,65 @@ const rankingDataSchema = z.object({
   province: z.string(),
 })
 
+/**
+ * 라이딩스타일 판정 로직
+ * streamAnalysis 또는 activityData를 기반으로 라이딩스타일을 결정
+ */
+function determineRiderStyle(data: {
+  distance: number
+  elevation: number
+  averageSpeed: number
+  averageWatts?: number
+  maxWatts?: number
+  averageCadence?: number
+}): { icon: string; name: string; desc: string } {
+  const dist = data.distance
+  const elev = data.elevation
+  const elevPerKm = elev / (dist || 1)
+  const speed = data.averageSpeed
+  const avgW = data.averageWatts || 0
+  const maxW = data.maxWatts || 0
+  const cad = data.averageCadence || 0
+
+  // 🚲 초보형
+  if (dist < 20 || speed < 20) {
+    return { icon: '🚲', name: '초보형 (입문형 라이더)', desc: '짧은 주행과 불안정한 리듬으로 기초 체력 단계' }
+  }
+
+  // 🔥 스프린터
+  if (maxW > 700 && dist < 50) {
+    return { icon: '🔥', name: '스프린터 (단거리가속형)', desc: '순간 폭발력이 뛰어난 스프린트 중심 주행' }
+  }
+
+  // ⛰️ 클라이머
+  if (elevPerKm >= 15 && elev >= 800) {
+    return { icon: '⛰️', name: '클라이머 (산악형)', desc: '오르막 구간에서 낮은 케이던스로 꾸준히 힘을 낸 주행' }
+  }
+
+  // 🚀 펀처
+  if (dist >= 40 && dist <= 80 && maxW > 400 && elevPerKm >= 10) {
+    return { icon: '🚀', name: '펀처 (순간폭발형)', desc: '짧은 언덕과 순간 강도 대응이 돋보이는 주행' }
+  }
+
+  // ⚡ 롤러
+  if (elevPerKm < 10 && dist >= 60 && speed >= 26) {
+    return { icon: '⚡', name: '롤러/도메스틱 (평지장거리형)', desc: '평지 장거리에서 안정적 페이스 유지' }
+  }
+
+  // 🐺 브레이커웨이
+  if (dist >= 100) {
+    return { icon: '🐺', name: '브레이커웨이 스페셜리스트 (장거리형)', desc: '장거리 독주와 꾸준한 페이스 유지' }
+  }
+
+  // 🏋️ TT 스페셜리스트
+  if (dist >= 20 && dist <= 60 && avgW > 0.9 * (maxW || avgW) && cad >= 80) {
+    return { icon: '🏋️', name: 'TT 스페셜리스트 (파워유지형)', desc: '에어로 자세로 일정 파워를 유지한 주행' }
+  }
+
+  // 🦾 올라운더 (기본값)
+  return { icon: '🦾', name: '올라운더 (밸런스형)', desc: '언덕과 평지 모두 균형 잡힌 주행' }
+}
+
 export async function generateActivityDescriptionWithGPT(
   activityData: z.infer<typeof activityDataSchema>,
   rankingData?: z.infer<typeof rankingDataSchema>
@@ -79,6 +138,17 @@ export async function generateActivityDescriptionWithGPT(
       rankingSection,
       time: new Date().toISOString()
     })
+
+    // 라이딩스타일 판정
+    const riderStyle = determineRiderStyle({
+      distance: activityData.distance,
+      elevation: activityData.elevation,
+      averageSpeed: activityData.averageSpeed,
+      averageWatts: activityData.averageWatts,
+      maxWatts: activityData.maxWatts,
+      averageCadence: activityData.averageCadence
+    })
+    console.log('🎯 판정된 라이딩스타일:', riderStyle)
 
     // 템플릿 준비
     console.log('🔍 템플릿 생성 전 스트림 데이터 확인:', {
@@ -224,22 +294,10 @@ FTP 분석:
 
 ※작성가이드
 ■ 간단한분석
-라이딩스타일은 아래 참고내용을 참고해서 표시해줘
-스트림 데이터 분석 결과를 바탕으로 이번 주행의 페이스 조절, 리듬등 관점에서 예시와 같이 요약해줘.
-[참고내용]
-🚲 초보형 (입문형 라이더)
-🔥 스프린터 (단거리가속형)
-⛰️ 클라이머 (산악형)
-🚀 펀처 (순간폭발형)
-⚡ 롤러/도메스틱 (평지장거리형)
-🦾 올라운더 (밸런스형)
-🐺 브레이커웨이 스페셜리스트 (장거리형)
-🏋️ TT 스페셜리스트 (파워유지형)
-예시)
-📝 간단한 분석
-🔥 라이딩스타일 : 스프린터 (단거리가속형)
-📏 123km를 평균속도 26km/h로 소화한, 지속성과 효율 중심의 안정적 주행
-🦵 109W 파워 + 💫 70rpm 케이던스로, 무리 없는 페이스와 순간 강도 대응이 균형
+📝 간단한분석
+${riderStyle.icon} 라이딩스타일 : ${riderStyle.name}
+📏 [총거리]km / 평균속도 [평균속도]km/h, ${riderStyle.desc}
+🦵 [평균파워]W + 💫 [평균케이던스]rpm, 페이스와 리듬 해석 추가
 
 ■ 훈련분석
 스트림 데이터 분석 결과를 기반으로 지속성, 강도 변화, 리듬 측면의 주요 특징을 분석하고, 개선이 필요한 다음 훈련 요소를 예시와 같이 가독성이 높게 이모지도 포함해서 100자 이내로 제안해줘.예시의 폼은 유지해줘.
