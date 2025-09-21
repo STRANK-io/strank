@@ -8,8 +8,8 @@ import { logError } from '@/lib/utils/log'
 import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
 /**
- * ✅ Strava 앱과 동일한 방식:
- * moving=true 구간의 watts 값만 단순 평균
+ * ✅ Python 검산식 그대로:
+ * moving==1인 watt 값만 평균
  */
 function calculateAverageWatts(streamsData: any): number | undefined {
   if (!streamsData?.watts?.data || !streamsData?.moving?.data) return undefined
@@ -19,19 +19,17 @@ function calculateAverageWatts(streamsData: any): number | undefined {
 
   if (!watts.length || watts.length !== movingRaw.length) return undefined
 
-  // 0/1 또는 true/false → boolean 변환
-  const moving: boolean[] = movingRaw.map(v => v === true || v === 1)
+  // np.array(moving_raw) == 1 과 동일
+  const moving: boolean[] = movingRaw.map(v => v === 1)
 
   const movingWatts = watts.filter((_, i) => moving[i])
   if (movingWatts.length === 0) return undefined
 
-  return Math.round(
-    movingWatts.reduce((a, b) => a + b, 0) / movingWatts.length
-  )
+  return Math.round(movingWatts.reduce((a, b) => a + b, 0) / movingWatts.length)
 }
 
 /**
- * 스트랭크 디스크립션 포맷에 맞춰 활동 디스크립션을 생성하는 함수
+ * 스트랭크 디스크립션 생성
  */
 export async function generateActivityDescription(
   activity: StravaActivity,
@@ -62,12 +60,10 @@ export async function generateActivityDescription(
       console.log('⚠️ 스트림 요청 오류', e)
     }
 
-    // ✅ 평균 파워: moving 기반 평균 → 없으면 average_watts
-    const avgWatts: number | undefined =
-      calculateAverageWatts(streamsData) ??
-      (activity.average_watts ?? undefined)
+    // ✅ 평균 파워: Python 계산식 기반
+    const avgWatts: number | undefined = calculateAverageWatts(streamsData)
 
-    // 계산된 값을 activity에 저장 → generateAnalysisSection에서도 동일 사용
+    // 확정 값 저장 (다른 함수에서 일관되게 사용)
     ;(activity as any).calculated_avg_watts = avgWatts
 
     // GPT로 설명 생성
@@ -104,7 +100,7 @@ export async function generateActivityDescription(
 }
 
 /**
- * 기본 디스크립션 (GPT 실패 시)
+ * GPT 실패 시 기본 디스크립션
  */
 function generateBasicDescription(
   activity: StravaActivity,
@@ -161,9 +157,8 @@ function generateAnalysisSection(activity: StravaActivity): string {
     average_cadence = 0,
   } = activity
 
-  // ✅ 디스크립션 출력에서도 moving 기반 평균 사용
-  const avgWatts: number | undefined =
-    (activity as any).calculated_avg_watts ?? (activity.average_watts ?? undefined)
+  // ✅ 일관된 avgWatts 사용
+  const avgWatts: number | undefined = (activity as any).calculated_avg_watts
 
   const metrics = [
     ['🚴총거리', formatActivityValue(distance, 'distance'), ACTIVITY_UNITS.DISTANCE],
@@ -190,7 +185,7 @@ function generateAnalysisSection(activity: StravaActivity): string {
 }
 
 /**
- * 🚨 업데이트 함수 (상세 로깅 포함)
+ * 🚨 Strava 디스크립션 업데이트
  */
 export async function updateStravaActivityDescription(
   accessToken: string,
