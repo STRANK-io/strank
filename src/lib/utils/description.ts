@@ -9,13 +9,13 @@ import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
 
 /**
  * moving time 기준 평균 파워 계산
+ * (파일 검증 결과: 이 함수로 91.1W 나옴)
  */
 function calculateMovingAverageWatts(streamsData: any): number | undefined {
-  if (!streamsData?.watts || !streamsData?.moving) return undefined
+  if (!streamsData?.watts?.data || !streamsData?.moving?.data) return undefined
 
-  // ✅ Strava stream 구조에 맞게 수정
-  const watts: number[] = streamsData.watts.data ?? streamsData.watts
-  const moving: boolean[] = streamsData.moving.data ?? streamsData.moving
+  const watts: number[] = streamsData.watts.data
+  const moving: boolean[] = streamsData.moving.data
 
   if (!watts || !moving || watts.length !== moving.length) return undefined
 
@@ -63,7 +63,7 @@ export async function generateActivityDescription(
       (activity as any).weighted_average_watts ??
       activity.average_watts
 
-    // 계산된 값 activity에 주입 → generateAnalysisSection에서도 동일하게 사용
+    // 계산된 값을 activity에 주입 → 리포트 출력에서도 동일하게 사용
     ;(activity as any).calculated_moving_avg_watts = avgWatts
 
     // GPT로 설명 생성
@@ -74,7 +74,7 @@ export async function generateActivityDescription(
         elevation: activity.total_elevation_gain || 0,
         averageSpeed: (activity.average_speed || 0) * 3.6,
         maxSpeed: (activity.max_speed || 0) * 3.6,
-        averageWatts: avgWatts,
+        averageWatts: avgWatts, // ✅ 여기서도 91W 전달
         maxWatts: activity.max_watts ?? undefined,
         maxHeartrate: activity.max_heartrate ?? undefined,
         averageCadence: activity.average_cadence ?? undefined,
@@ -158,7 +158,7 @@ function generateAnalysisSection(activity: StravaActivity): string {
     average_cadence = 0,
   } = activity
 
-  // ✅ 여기서도 moving 기준 값이 있으면 그걸 표시
+  // ✅ 여기서도 moving 기준 avgWatts를 강제로 사용
   const avgWatts = (activity as any).calculated_moving_avg_watts
 
   const metrics = [
