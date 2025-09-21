@@ -54,7 +54,7 @@ export async function generateActivityDescription(
         // ✅ moving 스트림 상태 로깅
         if (streamsData?.moving?.data) {
           console.log('📊 moving 스트림 샘플:', streamsData.moving.data.slice(0, 50))
-          console.log('📊 moving 고유값:', [...new Set(streamsData.moving.data)])
+          console.log('📊 moving 고유값:', Array.from(new Set(streamsData.moving.data)))
         }
       } else {
         console.log('⚠️ 스트림 데이터 가져오기 실패', {
