@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     // URL 파라미터 파싱
     const { searchParams } = new URL(request.url)
     const activityId = searchParams.get('activityId')
-    const keys = searchParams.get('keys')?.split(',') || ['distance', 'time', 'latlng', 'altitude', 'velocity_smooth', 'heartrate', 'cadence', 'watts', 'grade_smooth']
+    const keys = searchParams.get('keys')?.split(',') || ['distance', 'time', 'latlng', 'altitude', 'velocity_smooth', 'heartrate', 'cadence', 'watts', 'grade_smooth', 'moving']
     
     // 필수 파라미터 검증
     if (!activityId) {
