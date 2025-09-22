@@ -47,7 +47,7 @@ const POWER_ZONES = {
   Z4: [181, 210],
   Z5: [211, 240],
   Z6: [241, 300],
-  Z7: [301, 2000],
+  Z7: [301, 4000],
 }
 
 // FTP 기반 파워 존 정의
@@ -58,7 +58,7 @@ const POWER_ZONES_FTP = {
   Z4: [Math.round(FTP_RESET * 0.91), Math.round(FTP_RESET * 1.05)],
   Z5: [Math.round(FTP_RESET * 1.06), Math.round(FTP_RESET * 1.20)],
   Z6: [Math.round(FTP_RESET * 1.21), Math.round(FTP_RESET * 1.50)],
-  Z7: [Math.round(FTP_RESET * 1.51), 2000],
+  Z7: [Math.round(FTP_RESET * 1.51), 4000],
 }
 
 // 심박 존 정의
