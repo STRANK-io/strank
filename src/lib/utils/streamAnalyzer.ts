@@ -19,6 +19,7 @@ interface StreamData {
   watts?: number[]
   heartrate?: number[]
   cadence?: number[]
+  moving?: (number | boolean)[]
 }
 
 interface AnalysisResult {
@@ -60,7 +61,7 @@ const POWER_ZONES_FTP = {
   Z7: [Math.round(FTP_RESET * 1.51), 2000],
 }
 
-// 심박 존 정의 (Python 스크립트와 동일)
+// 심박 존 정의
 const HR_ZONES = {
   Z1: [0, 114],
   Z2: [115, 133],
@@ -70,7 +71,39 @@ const HR_ZONES = {
 }
 
 /**
- * FTP 계산 함수 (Python 스크립트와 동일)
+ * Strava 평균파워 방식 구현
+ */
+function computeAvgPowerMovingIncludingZeros(
+  watts: number[],
+  moving?: (number | boolean)[],
+  velocity?: number[]
+): number {
+  if (!watts || watts.length === 0) return 0
+  const N = watts.length
+
+  let movingMask: boolean[]
+  if (moving && moving.length === N) {
+    movingMask = moving.map(v => Boolean(v))
+  } else if (velocity && velocity.length === N) {
+    movingMask = velocity.map(v => (v || 0) > 0.5)
+  } else {
+    movingMask = Array(N).fill(true)
+  }
+
+  let sum = 0
+  let cnt = 0
+  for (let i = 0; i < N; i++) {
+    if (movingMask[i]) {
+      const w = typeof watts[i] === 'number' && isFinite(watts[i]) ? watts[i] : 0
+      sum += w
+      cnt++
+    }
+  }
+  return cnt > 0 ? Math.round(sum / cnt) : 0
+}
+
+/**
+ * FTP 계산 함수
  */
 function computeFtpFromPower(
   watts: number[], 
@@ -80,26 +113,22 @@ function computeFtpFromPower(
   factor = 0.95
 ): number | null {
   if (watts.length === 0) return null
-  if (totalTime < windowSec) return null   // 전체 주행시간이 윈도우보다 짧으면 계산 불가
+  if (totalTime < windowSec) return null
   
-  const arr = watts
   const arrDt = dt
   const medianDt = arrDt.slice().sort((a, b) => a - b)[Math.floor(arrDt.length / 2)]
-  
-  const n = Math.max(1, Math.min(Math.round(windowSec / medianDt), arr.length))
-  if (n <= 1 || n > arr.length) return null
-  
+  const n = Math.max(1, Math.min(Math.round(windowSec / medianDt), watts.length))
+  if (n <= 1 || n > watts.length) return null
+
   let maxAvg = 0
-  for (let i = 0; i <= arr.length - n; i++) {
-    const window = arr.slice(i, i + n)
+  for (let i = 0; i <= watts.length - n; i++) {
+    const window = watts.slice(i, i + n)
     const avg = window.reduce((sum, w) => sum + (w || 0), 0) / n
-    if (avg > maxAvg) {
-      maxAvg = avg
-    }
+    if (avg > maxAvg) maxAvg = avg
   }
-  
   return Math.round(maxAvg * factor * 10) / 10
 }
+
 
 /**
  * 파워 데이터가 없을 때 GPS/고도/속도로 추정 FTP
@@ -568,59 +597,48 @@ function peakPower(watts: number[], windowSec: number, dt: number[], totalTime: 
   return Math.round(maxAvg)
 }
 
+
 /**
  * 메인 분석 함수
  */
 export function analyzeStreamData(streamsData: any): AnalysisResult {
   console.log('🔍 스트림 데이터 분석 시작...')
   
-  // 스트림 데이터 추출
   const streams: StreamData = {}
-  const streamKeys = ['time', 'distance', 'altitude', 'velocity_smooth', 'watts', 'heartrate', 'cadence']
-  
+  const streamKeys = ['time', 'distance', 'altitude', 'velocity_smooth', 'watts', 'heartrate', 'cadence', 'moving']
   for (const key of streamKeys) {
     if (streamsData[key]) {
       streams[key as keyof StreamData] = streamsData[key].data || []
     }
   }
-  
-  // 데이터 길이 확인 및 정규화
+
   const maxLength = Math.max(...Object.values(streams).map(arr => arr?.length || 0))
-  if (maxLength === 0) {
-    throw new Error('스트림 데이터가 없습니다')
-  }
-  
-  // 모든 배열을 같은 길이로 맞춤
+  if (maxLength === 0) throw new Error('스트림 데이터가 없습니다')
+
   for (const key of streamKeys) {
     if (streams[key as keyof StreamData]) {
       const arr = streams[key as keyof StreamData] as number[]
-      while (arr.length < maxLength) {
-        arr.push(arr[arr.length - 1] || 0)
-      }
+      while (arr.length < maxLength) arr.push(arr[arr.length - 1] || 0)
     } else {
       streams[key as keyof StreamData] = new Array(maxLength).fill(0)
     }
   }
-  
-  // 시간 차이 계산
+
   const dt: number[] = []
   for (let i = 0; i < maxLength; i++) {
-    if (i === 0) {
-      dt.push(1)
-    } else {
+    if (i === 0) dt.push(1)
+    else {
       const timeDiff = (streams.time![i] - streams.time![i - 1]) || 1
       dt.push(Math.max(1, timeDiff))
     }
   }
-  
-  // 총 시간 계산
+
   const totalTime = streams.time![streams.time!.length - 1] || 0
-  
-  // 누락된 데이터 추정 및 FTP 계산 (Python 스크립트와 동일)
+
   let powerZoneRatios: Record<string, number>
   let ftp20: number | null = null
   let ftp60: number | null = null
-  
+
   if (!streams.watts || streams.watts.every(w => !w)) {
     console.log('⚡ 파워: 추정값으로 대체')
     streams.watts = estimatePower(streams.distance!, streams.altitude!, dt, streams.velocity_smooth)
@@ -637,11 +655,10 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
     ftp20 = ftpResult.ftp20
     ftp60 = ftpResult.ftp60
   } else {
-    // 기존 파워 데이터에서 FTP 계산
     ftp20 = computeFtpFromPower(streams.watts, dt, totalTime, 20 * 60, 0.95)
     ftp60 = computeFtpFromPower(streams.watts, dt, totalTime, 60 * 60, 1.0)
   }
-  
+
   // 스무딩 옵션 적용
   if (SMOOTH_POWER && streams.watts) {
     console.log('⚡ 파워: 스무딩 적용')
@@ -683,7 +700,11 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
     총고도: computeTotalElevationGain(streams.altitude!),
     평균속도: computeSpeedStats(streams.velocity_smooth!).avg,
     최고속도: computeSpeedStats(streams.velocity_smooth!).max,
-    평균파워: computePowerStats(streams.watts!).avg,
+    평균파워: computeAvgPowerMovingIncludingZeros(
+      streams.watts!,
+      streamsData.moving?.data,
+      streams.velocity_smooth
+    ),
     최대파워: computePowerStats(streams.watts!).max,
     최고심박수: computeHrMax(streams.heartrate!),
     평균케이던스: computeCadenceAvg(streams.cadence!),
