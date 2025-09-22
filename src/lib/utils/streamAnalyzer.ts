@@ -1,10 +1,10 @@
 /**
  * Strava 스트림 데이터 분석 유틸리티
- * Python 스크립트를 TypeScript로 포팅
+ * Python 스크립트를 TypeScript로 포팅 + RiderStyle 판정 통합
  */
 
 // =========================================
-// 설정 (원하는 방식으로 변경 가능)
+// 설정
 // =========================================
 const USE_ABSOLUTE_ZONES = true   // 파워존 기준: 절대 존(true) / FTP 비율(false)
 const ZONE_METHOD = 'count'       // 존 비율 산출 방식: 'count' / 'time'
@@ -22,6 +22,12 @@ interface StreamData {
   moving?: (number | boolean)[]
 }
 
+interface RiderStyle {
+  icon: string
+  name: string
+  desc: string
+}
+
 interface AnalysisResult {
   총거리: number
   총고도: number
@@ -37,9 +43,12 @@ interface AnalysisResult {
   hrZoneAverages: Record<string, number | null>
   ftp20: number | null
   ftp60: number | null
+  riderStyle: RiderStyle
 }
 
-// 파워 존 정의 (Python 스크립트와 동일)
+// =========================================
+// 존 정의
+// =========================================
 const POWER_ZONES = {
   Z1: [0, 110],
   Z2: [111, 150],
@@ -50,7 +59,6 @@ const POWER_ZONES = {
   Z7: [301, 2500],
 }
 
-// FTP 기반 파워 존 정의
 const POWER_ZONES_FTP = {
   Z1: [0, Math.round(FTP_RESET * 0.55)],
   Z2: [Math.round(FTP_RESET * 0.56), Math.round(FTP_RESET * 0.75)],
@@ -61,7 +69,6 @@ const POWER_ZONES_FTP = {
   Z7: [Math.round(FTP_RESET * 1.51), 2500],
 }
 
-// 심박 존 정의
 const HR_ZONES = {
   Z1: [0, 114],
   Z2: [115, 133],
@@ -70,9 +77,9 @@ const HR_ZONES = {
   Z5: [172, 225],
 }
 
-/**
- * Strava 평균파워 방식 구현
- */
+// =========================================
+// 유틸 함수
+// =========================================
 function computeAvgPowerMovingIncludingZeros(
   watts: number[],
   moving?: (number | boolean)[],
@@ -102,19 +109,16 @@ function computeAvgPowerMovingIncludingZeros(
   return cnt > 0 ? Math.round(sum / cnt) : 0
 }
 
-/**
- * FTP 계산 함수
- */
 function computeFtpFromPower(
-  watts: number[], 
-  dt: number[], 
-  totalTime: number, 
-  windowSec = 1200, 
+  watts: number[],
+  dt: number[],
+  totalTime: number,
+  windowSec = 1200,
   factor = 0.95
 ): number | null {
   if (watts.length === 0) return null
   if (totalTime < windowSec) return null
-  
+
   const arrDt = dt
   const medianDt = arrDt.slice().sort((a, b) => a - b)[Math.floor(arrDt.length / 2)]
   const n = Math.max(1, Math.min(Math.round(windowSec / medianDt), watts.length))
@@ -128,7 +132,6 @@ function computeFtpFromPower(
   }
   return Math.round(maxAvg * factor * 10) / 10
 }
-
 
 /**
  * 파워 데이터가 없을 때 GPS/고도/속도로 추정 FTP
@@ -156,10 +159,9 @@ function estimateFtpWithoutPower(
 function rollingMean(data: number[], window: number, center = true, minPeriods = 1): number[] {
   const result: number[] = []
   const halfWindow = Math.floor(window / 2)
-  
+
   for (let i = 0; i < data.length; i++) {
     let start: number, end: number
-    
     if (center) {
       start = Math.max(0, i - halfWindow)
       end = Math.min(data.length, i + halfWindow + 1)
@@ -167,9 +169,7 @@ function rollingMean(data: number[], window: number, center = true, minPeriods =
       start = Math.max(0, i - window + 1)
       end = i + 1
     }
-    
     const windowData = data.slice(start, end).filter(d => d != null && !isNaN(d))
-    
     if (windowData.length >= minPeriods) {
       const sum = windowData.reduce((s, d) => s + d, 0)
       result.push(sum / windowData.length)
@@ -177,9 +177,9 @@ function rollingMean(data: number[], window: number, center = true, minPeriods =
       result.push(data[i] || 0)
     }
   }
-  
   return result
 }
+
 
 /**
  * 중앙값 필터 함수
@@ -597,12 +597,56 @@ function peakPower(watts: number[], windowSec: number, dt: number[], totalTime: 
   return Math.round(maxAvg)
 }
 
+// =========================================
+// RiderStyle 판정 로직
+// =========================================
+function determineRiderStyle(data: {
+  distance: number
+  elevation: number
+  averageSpeed: number
+  averageWatts?: number
+  maxWatts?: number
+  averageCadence?: number
+}): RiderStyle {
+  const dist = data.distance
+  const elev = data.elevation
+  const elevPerKm = elev / (dist || 1)
+  const speed = data.averageSpeed
+  const avgW = data.averageWatts || 0
+  const maxW = data.maxWatts || 0
+  const cad = data.averageCadence || 0
 
-/**
- * 메인 분석 함수
- */
+  if (dist < 20 || speed < 20) {
+    return { icon: '🚲', name: '초보형 (입문형 라이더)', desc: '짧은 주행과 불안정한 리듬으로 기초 체력 단계' }
+  }
+  if (maxW > 700 && dist < 50) {
+    return { icon: '🔥', name: '스프린터 (단거리가속형)', desc: '순간 폭발력이 뛰어난 스프린트 중심 주행' }
+  }
+  if (elevPerKm >= 15 && elev >= 800) {
+    return { icon: '⛰️', name: '클라이머 (산악형)', desc: '오르막 구간에서 낮은 케이던스로 꾸준히 힘을 낸 주행' }
+  }
+  if (dist >= 40 && dist <= 80 && maxW > 400 && elevPerKm >= 10) {
+    return { icon: '🚀', name: '펀처 (순간폭발형)', desc: '짧은 언덕과 순간 강도 대응이 돋보이는 주행' }
+  }
+  if (elevPerKm < 10 && dist >= 60 && speed >= 26) {
+    return { icon: '⚡', name: '롤러/도메스틱 (평지장거리형)', desc: '평지 장거리에서 안정적 페이스 유지' }
+  }
+  if (dist >= 100) {
+    return { icon: '🐺', name: '브레이커웨이 스페셜리스트 (장거리형)', desc: '장거리 독주와 꾸준한 페이스 유지' }
+  }
+  if (dist >= 20 && dist <= 60 && avgW > 0.9 * (maxW || avgW) && cad >= 80) {
+    return { icon: '🏋️', name: 'TT 스페셜리스트 (파워유지형)', desc: '에어로 자세로 일정 파워를 유지한 주행' }
+  }
+  return { icon: '🦾', name: '올라운더 (밸런스형)', desc: '언덕과 평지 모두 균형 잡힌 주행' }
+}
+
+
+// =========================================
+// 메인 분석 함수
+// =========================================
 export function analyzeStreamData(streamsData: any): AnalysisResult {
   console.log('🔍 스트림 데이터 분석 시작...')
+
   
   const streams: StreamData = {}
   const streamKeys = ['time', 'distance', 'altitude', 'velocity_smooth', 'watts', 'heartrate', 'cadence', 'moving']
@@ -695,6 +739,7 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
   }
   
   // 분석 실행
+
   const results: AnalysisResult = {
     총거리: computeTotalDistanceKm(streams.distance!),
     총고도: computeTotalElevationGain(streams.altitude!),
@@ -713,9 +758,21 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
     peakPowers: {},
     hrZoneAverages: {},
     ftp20: ftp20,
-    ftp60: ftp60
+    ftp60: ftp60,
+    riderStyle: determineRiderStyle({
+      distance: computeTotalDistanceKm(streams.distance!),
+      elevation: computeTotalElevationGain(streams.altitude!),
+      averageSpeed: computeSpeedStats(streams.velocity_smooth!).avg,
+      averageWatts: computeAvgPowerMovingIncludingZeros(
+        streams.watts!,
+        streamsData.moving?.data,
+        streams.velocity_smooth
+      ),
+      maxWatts: computePowerStats(streams.watts!).max,
+      averageCadence: computeCadenceAvg(streams.cadence!)
+    })
   }
-  
+
   // 피크 파워 계산
   const peakWindows = [
     { sec: 5, label: '5s' },
