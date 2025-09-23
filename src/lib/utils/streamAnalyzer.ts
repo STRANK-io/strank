@@ -1,8 +1,3 @@
-/**
- * Strava 스트림 데이터 분석 유틸리티
- * Python 스크립트를 TypeScript로 포팅 + RiderStyle 판정 통합
- */
-
 // =========================================
 // 설정
 // =========================================
@@ -208,7 +203,7 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 }
 
 /**
- * 파워 추정 함수 (Python 스크립트와 동일)
+ * 파워 추정 함수
  */
 function estimatePower(
   distanceM: number[],
@@ -221,43 +216,48 @@ function estimatePower(
   rho = 1.226,
   g = 9.81
 ): number[] {
-  // 거리 기반 속도 계산 (5점 이동평균)
   const distSmooth = rollingMean(distanceM, 5, true, 1)
   const dDist: number[] = []
   for (let i = 0; i < distSmooth.length; i++) {
-    if (i === 0) {
-      dDist.push(0)
-    } else {
-      dDist.push(distSmooth[i] - distSmooth[i - 1])
-    }
+    dDist.push(i === 0 ? 0 : distSmooth[i] - distSmooth[i - 1])
   }
-  
   const speedFromDist = dDist.map((dd, i) => dd / (dt[i] || 1))
-  
-  // 속도 결정 (velocity_smooth와 거리 기반 속도의 평균)
-  let speed: number[]
-  if (velocitySmooth && velocitySmooth.some(v => v != null && !isNaN(v) && v > 0)) {
+
+  // 속도 (m/s), 이상치 제거 (0 ~ 15m/s)
+  let speed: number[] = []
+  if (velocitySmooth && velocitySmooth.some(v => v > 0)) {
     speed = velocitySmooth.map((vs, i) => {
-      const vsVal = vs || 0
       const sdVal = speedFromDist[i] || 0
-      return (vsVal + sdVal) / 2.0
+      const s = (vs || 0 + sdVal) / 2
+      return Math.min(Math.max(s, 0), 15)
     })
   } else {
-    speed = speedFromDist
+    speed = speedFromDist.map(s => Math.min(Math.max(s, 0), 15))
   }
-  
-  // 고도 스무딩 (8점 이동평균)
+
+  // 고도 스무딩
   const altSmooth = rollingMean(altitudeM, 8, true, 1)
   const dAlt: number[] = []
   for (let i = 0; i < altSmooth.length; i++) {
-    if (i === 0) {
-      dAlt.push(0)
-    } else {
-      const diff = altSmooth[i] - altSmooth[i - 1]
-      dAlt.push(Math.abs(diff) > 0.3 ? diff : 0)
-    }
+    const diff = i === 0 ? 0 : altSmooth[i] - altSmooth[i - 1]
+    dAlt.push(Math.abs(diff) > 1.0 ? 0 : diff) // ±1m 이상 튀는 값 무시
   }
-  
+
+  const power: number[] = []
+  for (let i = 0; i < speed.length; i++) {
+    const s = speed[i]
+    const deltaTime = dt[i] || 1
+    const gradPower = mass * g * dAlt[i] / deltaTime
+    const rollPower = mass * g * cr * s
+    const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
+
+    let totalPower = gradPower + rollPower + aeroPower
+    totalPower = Math.max(0, Math.min(1500, totalPower)) // 상한 제한
+    power.push(totalPower)
+  }
+  return rollingMean(power, 5, true, 1) // 추가 스무딩
+}
+
   // 파워 계산
   const power: number[] = []
   for (let i = 0; i < speed.length; i++) {
