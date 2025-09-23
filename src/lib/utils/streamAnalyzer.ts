@@ -240,9 +240,10 @@ function estimatePower(
   const dAlt: number[] = []
   for (let i = 0; i < altSmooth.length; i++) {
     const diff = i === 0 ? 0 : altSmooth[i] - altSmooth[i - 1]
-    dAlt.push(Math.abs(diff) > 1.0 ? 0 : diff) // ±1m 이상 튀는 값 무시
+    dAlt.push(Math.abs(diff) > 1.0 ? 0 : diff)
   }
 
+  // 파워 계산
   const power: number[] = []
   for (let i = 0; i < speed.length; i++) {
     const s = speed[i]
@@ -255,25 +256,8 @@ function estimatePower(
     totalPower = Math.max(0, Math.min(1500, totalPower)) // 상한 제한
     power.push(totalPower)
   }
-  return rollingMean(power, 5, true, 1) // 추가 스무딩
-}
 
-  // 파워 계산
-  const power: number[] = []
-  for (let i = 0; i < speed.length; i++) {
-    const s = speed[i] || 0
-    const deltaTime = dt[i] || 1
-    const deltaAlt = dAlt[i] || 0
-    
-    const gradPower = mass * g * deltaAlt / deltaTime
-    const rollPower = mass * g * cr * s
-    const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
-    
-    const totalPower = gradPower + rollPower + aeroPower
-    power.push(Math.max(0, totalPower))
-  }
-  
-  return power
+  return rollingMean(power, 5, true, 1) // 최종 반환
 }
 
 /**
