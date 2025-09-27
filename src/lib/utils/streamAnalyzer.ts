@@ -74,51 +74,38 @@ const HR_ZONES = {
 }
 
 // =========================================
-// 코스명 유틸 함수
+// POI 탐색 (반경 300m)
 // =========================================
-async function reverseGeocode(point: { lat: number; lon: number }): Promise<string> {
-  const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=14&addressdetails=1&extratags=1`
+async function findNearbyPOI(lat: number, lon: number): Promise<string | null> {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&extratags=1&addressdetails=1&radius=300&lat=${lat}&lon=${lon}`
   const res = await fetch(url, {
     headers: { "User-Agent": "STRANK/1.0 (support@strank.io)" },
   })
   const data = await res.json()
 
-  // 1️⃣ POI (extratags + name)
-  let feature =
-    data.name ||
-    data.extratags?.temple ||
-    data.extratags?.historic ||
-    data.extratags?.tourism ||
-    data.extratags?.peak ||
-    data.extratags?.park ||
-    data.extratags?.river ||
-    data.extratags?.water ||
-    data.extratags?.bridge ||
-    data.extratags?.cycleway ||
-    null
+  if (!Array.isArray(data) || data.length === 0) return null
 
-  if (feature && feature !== "yes") return feature
+  // POI 중요도 점수 계산
+  const scored = data.map((d: any) => {
+    const name = d.display_name || ""
+    let weight = 0
+    if (name.includes("산")) weight = 5
+    else if (name.includes("강")) weight = 4
+    else if (name.includes("호수") || name.includes("저수지")) weight = 4
+    else if (name.includes("공원")) weight = 3
+    else if (name.includes("사찰") || name.includes("사")) weight = 3
+    else if (name.includes("역")) weight = 2
+    else weight = 1
+    return { name, weight }
+  })
 
-  // 2️⃣ address에서 산/강/공원 같은 키워드 추출
-  if (data.address) {
-    const addrStr = Object.values(data.address).join(" ")
-    const match = addrStr.match(/[^ ]*(산|강|호수|저수지|공원)/)
-    if (match) return match[0]
-  }
-
-  // 3️⃣ fallback: 작은 행정구역
-  return (
-    data.address?.neighbourhood ||
-    data.address?.suburb ||
-    data.address?.borough ||
-    data.address?.town ||
-    data.address?.village ||
-    "알 수 없음"
-  )
+  // 가장 높은 weight의 POI 선택
+  scored.sort((a, b) => b.weight - a.weight)
+  return scored[0]?.name || null
 }
 
 /**
- * 100m 간격 샘플링
+ * 100m 간격으로 좌표 샘플링
  */
 function sampleLatLngByDistance(
   latlngs: { lat: number; lon: number }[],
@@ -143,7 +130,7 @@ function sampleLatLngByDistance(
 }
 
 /**
- * 최적화된 코스명 생성 (100m 후보 → 주요 5개)
+ * 최적화된 코스명 생성 (100m 후보 → 반경 300m POI → 주요 5개)
  */
 export async function generateCourseNameOptimized(
   latlngs: { lat: number; lon: number }[],
@@ -151,16 +138,15 @@ export async function generateCourseNameOptimized(
   maxPOI = 5
 ): Promise<string> {
   const candidates = sampleLatLngByDistance(latlngs, distanceM, 100)
-
   if (candidates.length === 0) return "코스명 없음"
 
-  // 비율 기반으로 주요 지점 선택 (0%, 25%, 50%, 75%, 100%)
+  // 비율 기반 주요 지점 선택 (0%, 25%, 50%, 75%, 100%)
   const total = candidates.length
   const step = Math.floor(total / (maxPOI - 1))
   const picked = Array.from({ length: maxPOI }, (_, i) => candidates[Math.min(i * step, total - 1)])
 
-  // POI 이름 가져오기
-  const names = await Promise.all(picked.map(reverseGeocode))
+  // 각 지점에서 반경 300m 내 POI 찾기
+  const names = await Promise.all(picked.map(p => findNearbyPOI(p.lat, p.lon)))
 
   // 연속 중복 제거
   const cleaned: string[] = []
@@ -912,7 +898,7 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
     console.log(`${z}: ${val === null ? 'N/A' : val + ' bpm'}`)
   }
   
-  // ✅ 코스명 생성 (100m 간격 → 주요 5개)
+  // ✅ 코스명 생성 (100m 간격 샘플링 → 반경 300m POI 기반)
   if (streamsData.latlng?.data) {
     const latlngs = streamsData.latlng.data.map((d: number[]) => ({
       lat: d[0],
