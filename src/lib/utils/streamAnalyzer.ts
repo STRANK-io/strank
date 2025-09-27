@@ -76,6 +76,32 @@ const HR_ZONES = {
 // =========================================
 // 코스명 유틸 함수
 // =========================================
+async function reverseGeocode(point: { lat: number; lon: number }): Promise<string> {
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=15&addressdetails=1&extratags=1`
+  const res = await fetch(url, {
+    headers: { "User-Agent": "STRANK/1.0 (support@strank.io)" },
+  })
+  const data = await res.json()
+
+  const feature =
+    data.extratags?.river ||
+    data.extratags?.park ||
+    data.extratags?.cycleway ||
+    data.extratags?.footway ||
+    data.extratags?.greenfield
+
+  const admin =
+    data.address?.neighbourhood ||
+    data.address?.suburb ||
+    data.address?.village ||
+    data.address?.town ||
+    data.address?.city
+
+  if (feature && admin) return `${feature}(${admin})`
+  if (feature) return feature
+  if (admin) return admin
+  return "알 수 없음"
+}
 function getSegmentCount(distanceKm: number): number {
  if (distanceKm <= 5) return 2
  if (distanceKm <= 30) return 4
