@@ -77,7 +77,7 @@ const HR_ZONES = {
 // 코스명 유틸 함수
 // =========================================
 async function reverseGeocode(point: { lat: number; lon: number }): Promise<string> {
-  const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=15&addressdetails=1&extratags=1`
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=14&addressdetails=1&extratags=1`
   const res = await fetch(url, {
     headers: { "User-Agent": "STRANK/1.0 (support@strank.io)" },
   })
@@ -90,12 +90,23 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
     data.extratags?.footway ||
     data.extratags?.greenfield
 
+  // 행정명 우선순위 (작은 단위 → 큰 단위)
   const admin =
-    data.address?.neighbourhood ||
-    data.address?.suburb ||
-    data.address?.village ||
-    data.address?.town ||
-    data.address?.city
+    data.address?.neighbourhood ||   // 동/리/근린
+    data.address?.suburb ||          // 구/동(도시 하위)
+    data.address?.city_district ||   // 자치구
+    data.address?.borough ||         // borough
+    data.address?.town ||            // 읍/면/소도시
+    data.address?.village ||         // 마을
+    data.address?.county ||          // 군
+    data.address?.state_district ||  // 도 하위 행정구
+    null
+
+  // 광역 단위는 fallback
+  const fallback =
+    data.address?.city ||
+    data.address?.state ||
+    data.address?.region
 
   if (feature && admin) return `${feature}(${admin})`
   if (feature) return feature
