@@ -959,14 +959,19 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
     console.log(`${z}: ${val === null ? 'N/A' : val + ' bpm'}`)
   }
   
-   // 코스명 생성
-  if (streamsData.latlng?.data) {
-    const latlngs = streamsData.latlng.data.map((d: number[]) => ({
-      lat: d[0],
-      lon: d[1]
-    }))
-    results.courseName = await generateCourseName(latlngs, results.총거리)
-  }
+// 코스명 생성
+if (streamsData.latlng?.data) {
+  const latlngs = streamsData.latlng.data.map((d: number[]) => ({
+    lat: d[0],
+    lon: d[1]
+  }))
+  results.courseName = await generateCourseName(
+    latlngs,
+    streamsData.distance?.data || [],   // distanceM
+    streamsData.altitude?.data || [],   // altitudeM
+    results.총거리                      // distanceKm
+  )
+}
 
   console.log('✅ 스트림 데이터 분석 완료')
   return results
