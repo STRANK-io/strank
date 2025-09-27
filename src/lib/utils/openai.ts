@@ -234,7 +234,6 @@ ${streamAnalysis.riderStyle.icon} ${streamAnalysis.riderStyle.name} - ${streamAn
 
 ※작성가이드
 ■ 간단한분석
-📝 간단한분석
 ${streamAnalysis ? `${streamAnalysis.riderStyle.icon} 라이딩스타일 : ${streamAnalysis.riderStyle.name}
 📏 [총거리]km / 평균속도 [평균속도]km/h, ${streamAnalysis.riderStyle.desc}` : ''}
 🦵 [평균파워]W + 💫 [평균케이던스]rpm, 페이스와 리듬 해석 추가
