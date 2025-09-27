@@ -48,7 +48,7 @@ export async function generateActivityDescriptionWithGPT(
   if (activityData.streamsData) {
     try {
       console.log('\n📊 스트림 데이터 분석 시작...')
-      streamAnalysis = analyzeStreamData(activityData.streamsData)
+      streamAnalysis = await analyzeStreamData(activityData.streamsData)
       console.log('✅ 스트림 데이터 분석 완료\n')
     } catch (error) {
       console.log('❌ 스트림 데이터 분석 실패:', error)
@@ -110,6 +110,9 @@ ${rankingSection}
 ❤️최고심박수: [최고심박수] bpm
 💫평균케이던스: [평균케이던스] rpm
 
+📍코스명
+👉: [courseName]
+
 📝 간단한분석
 [작성가이드에 맞춰 작성]
 
@@ -145,9 +148,6 @@ Z1: [H_Z1]bpm / Z2: [H_Z2]bpm / Z3: [H_Z3]bpm
 Z4: [H_Z4]bpm / Z5: [H_Z5]bpm
 
 🧘‍♂️ 회복 스트레칭
-[작성가이드에 맞춰 작성]
-
-🥗 회복 식단
 [작성가이드에 맞춰 작성]
 
 🧩 오늘의 훈련 요약
@@ -202,6 +202,7 @@ ${streamAnalysis ? `
 - 최대파워: ${streamAnalysis.최대파워}W
 - 최고심박수: ${streamAnalysis.최고심박수}bpm
 - 평균케이던스: ${streamAnalysis.평균케이던스}rpm
+- courseName: ${streamAnalysis?.courseName || 'N/A'}
 
 FTP 분석:
 - 20분 FTP: ${streamAnalysis.ftp20 || 'N/A'}W
@@ -302,26 +303,6 @@ Z4: [H_Z4]bpm / Z5: [H_Z5]bpm
 예시)
 🦵 대퇴사두, 햄스트링, 종아리, 둔근
 ⏱️ ??분간 / ??초씩 마사지, 깊은 호흡으로 이완
-
-■ 회복 식단
-스트림 데이터 분석 결과를 기반으로,
-자전거 라이더의 회복을 위해 탄수화물·단백질·수분이 균형 잡힌 식단을 제안해줘.
-
-조건:
-1. 식단은 매번 다르게 구성하고, 같은 재료가 반복되지 않도록 한다. 
-2. 탄수화물, 단백질, 수분 각각 최소 2가지 이상의 다양한 후보군을 고려한다.
-   - 탄수화물 예시: 고구마, 감자, 옥수수, 현미밥, 파스타, 퀴노아, 귀리, 보리빵, 국수, 호밀빵, 옥수수빵, 잡곡밥 등
-   - 단백질 예시: 닭가슴살, 연어, 참치, 두부, 병아리콩, 렌틸콩, 달걀, 코티지 치즈, 그릭 요거트, 소고기, 오리훈제, 돼지고기 안심 등
-   - 수분/보조 예시: 전해질 음료, 코코넛 워터, 수박, 오렌지 주스, 아몬드 우유, 우유, 케일 스무디, 과일주스, 물 등
-3. 칼로리는 대략 합산하여 kcal 단위로 제시한다.
-4. 출력은 아래 형식을 따른다.
-
-출력 형식:
-🚴 [짧은 제목: 식단 성격 표현]
-🍞 탄수화물: ???(???g) + ???(???g)
-🍳 단백질: ???(???g) + ???(???g)
-🥤 수분/보조: ???(???ml) + ???(???ml)
-🔥 취득칼로리 : ?,???kcal
 
 ■ 오늘의 훈련 요약
 이번 라이딩의 핵심 특징을 한 문장으로 요약하고, 사용자의 동기를 높일 수 있는 격려 문구를 함께 작성해줘. STRANK가 반드시 들어가고 함께 했다는 의미로 작성해줘.
