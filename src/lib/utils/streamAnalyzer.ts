@@ -83,56 +83,66 @@ function getSegmentCount(distanceKm: number): number {
   return 6
 }
 
-function splitCourse(latlngs: { lat: number; lon: number }[], distanceKm: number) {
-  const segmentCount = getSegmentCount(distanceKm)
-  const step = Math.floor(latlngs.length / (segmentCount - 1))
-  return Array.from({ length: segmentCount }, (_, i) =>
-    latlngs[Math.min(i * step, latlngs.length - 1)]
+// 고도·방향 변화 기반 주요 지점 추출
+function extractKeyPoints(
+  latlngs: { lat: number; lon: number }[],
+  altitudeM: number[],
+  thresholdAlt = 15,   // 고도 변화 임계치 (m)
+  thresholdTurn = 45   // 방향 변화 임계치 (deg)
+): { lat: number; lon: number }[] {
+  if (latlngs.length === 0) return []
+
+  const keyPoints: { lat: number; lon: number }[] = []
+  keyPoints.push(latlngs[0]) // 출발지
+
+  // bearing 계산 함수
+  const bearing = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => {
+    const dy = b.lat - a.lat
+    const dx = Math.cos((a.lat * Math.PI) / 180) * (b.lon - a.lon)
+    return (Math.atan2(dx, dy) * 180) / Math.PI
+  }
+
+  for (let i = 1; i < latlngs.length - 1; i++) {
+    const prev = latlngs[i - 1]
+    const curr = latlngs[i]
+    const next = latlngs[i + 1]
+
+    // --- 1. 고도 변화 체크 ---
+    const dAlt = Math.abs((altitudeM[i] || 0) - (altitudeM[i - 1] || 0))
+    if (dAlt >= thresholdAlt) {
+      keyPoints.push(curr)
+      continue
+    }
+
+    // --- 2. 방향 변화 체크 ---
+    const dir1 = bearing(prev, curr)
+    const dir2 = bearing(curr, next)
+    let turnAngle = Math.abs(dir2 - dir1)
+    if (turnAngle > 180) turnAngle = 360 - turnAngle
+
+    if (turnAngle >= thresholdTurn) {
+      keyPoints.push(curr)
+      continue
+    }
+  }
+
+  keyPoints.push(latlngs[latlngs.length - 1]) // 도착지
+
+  // 중복 제거
+  return keyPoints.filter(
+    (p, idx, arr) =>
+      idx === arr.findIndex(q => Math.abs(q.lat - p.lat) < 1e-5 && Math.abs(q.lon - p.lon) < 1e-5)
   )
-}
-
-// 개선된 reverseGeocode (구 단위 + 지형지물 우선)
-async function reverseGeocode(point: { lat: number; lon: number }): Promise<string> {
-  const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=16&addressdetails=1&extratags=1`
-  const res = await fetch(url, {
-    headers: { "User-Agent": "STRANK/1.0 (support@strank.io)" },
-  })
-  const data = await res.json()
-
-  // 지형지물 (river, park, cycleway 등)
-  const feature =
-    data.extratags?.river ||
-    data.extratags?.park ||
-    data.extratags?.cycleway ||
-    data.extratags?.footway ||
-    data.extratags?.greenfield
-
-  // 행정명 후보 (구 단위 → 동 단위 → 기타 → 마지막에 city)
-  const admin =
-    data.address?.city_district || // ex. 강남구, 마포구
-    data.address?.borough ||
-    data.address?.suburb ||        // ex. 동 단위
-    data.address?.neighbourhood ||
-    data.address?.village ||
-    data.address?.town ||
-    data.address?.city             // 마지막 fallback: 서울특별시
-
-  // 최종 반환 규칙
-  if (feature && admin) return `${feature}(${admin})`
-  if (feature) return feature
-  if (admin) return admin
-  return "알 수 없음"
 }
 
 // generateCourseName
 export async function generateCourseName(
   latlngs: { lat: number; lon: number }[],
-  distanceKm: number
+  altitudeM: number[],
 ): Promise<string> {
-  const keyPoints = splitCourse(latlngs, distanceKm)
+  const keyPoints = extractKeyPoints(latlngs, altitudeM)
   const names = await Promise.all(keyPoints.map(reverseGeocode))
 
-  // 중복 제거
   const unique = names.filter((n, i) => n && names.indexOf(n) === i)
 
   return unique.join(" → ")
@@ -881,7 +891,7 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
       lat: d[0],
       lon: d[1]
     }))
-    results.courseName = await generateCourseName(latlngs, results.총거리)
+    results.courseName = await generateCourseName(latlngs, streams.altitude!)
   }
 
   console.log('✅ 스트림 데이터 분석 완료')
