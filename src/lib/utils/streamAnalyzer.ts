@@ -85,18 +85,18 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
 
   // 랜드마크/지형지물 후보
   const feature =
-    data.name ||                        // POI (삼막사)
+    data.name ||                        // 이름 (삼막사 같은 POI)
     data.extratags?.temple ||           // 사찰
     data.extratags?.historic ||         // 문화재
     data.extratags?.tourism ||          // 관광지
     data.extratags?.peak ||             // 산
     data.extratags?.park ||             // 공원
     data.extratags?.river ||            // 강
-    data.extratags?.water ||            // 호수
-    data.extratags?.bridge ||           // 다리
-    data.extratags?.cycleway ||         // 자전거도로
+    data.extratags?.water ||      // 호수/저수지
+    data.extratags?.bridge ||     // 다리
+    data.extratags?.cycleway      // 자전거도로
     null
-
+  
   // 행정구역 (소단위 → 대단위)
   const admin =
     data.address?.neighbourhood ||
@@ -110,8 +110,9 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
     data.address?.city ||
     null
 
+  // 최종 결과 조합 (중복 방지 포함)
   if (feature && admin) {
-    if (feature === admin) return feature
+    if (feature === admin) return feature   // 중복이면 한 번만
     return `${feature}(${admin})`
   }
   if (feature) return feature
@@ -119,44 +120,29 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
   return "알 수 없음"
 }
 
-// 거리 기반 분할 (기본 2km 간격)
-function splitCourseByDistance(
-  latlngs: { lat: number; lon: number; dist: number }[],
-  intervalKm = 2
-) {
-  const result: { lat: number; lon: number }[] = []
-  let targetDist = 0
-
-  for (const point of latlngs) {
-    const distKm = point.dist / 1000
-    if (distKm >= targetDist) {
-      result.push({ lat: point.lat, lon: point.lon })
-      targetDist += intervalKm
-    }
-  }
-
-  // 마지막 지점 포함
-  if (latlngs.length > 0) {
-    const last = latlngs[latlngs.length - 1]
-    result.push({ lat: last.lat, lon: last.lon })
-  }
-
-  return result
+function getSegmentCount(distanceKm: number): number {
+ if (distanceKm <= 5) return 2
+ if (distanceKm <= 30) return 4
+ if (distanceKm <= 80) return 5
+ return 6
 }
 
+function splitCourseByIndex(latlngs: { lat: number; lon: number }[], segmentCount = 6) {
+  if (latlngs.length <= segmentCount) return latlngs
+  const step = Math.floor(latlngs.length / (segmentCount - 1))
+  return Array.from({ length: segmentCount }, (_, i) =>
+    latlngs[Math.min(i * step, latlngs.length - 1)]
+  )
+}
 export async function generateCourseName(
   latlngs: { lat: number; lon: number }[],
-  distanceKm: number,
-  distancesM?: number[]
+  distanceKm: number
 ): Promise<string> {
-  // distancesM은 누적 거리 배열 (Strava stream `distance` 활용)
-  const points = distancesM
-    ? latlngs.map((p, i) => ({ ...p, dist: distancesM[i] || 0 }))
-    : latlngs.map((p, i) => ({ ...p, dist: (i / (latlngs.length - 1)) * distanceKm * 1000 }))
-
-  const keyPoints = splitCourseByDistance(points, 2) // ✅ 2km 간격
+  const segmentCount = getSegmentCount(distanceKm)   // ✅ 거리 기반 분할 개수 결정
+  const keyPoints = splitCourseByIndex(latlngs, segmentCount)
   const names = await Promise.all(keyPoints.map(reverseGeocode))
 
+  // ✅ 연속된 중복만 제거 (왕복 루트 보존)
   const cleaned: string[] = []
   for (const n of names) {
     if (!n) continue
@@ -167,8 +153,6 @@ export async function generateCourseName(
 
   return cleaned.join(" → ")
 }
-
-
 // =========================================
 // 유틸 함수
 // =========================================
@@ -907,16 +891,14 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
     console.log(`${z}: ${val === null ? 'N/A' : val + ' bpm'}`)
   }
   
-// 코스명 생성
-if (streamsData.latlng?.data && streamsData.distance?.data) {
-  const latlngs = streamsData.latlng.data.map((d: number[]) => ({
-    lat: d[0],
-    lon: d[1]
-  }))
-  const distances = streamsData.distance.data // ✅ 누적 거리 (m)
-
-  results.courseName = await generateCourseName(latlngs, results.총거리, distances)
-}
+   // 코스명 생성
+  if (streamsData.latlng?.data) {
+    const latlngs = streamsData.latlng.data.map((d: number[]) => ({
+      lat: d[0],
+      lon: d[1]
+    }))
+    results.courseName = await generateCourseName(latlngs, results.총거리)
+  }
 
   console.log('✅ 스트림 데이터 분석 완료')
   return results
