@@ -77,63 +77,37 @@ const HR_ZONES = {
 // 코스명 유틸 함수
 // =========================================
 function getSegmentCount(distanceKm: number): number {
-  if (distanceKm <= 5) return 2
-  if (distanceKm <= 30) return 4
-  if (distanceKm <= 80) return 5
-  return 6
+ if (distanceKm <= 5) return 2
+ if (distanceKm <= 30) return 4
+ if (distanceKm <= 80) return 5
+ return 6
 }
 
-function splitCourse(latlngs: { lat: number; lon: number }[], distanceKm: number) {
-  const segmentCount = getSegmentCount(distanceKm)
+function splitCourseByIndex(latlngs: { lat: number; lon: number }[], segmentCount = 6) {
+  if (latlngs.length <= segmentCount) return latlngs
   const step = Math.floor(latlngs.length / (segmentCount - 1))
   return Array.from({ length: segmentCount }, (_, i) =>
     latlngs[Math.min(i * step, latlngs.length - 1)]
   )
 }
-
-// 개선된 reverseGeocode (지형지물(행정명) 스타일)
-async function reverseGeocode(point: { lat: number; lon: number }): Promise<string> {
-  const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=16&addressdetails=1&extratags=1`
-  const res = await fetch(url, {
-    headers: { "User-Agent": "STRANK/1.0 (support@strank.io)" },
-  })
-  const data = await res.json()
-
-  // 구간성 지형지물 (POI 제외)
-  const feature =
-    data.extratags?.river ||
-    data.extratags?.park ||
-    data.extratags?.cycleway ||
-    data.extratags?.footway ||
-    data.extratags?.greenfield
-
-  // 행정명 후보
-  const admin =
-    data.address?.neighbourhood ||
-    data.address?.suburb ||
-    data.address?.village ||
-    data.address?.town ||
-    data.address?.city
-
-  // 최종 반환 규칙
-  if (feature && admin) return `${feature}(${admin})`
-  if (feature) return feature
-  if (admin) return admin
-  return "알 수 없음"
-}
-
-// generateCourseName
 export async function generateCourseName(
   latlngs: { lat: number; lon: number }[],
   distanceKm: number
 ): Promise<string> {
-  const keyPoints = splitCourse(latlngs, distanceKm)
+  const segmentCount = getSegmentCount(distanceKm)   // ✅ 거리 기반 분할 개수 결정
+  const keyPoints = splitCourseByIndex(latlngs, segmentCount)
   const names = await Promise.all(keyPoints.map(reverseGeocode))
 
-  // 중복 제거
-  const unique = names.filter((n, i) => n && names.indexOf(n) === i)
+  // ✅ 연속된 중복만 제거 (왕복 루트 보존)
+  const cleaned: string[] = []
+  for (const n of names) {
+    if (!n) continue
+    if (cleaned.length === 0 || cleaned[cleaned.length - 1] !== n) {
+      cleaned.push(n)
+    }
+  }
 
-  return unique.join(" → ")
+  return cleaned.join(" → ")
 }
 // =========================================
 // 유틸 함수
