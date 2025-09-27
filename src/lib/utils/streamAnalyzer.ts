@@ -89,7 +89,7 @@ function getPOIWeight(name: string): number {
 }
 
 // =========================================
-// Reverse Geocode (POI 우선, city/county 제외)
+// Reverse Geocode (POI 우선, city/county 제외 + 작은 행정구역 확장)
 // =========================================
 async function reverseGeocodePOI(point: { lat: number; lon: number }): Promise<string | null> {
   const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=14&addressdetails=1&extratags=1`
@@ -100,7 +100,7 @@ async function reverseGeocodePOI(point: { lat: number; lon: number }): Promise<s
 
   // 1️⃣ POI 이름 우선
   const feature =
-    data.name ||               // 일반 명칭
+    data.name ||
     data.extratags?.peak ||
     data.extratags?.river ||
     data.extratags?.water ||
@@ -115,6 +115,9 @@ async function reverseGeocodePOI(point: { lat: number; lon: number }): Promise<s
 
   // 2️⃣ 보조: 작은 행정구역 (city/county 제외)
   const admin =
+    data.address?.neighbourhood ||
+    data.address?.suburb ||
+    data.address?.borough ||
     data.address?.town ||
     data.address?.village ||
     null
@@ -123,12 +126,12 @@ async function reverseGeocodePOI(point: { lat: number; lon: number }): Promise<s
 }
 
 // =========================================
-// 코스명 생성 (500m 간격 샘플링, 중요도 기반 상위 4~5개)
+// 코스명 생성 (100m 간격 샘플링, 중요도 기반 + 균형 유지)
 // =========================================
 async function generateCourseNameByPOI(
   latlngs: { lat: number; lon: number }[],
   distanceM: number[],
-  stepM = 500,
+  stepM = 100,
   maxPOI = 5
 ): Promise<string> {
   const totalDist = distanceM[distanceM.length - 1] - distanceM[0]
@@ -164,13 +167,13 @@ async function generateCourseNameByPOI(
   const weighted = cleaned.map(n => ({ name: n, weight: getPOIWeight(n) }))
   weighted.sort((a, b) => b.weight - a.weight)
 
-  // 상위 maxPOI 추림
-  const topPOI = weighted.slice(0, maxPOI).map(w => w.name)
+  // 상위 2개는 중요도 우선 추출
+  const topByWeight = weighted.slice(0, 2).map(w => w.name)
 
-  // 순서 복원: cleaned 순서 유지하면서 topPOI만 포함
+  // 순서 복원: cleaned 순서에서 topByWeight + 추가 지점 포함
   const final: string[] = []
   for (const n of cleaned) {
-    if (topPOI.includes(n) && !final.includes(n)) {
+    if ((topByWeight.includes(n) || final.length < maxPOI) && !final.includes(n)) {
       final.push(n)
     }
     if (final.length >= maxPOI) break
