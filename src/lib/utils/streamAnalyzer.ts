@@ -76,10 +76,8 @@ const HR_ZONES = {
 // =========================================
 // 코스명 유틸 함수
 // =========================================
-
-// 역지오코딩 (랜드마크 → 행정구역 우선순위)
 async function reverseGeocode(point: { lat: number; lon: number }): Promise<string> {
-  const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=15&addressdetails=1&extratags=1`
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=14&addressdetails=1&extratags=1`
   const res = await fetch(url, {
     headers: { "User-Agent": "STRANK/1.0 (support@strank.io)" },
   })
@@ -89,83 +87,59 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
   const feature =
     data.name ||                        // 이름 (삼막사 같은 POI)
     data.extratags?.temple ||           // 사찰
-    data.extratags?.peak ||             // 산
-    data.extratags?.park ||             // 공원
     data.extratags?.historic ||         // 문화재
     data.extratags?.tourism ||          // 관광지
+    data.extratags?.peak ||             // 산
+    data.extratags?.park ||             // 공원
     data.extratags?.river ||            // 강
-    data.extratags?.water ||            // 호수/저수지
-    data.extratags?.bridge ||           // 다리
+    data.extratags?.water ||      // 호수/저수지
+    data.extratags?.bridge ||     // 다리
+    data.extratags?.cycleway      // 자전거도로
     null
-
+  
   // 행정구역 (소단위 → 대단위)
   const admin =
     data.address?.neighbourhood ||
     data.address?.suburb ||
-    data.address?.town ||
-    data.address?.village ||
     data.address?.city_district ||
     data.address?.borough ||
+    data.address?.town ||
+    data.address?.village ||
     data.address?.county ||
+    data.address?.state_district ||
     data.address?.city ||
     null
 
-  if (feature) return feature          // 랜드마크 우선
-  if (admin) return admin              // 없으면 행정명
+  // 최종 결과 조합 (중복 방지 포함)
+  if (feature && admin) {
+    if (feature === admin) return feature   // 중복이면 한 번만
+    return `${feature}(${admin})`
+  }
+  if (feature) return feature
+  if (admin) return admin
   return "알 수 없음"
 }
 
-// 전체 거리(km)에 따라 최대 segment 개수 제한
 function getSegmentCount(distanceKm: number): number {
-  if (distanceKm <= 5) return 2
-  if (distanceKm <= 30) return 4
-  if (distanceKm <= 80) return 5
-  return 6
+ if (distanceKm <= 5) return 2
+ if (distanceKm <= 30) return 4
+ if (distanceKm <= 80) return 5
+ return 6
 }
 
-// 누적거리 기반 분할 (예: 2km마다 샘플링)
-function splitCourseByDistance(
-  latlngs: { lat: number; lon: number }[],
-  distances: number[], // 단위: m
-  stepKm = 2,
-  maxSegments = 6
-) {
-  const keyPoints: { lat: number; lon: number }[] = []
-  let nextDist = 0
-
-  for (let i = 0; i < distances.length; i++) {
-    const distKm = distances[i] / 1000
-    if (distKm >= nextDist) {
-      keyPoints.push(latlngs[i])
-      nextDist += stepKm
-    }
-  }
-
-  // 마지막 지점 보장
-  if (latlngs.length > 0 && keyPoints[keyPoints.length - 1] !== latlngs[latlngs.length - 1]) {
-    keyPoints.push(latlngs[latlngs.length - 1])
-  }
-
-  // 최대 segment 제한 적용
-  if (keyPoints.length > maxSegments) {
-    const step = Math.floor(keyPoints.length / maxSegments)
-    return Array.from({ length: maxSegments }, (_, i) =>
-      keyPoints[Math.min(i * step, keyPoints.length - 1)]
-    )
-  }
-
-  return keyPoints
+function splitCourseByIndex(latlngs: { lat: number; lon: number }[], segmentCount = 6) {
+  if (latlngs.length <= segmentCount) return latlngs
+  const step = Math.floor(latlngs.length / (segmentCount - 1))
+  return Array.from({ length: segmentCount }, (_, i) =>
+    latlngs[Math.min(i * step, latlngs.length - 1)]
+  )
 }
-
-// 메인 코스명 생성 함수
 export async function generateCourseName(
   latlngs: { lat: number; lon: number }[],
-  distanceKm: number,
-  distances: number[] // 누적거리 (m)
+  distanceKm: number
 ): Promise<string> {
-  const maxSegments = getSegmentCount(distanceKm)
-  const keyPoints = splitCourseByDistance(latlngs, distances, 2, maxSegments) // 2km마다
-
+  const segmentCount = getSegmentCount(distanceKm)   // ✅ 거리 기반 분할 개수 결정
+  const keyPoints = splitCourseByIndex(latlngs, segmentCount)
   const names = await Promise.all(keyPoints.map(reverseGeocode))
 
   // ✅ 연속된 중복만 제거 (왕복 루트 보존)
@@ -179,7 +153,6 @@ export async function generateCourseName(
 
   return cleaned.join(" → ")
 }
-
 // =========================================
 // 유틸 함수
 // =========================================
@@ -918,17 +891,14 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
     console.log(`${z}: ${val === null ? 'N/A' : val + ' bpm'}`)
   }
   
-// 코스명 생성
-if (streamsData.latlng?.data && streamsData.distance?.data) {
-  const latlngs = streamsData.latlng.data.map((d: number[]) => ({
-    lat: d[0],
-    lon: d[1]
-  }))
-  const distances = streamsData.distance.data // 누적거리(m)
-
-  results.courseName = await generateCourseName(latlngs, results.총거리, distances)
-}
-
+   // 코스명 생성
+  if (streamsData.latlng?.data) {
+    const latlngs = streamsData.latlng.data.map((d: number[]) => ({
+      lat: d[0],
+      lon: d[1]
+    }))
+    results.courseName = await generateCourseName(latlngs, results.총거리)
+  }
 
   console.log('✅ 스트림 데이터 분석 완료')
   return results
