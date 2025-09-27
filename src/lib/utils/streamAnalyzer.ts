@@ -92,9 +92,9 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
     data.extratags?.peak ||             // 산
     data.extratags?.park ||             // 공원
     data.extratags?.river ||            // 강
-    data.extratags?.water ||      // 호수/저수지
-    data.extratags?.bridge ||     // 다리
-    data.extratags?.cycleway      // 자전거도로
+    data.extratags?.water ||            // 호수/저수지
+    data.extratags?.bridge ||           // 다리
+    data.extratags?.cycleway ||         // 자전거도로
     null
   
   // 행정구역 (소단위 → 대단위)
@@ -120,26 +120,93 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
   return "알 수 없음"
 }
 
-function getSegmentCount(distanceKm: number): number {
- if (distanceKm <= 5) return 2
- if (distanceKm <= 30) return 4
- if (distanceKm <= 80) return 5
- return 6
+// =========================================
+// 코스 분할 로직
+// =========================================
+
+// 거리 기반 분할 (예: 5km 단위)
+function splitByDistance(
+  latlngs: { lat: number; lon: number }[],
+  distanceM: number[],
+  step = 5000
+) {
+  const keyPoints: { lat: number; lon: number }[] = []
+  const totalDist = distanceM[distanceM.length - 1] || 0
+
+  for (let target = 0; target <= totalDist; target += step) {
+    let minDiff = Infinity
+    let idx = 0
+    for (let i = 0; i < distanceM.length; i++) {
+      const diff = Math.abs(distanceM[i] - target)
+      if (diff < minDiff) {
+        minDiff = diff
+        idx = i
+      }
+    }
+    keyPoints.push(latlngs[idx])
+  }
+
+  return keyPoints
 }
 
-function splitCourseByIndex(latlngs: { lat: number; lon: number }[], segmentCount = 6) {
-  if (latlngs.length <= segmentCount) return latlngs
-  const step = Math.floor(latlngs.length / (segmentCount - 1))
-  return Array.from({ length: segmentCount }, (_, i) =>
-    latlngs[Math.min(i * step, latlngs.length - 1)]
-  )
+// 고도 변화 이벤트 기반 (예: 60m 이상 상승/하강 지점)
+function splitByElevation(
+  latlngs: { lat: number; lon: number }[],
+  altitudeM: number[],
+  threshold = 60
+) {
+  const keyPoints: { lat: number; lon: number }[] = []
+  for (let i = 1; i < altitudeM.length; i++) {
+    const diff = altitudeM[i] - altitudeM[i - 1]
+    if (Math.abs(diff) >= threshold) {
+      keyPoints.push(latlngs[i])
+    }
+  }
+  return keyPoints
 }
+
+// 스마트 분할 (거리 + 고도 이벤트)
+function splitCourseSmart(
+  latlngs: { lat: number; lon: number }[],
+  distanceM: number[],
+  altitudeM: number[],
+  distanceKm: number
+) {
+  const points: { lat: number; lon: number }[] = []
+
+  // 1. 거리 기반 대표 지점
+  points.push(...splitByDistance(latlngs, distanceM, 5000))
+
+  // 2. 고도 이벤트 지점
+  points.push(...splitByElevation(latlngs, altitudeM, 60))
+
+  // 3. 중복 제거
+  const unique: { lat: number; lon: number }[] = []
+  const seen = new Set()
+  for (const p of points) {
+    const key = `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      unique.push(p)
+    }
+  }
+
+  return unique
+}
+
+// =========================================
+// 메인 함수
+// =========================================
 export async function generateCourseName(
   latlngs: { lat: number; lon: number }[],
+  distanceM: number[],
+  altitudeM: number[],
   distanceKm: number
 ): Promise<string> {
-  const segmentCount = getSegmentCount(distanceKm)   // ✅ 거리 기반 분할 개수 결정
-  const keyPoints = splitCourseByIndex(latlngs, segmentCount)
+  // 스마트 분할 실행
+  const keyPoints = splitCourseSmart(latlngs, distanceM, altitudeM, distanceKm)
+
+  // 역지오코딩 → 이름 리스트 생성
   const names = await Promise.all(keyPoints.map(reverseGeocode))
 
   // ✅ 연속된 중복만 제거 (왕복 루트 보존)
@@ -153,6 +220,7 @@ export async function generateCourseName(
 
   return cleaned.join(" → ")
 }
+
 // =========================================
 // 유틸 함수
 // =========================================
