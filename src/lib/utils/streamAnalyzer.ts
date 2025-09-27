@@ -85,14 +85,18 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
 
   // 랜드마크/지형지물 후보
   const feature =
-    data.name ||
-    data.extratags?.peak ||       // 산/봉우리
-    data.extratags?.river ||      // 강
+    data.name ||                        // 이름 (삼막사 같은 POI)
+    data.extratags?.temple ||           // 사찰
+    data.extratags?.historic ||         // 문화재
+    data.extratags?.tourism ||          // 관광지
+    data.extratags?.peak ||             // 산
+    data.extratags?.park ||             // 공원
+    data.extratags?.river ||            // 강
     data.extratags?.water ||      // 호수/저수지
-    data.extratags?.park ||       // 공원
     data.extratags?.bridge ||     // 다리
     data.extratags?.cycleway      // 자전거도로
-
+    null
+  
   // 행정구역 (소단위 → 대단위)
   const admin =
     data.address?.neighbourhood ||
@@ -104,7 +108,6 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
     data.address?.county ||
     data.address?.state_district ||
     data.address?.city ||
-    data.address?.state ||
     null
 
   // 최종 결과 조합 (중복 방지 포함)
