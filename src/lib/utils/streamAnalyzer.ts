@@ -39,6 +39,7 @@ interface AnalysisResult {
   ftp20: number | null
   ftp60: number | null
   riderStyle: RiderStyle
+  courseName?: string   // ?? 코스명 필드 추가
 }
 
 // =========================================
@@ -72,6 +73,68 @@ const HR_ZONES = {
   Z5: [172, 225],
 }
 
+// =========================================
+// 코스명 유틸 함수
+// =========================================
+function getSegmentCount(distanceKm: number): number {
+  if (distanceKm <= 5) return 2
+  if (distanceKm <= 30) return 4
+  if (distanceKm <= 80) return 5
+  return 6
+}
+
+function splitCourse(latlngs: { lat: number; lon: number }[], distanceKm: number) {
+  const segmentCount = getSegmentCount(distanceKm)
+  const step = Math.floor(latlngs.length / (segmentCount - 1))
+  return Array.from({ length: segmentCount }, (_, i) =>
+    latlngs[Math.min(i * step, latlngs.length - 1)]
+  )
+}
+
+// 개선된 reverseGeocode (지형지물(행정명) 스타일)
+async function reverseGeocode(point: { lat: number; lon: number }): Promise<string> {
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=14&addressdetails=1&extratags=1`
+  const res = await fetch(url, {
+    headers: { "User-Agent": "STRANK/1.0 (support@strank.io)" },
+  })
+  const data = await res.json()
+
+  // 구간성 지형지물 (POI 제외)
+  const feature =
+    data.extratags?.river ||
+    data.extratags?.park ||
+    data.extratags?.cycleway ||
+    data.extratags?.footway ||
+    data.extratags?.greenfield
+
+  // 행정명 후보
+  const admin =
+    data.address?.neighbourhood ||
+    data.address?.suburb ||
+    data.address?.village ||
+    data.address?.town ||
+    data.address?.city
+
+  // 최종 반환 규칙
+  if (feature && admin) return `${feature}(${admin})`
+  if (feature) return feature
+  if (admin) return admin
+  return "알 수 없음"
+}
+
+// generateCourseName
+export async function generateCourseName(
+  latlngs: { lat: number; lon: number }[],
+  distanceKm: number
+): Promise<string> {
+  const keyPoints = splitCourse(latlngs, distanceKm)
+  const names = await Promise.all(keyPoints.map(reverseGeocode))
+
+  // 중복 제거
+  const unique = names.filter((n, i) => n && names.indexOf(n) === i)
+
+  return unique.join(" → ")
+}
 // =========================================
 // 유틸 함수
 // =========================================
@@ -601,35 +664,35 @@ function determineRiderStyle(data: {
   const cad = data.averageCadence || 0
 
   if (dist < 20 || speed < 20) {
-    return { icon: '🚲', name: '초보형 (입문형 라이더)', desc: '짧은 주행과 불안정한 리듬으로 기초 체력 단계' }
+    return { icon: '??', name: '초보형 (입문형 라이더)', desc: '짧은 주행과 불안정한 리듬으로 기초 체력 단계' }
   }
   if (maxW > 700 && dist < 50) {
-    return { icon: '🔥', name: '스프린터 (단거리가속형)', desc: '순간 폭발력이 뛰어난 스프린트 중심 주행' }
+    return { icon: '??', name: '스프린터 (단거리가속형)', desc: '순간 폭발력이 뛰어난 스프린트 중심 주행' }
   }
   if (elevPerKm >= 15 && elev >= 800) {
-    return { icon: '⛰️', name: '클라이머 (산악형)', desc: '오르막 구간에서 낮은 케이던스로 꾸준히 힘을 낸 주행' }
+    return { icon: '??', name: '클라이머 (산악형)', desc: '오르막 구간에서 낮은 케이던스로 꾸준히 힘을 낸 주행' }
   }
   if (dist >= 40 && dist <= 80 && maxW > 400 && elevPerKm >= 10) {
-    return { icon: '🚀', name: '펀처 (순간폭발형)', desc: '짧은 언덕과 순간 강도 대응이 돋보이는 주행' }
+    return { icon: '??', name: '펀처 (순간폭발형)', desc: '짧은 언덕과 순간 강도 대응이 돋보이는 주행' }
   }
   if (elevPerKm < 10 && dist >= 60 && speed >= 26) {
-    return { icon: '⚡', name: '롤러/도메스틱 (평지장거리형)', desc: '평지 장거리에서 안정적 페이스 유지' }
+    return { icon: '?', name: '롤러/도메스틱 (평지장거리형)', desc: '평지 장거리에서 안정적 페이스 유지' }
   }
   if (dist >= 100) {
-    return { icon: '🐺', name: '브레이커웨이 스페셜리스트 (장거리형)', desc: '장거리 독주와 꾸준한 페이스 유지' }
+    return { icon: '??', name: '브레이커웨이 스페셜리스트 (장거리형)', desc: '장거리 독주와 꾸준한 페이스 유지' }
   }
   if (dist >= 20 && dist <= 60 && avgW > 0.9 * (maxW || avgW) && cad >= 80) {
-    return { icon: '🏋️', name: 'TT 스페셜리스트 (파워유지형)', desc: '에어로 자세로 일정 파워를 유지한 주행' }
+    return { icon: '???', name: 'TT 스페셜리스트 (파워유지형)', desc: '에어로 자세로 일정 파워를 유지한 주행' }
   }
-  return { icon: '🦾', name: '올라운더 (밸런스형)', desc: '언덕과 평지 모두 균형 잡힌 주행' }
+  return { icon: '??', name: '올라운더 (밸런스형)', desc: '언덕과 평지 모두 균형 잡힌 주행' }
 }
 
 
 // =========================================
 // 메인 분석 함수
 // =========================================
-export function analyzeStreamData(streamsData: any): AnalysisResult {
-  console.log('🔍 스트림 데이터 분석 시작...')
+export async function analyzeStreamData(streamsData: any): Promise<AnalysisResult> {
+  console.log('?? 스트림 데이터 분석 시작...')
 
   
   const streams: StreamData = {}
@@ -668,7 +731,7 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
   let ftp60: number | null = null
 
   if (!streams.watts || streams.watts.every(w => !w)) {
-    console.log('⚡ 파워: 추정값으로 대체')
+    console.log('? 파워: 추정값으로 대체')
     streams.watts = estimatePower(streams.distance!, streams.altitude!, dt, streams.velocity_smooth)
     
     // FTP 추정
@@ -689,7 +752,7 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
 
   // 스무딩 옵션 적용
   if (SMOOTH_POWER && streams.watts) {
-    console.log('⚡ 파워: 스무딩 적용')
+    console.log('? 파워: 스무딩 적용')
     const powerSmooth = rollingMean(streams.watts, 15, true, 1)
     streams.watts = medianFilter(powerSmooth, 9)
   }
@@ -705,12 +768,12 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
   }
   
   if (!streams.heartrate || streams.heartrate.every(h => !h)) {
-    console.log('❤️ 심박: 추정값으로 대체')
+    console.log('?? 심박: 추정값으로 대체')
     streams.heartrate = estimateHrFromGpsAlt(streams.distance!, streams.altitude!, dt)
   }
   
   if (!streams.cadence || streams.cadence.every(c => !c)) {
-    console.log('🔄 케이던스: 추정값으로 대체')
+    console.log('?? 케이던스: 추정값으로 대체')
     streams.cadence = estimateCadenceFromFeatures(streams.velocity_smooth!, streams.altitude!, streams.distance!)
   }
   
@@ -725,37 +788,38 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
   // 분석 실행
 
   const results: AnalysisResult = {
-    총거리: computeTotalDistanceKm(streams.distance!),
-    총고도: computeTotalElevationGain(streams.altitude!),
-    평균속도: computeSpeedStats(streams.velocity_smooth!).avg,
-    최고속도: computeSpeedStats(streams.velocity_smooth!).max,
-    평균파워: computeAvgPowerMovingIncludingZeros(
+  총거리: computeTotalDistanceKm(streams.distance!),
+  총고도: computeTotalElevationGain(streams.altitude!),
+  평균속도: computeSpeedStats(streams.velocity_smooth!).avg,
+  최고속도: computeSpeedStats(streams.velocity_smooth!).max,
+  평균파워: computeAvgPowerMovingIncludingZeros(
+    streams.watts!,
+    streamsData.moving?.data,
+    streams.velocity_smooth
+   ),
+  최대파워: computePowerStats(streams.watts!).max,
+  최고심박수: computeHrMax(streams.heartrate!),
+  평균케이던스: computeCadenceAvg(streams.cadence!),
+  powerZoneRatios: powerZoneRatios,
+  hrZoneRatios: hrZoneRatios,
+  peakPowers: {},
+  hrZoneAverages: {},
+  ftp20: ftp20,
+  ftp60: ftp60,
+  riderStyle: determineRiderStyle({
+    distance: computeTotalDistanceKm(streams.distance!),
+    elevation: computeTotalElevationGain(streams.altitude!),
+    averageSpeed: computeSpeedStats(streams.velocity_smooth!).avg,
+    averageWatts: computeAvgPowerMovingIncludingZeros(
       streams.watts!,
       streamsData.moving?.data,
       streams.velocity_smooth
     ),
-    최대파워: computePowerStats(streams.watts!).max,
-    최고심박수: computeHrMax(streams.heartrate!),
-    평균케이던스: computeCadenceAvg(streams.cadence!),
-    powerZoneRatios: powerZoneRatios,
-    hrZoneRatios: hrZoneRatios,
-    peakPowers: {},
-    hrZoneAverages: {},
-    ftp20: ftp20,
-    ftp60: ftp60,
-    riderStyle: determineRiderStyle({
-      distance: computeTotalDistanceKm(streams.distance!),
-      elevation: computeTotalElevationGain(streams.altitude!),
-      averageSpeed: computeSpeedStats(streams.velocity_smooth!).avg,
-      averageWatts: computeAvgPowerMovingIncludingZeros(
-        streams.watts!,
-        streamsData.moving?.data,
-        streams.velocity_smooth
-      ),
-      maxWatts: computePowerStats(streams.watts!).max,
-      averageCadence: computeCadenceAvg(streams.cadence!)
-    })
-  }
+    maxWatts: computePowerStats(streams.watts!).max,
+    averageCadence: computeCadenceAvg(streams.cadence!)
+  }),
+  courseName: null
+ }
 
   // 피크 파워 계산
   const peakWindows = [
@@ -778,36 +842,46 @@ export function analyzeStreamData(streamsData: any): AnalysisResult {
     results.hrZoneAverages[zone] = hrInZone.length > 0 ? Math.round(hrInZone.reduce((sum, hr) => sum + hr, 0) / hrInZone.length) : null
   }
   
-  console.log('✅ 스트림 데이터 분석 완료')
+  console.log('? 스트림 데이터 분석 완료')
   
   // Python 스크립트와 동일한 출력 형식
-  console.log('🚴총거리:', results.총거리, 'km')
-  console.log('🚵총고도:', results.총고도, 'm')
-  console.log('🪫평균속도:', results.평균속도, 'km/h')
-  console.log('🔋최고속도:', results.최고속도, 'km/h')
-  console.log('🦵평균파워:', results.평균파워, 'W')
-  console.log('🦿최대파워:', results.최대파워, 'W')
-  console.log('⚡20min FTP:', results.ftp20 || 'N/A', 'W')
-  console.log('⚡60min FTP:', results.ftp60 || 'N/A', 'W')
-  console.log('❤️최고심박수:', results.최고심박수, 'bpm')
-  console.log('💫평균케이던스:', results.평균케이던스, 'rpm\n')
+  console.log('??총거리:', results.총거리, 'km')
+  console.log('??총고도:', results.총고도, 'm')
+  console.log('??평균속도:', results.평균속도, 'km/h')
+  console.log('??최고속도:', results.최고속도, 'km/h')
+  console.log('??평균파워:', results.평균파워, 'W')
+  console.log('??최대파워:', results.최대파워, 'W')
+  console.log('?20min FTP:', results.ftp20 || 'N/A', 'W')
+  console.log('?60min FTP:', results.ftp60 || 'N/A', 'W')
+  console.log('??최고심박수:', results.최고심박수, 'bpm')
+  console.log('??평균케이던스:', results.평균케이던스, 'rpm\n')
   
-  console.log('📈 파워·심박 존 훈련 분석')
+  console.log('?? 파워·심박 존 훈련 분석')
   for (const z of Object.keys(POWER_ZONES)) {
     console.log(`${z}: P ${results.powerZoneRatios[z]}% / H ${results.hrZoneRatios[z]}%`)
   }
   
-  console.log('\n⚡ 피크파워 분석')
+  console.log('\n? 피크파워 분석')
   const peakPowerStrings = Object.entries(results.peakPowers).map(([label, val]) => 
     `${label}: ${val === null ? 'N/A' : val + 'W'}`
   )
   console.log(peakPowerStrings.join(' / '))
   
-  console.log('\n❤️ 심박존 평균 분석 (AI추측)')
+  console.log('\n?? 심박존 평균 분석 (AI추측)')
   for (const z of Object.keys(HR_ZONES)) {
     const val = results.hrZoneAverages[z]
     console.log(`${z}: ${val === null ? 'N/A' : val + ' bpm'}`)
   }
   
+   // 코스명 생성
+  if (streamsData.latlng?.data) {
+    const latlngs = streamsData.latlng.data.map((d: number[]) => ({
+      lat: d[0],
+      lon: d[1]
+    }))
+    results.courseName = await generateCourseName(latlngs, results.총거리)
+  }
+
+  console.log('✅ 스트림 데이터 분석 완료')
   return results
 }
