@@ -122,16 +122,34 @@ async function reverseGeocodePOI(point: { lat: number; lon: number }): Promise<s
     data.address?.village ||
     null
 
+  // 3️⃣ extratags도 없고 POI도 없을 경우 → address 문자열에서 주요 키워드 추출
+  if (!feature && data.address) {
+    const addrStr = Object.values(data.address).join(" ")
+
+    if (addrStr.includes("산")) {
+      const match = addrStr.match(/[^ ]*산/)
+      if (match) return match[0]
+    }
+    if (addrStr.includes("강")) {
+      const match = addrStr.match(/[^ ]*강/)
+      if (match) return match[0]
+    }
+    if (addrStr.includes("공원")) {
+      const match = addrStr.match(/[^ ]*공원/)
+      if (match) return match[0]
+    }
+  }
+
   return admin
 }
 
 // =========================================
-// 코스명 생성 (100m 간격 샘플링, 중요도 기반 + 균형 유지)
+// 코스명 생성 (200m 간격 샘플링, 중요도 기반 + 균형 유지)
 // =========================================
 async function generateCourseNameByPOI(
   latlngs: { lat: number; lon: number }[],
   distanceM: number[],
-  stepM = 100,
+  stepM = 200,
   maxPOI = 5
 ): Promise<string> {
   const totalDist = distanceM[distanceM.length - 1] - distanceM[0]
@@ -140,7 +158,7 @@ async function generateCourseNameByPOI(
   let targetDist = 0
   let idx = 0
 
-  // 500m 간격으로 좌표 추출
+  // 200m 간격으로 좌표 추출
   while (targetDist <= totalDist && idx < distanceM.length) {
     while (idx < distanceM.length - 1 && distanceM[idx] < targetDist) {
       idx++
