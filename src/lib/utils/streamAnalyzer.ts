@@ -102,14 +102,18 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
     data.address?.town ||
     data.address?.village ||
     data.address?.county ||
-    data.address?.state_district
+    data.address?.state_district ||
+    data.address?.city ||
+    data.address?.state ||
+    null
 
-  const fallback = data.address?.city || data.address?.state
-
-  if (feature && admin) return `${feature}(${admin})`
+  // 최종 결과 조합 (중복 방지 포함)
+  if (feature && admin) {
+    if (feature === admin) return feature   // 중복이면 한 번만
+    return `${feature}(${admin})`
+  }
   if (feature) return feature
   if (admin) return admin
-  if (fallback) return fallback
   return "알 수 없음"
 }
 
