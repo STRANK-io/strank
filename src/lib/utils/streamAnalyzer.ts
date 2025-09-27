@@ -74,103 +74,75 @@ const HR_ZONES = {
 }
 
 // =========================================
-// POI 중요도 점수 함수
+// 코스명 유틸 함수
 // =========================================
-function getPOIWeight(name: string): number {
-  if (!name) return 0
-  if (name.includes("산")) return 5
-  if (name.includes("강")) return 4
-  if (name.includes("호수") || name.includes("저수지")) return 4
-  if (name.includes("공원")) return 3
-  if (name.includes("사찰") || name.includes("사")) return 3
-  if (name.includes("교")) return 2   // 다리
-  if (name.includes("자전거")) return 2
-  return 1
-}
-
-// =========================================
-// Reverse Geocode (POI 우선, city/county 제외 + 작은 행정구역 확장)
-// =========================================
-async function reverseGeocodePOI(point: { lat: number; lon: number }): Promise<string | null> {
+async function reverseGeocode(point: { lat: number; lon: number }): Promise<string> {
   const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=14&addressdetails=1&extratags=1`
   const res = await fetch(url, {
     headers: { "User-Agent": "STRANK/1.0 (support@strank.io)" },
   })
   const data = await res.json()
 
-  // 1️⃣ POI 이름 우선
+  // 랜드마크/지형지물 후보
   const feature =
-    data.name ||
-    data.extratags?.peak ||
-    data.extratags?.river ||
-    data.extratags?.water ||
-    data.extratags?.park ||
-    data.extratags?.temple ||
-    data.extratags?.bridge ||
-    data.extratags?.cycleway ||
+    data.name ||                        // 이름 (삼막사 같은 POI)
+    data.extratags?.temple ||           // 사찰
+    data.extratags?.historic ||         // 문화재
+    data.extratags?.tourism ||          // 관광지
+    data.extratags?.peak ||             // 산
+    data.extratags?.park ||             // 공원
+    data.extratags?.river ||            // 강
+    data.extratags?.water ||      // 호수/저수지
+    data.extratags?.bridge ||     // 다리
+    data.extratags?.cycleway      // 자전거도로
     null
-
-  // "yes" 같은 이름 없는 POI는 무시
-  if (feature && feature !== "yes") return feature
-
-  // 2️⃣ 보조: 작은 행정구역 (city/county 제외)
+  
+  // 행정구역 (소단위 → 대단위)
   const admin =
     data.address?.neighbourhood ||
     data.address?.suburb ||
+    data.address?.city_district ||
     data.address?.borough ||
     data.address?.town ||
     data.address?.village ||
+    data.address?.county ||
+    data.address?.state_district ||
+    data.address?.city ||
     null
 
-  // 3️⃣ extratags도 없고 POI도 없을 경우 → address 문자열에서 주요 키워드 추출
-  if (!feature && data.address) {
-    const addrStr = Object.values(data.address).join(" ")
-
-    if (addrStr.includes("산")) {
-      const match = addrStr.match(/[^ ]*산/)
-      if (match) return match[0]
-    }
-    if (addrStr.includes("강")) {
-      const match = addrStr.match(/[^ ]*강/)
-      if (match) return match[0]
-    }
-    if (addrStr.includes("공원")) {
-      const match = addrStr.match(/[^ ]*공원/)
-      if (match) return match[0]
-    }
+  // 최종 결과 조합 (중복 방지 포함)
+  if (feature && admin) {
+    if (feature === admin) return feature   // 중복이면 한 번만
+    return `${feature}(${admin})`
   }
-
-  return admin
+  if (feature) return feature
+  if (admin) return admin
+  return "알 수 없음"
 }
 
-// =========================================
-// 코스명 생성 (200m 간격 샘플링, 중요도 기반 + 균형 유지)
-// =========================================
-async function generateCourseNameByPOI(
+function getSegmentCount(distanceKm: number): number {
+ if (distanceKm <= 5) return 2
+ if (distanceKm <= 30) return 4
+ if (distanceKm <= 80) return 5
+ return 6
+}
+
+function splitCourseByIndex(latlngs: { lat: number; lon: number }[], segmentCount = 6) {
+  if (latlngs.length <= segmentCount) return latlngs
+  const step = Math.floor(latlngs.length / (segmentCount - 1))
+  return Array.from({ length: segmentCount }, (_, i) =>
+    latlngs[Math.min(i * step, latlngs.length - 1)]
+  )
+}
+export async function generateCourseName(
   latlngs: { lat: number; lon: number }[],
-  distanceM: number[],
-  stepM = 200,
-  maxPOI = 5
+  distanceKm: number
 ): Promise<string> {
-  const totalDist = distanceM[distanceM.length - 1] - distanceM[0]
-  const keyPoints: { lat: number; lon: number }[] = []
+  const segmentCount = getSegmentCount(distanceKm)   // ✅ 거리 기반 분할 개수 결정
+  const keyPoints = splitCourseByIndex(latlngs, segmentCount)
+  const names = await Promise.all(keyPoints.map(reverseGeocode))
 
-  let targetDist = 0
-  let idx = 0
-
-  // 200m 간격으로 좌표 추출
-  while (targetDist <= totalDist && idx < distanceM.length) {
-    while (idx < distanceM.length - 1 && distanceM[idx] < targetDist) {
-      idx++
-    }
-    keyPoints.push(latlngs[idx])
-    targetDist += stepM
-  }
-
-  // POI 이름들 가져오기
-  const names = await Promise.all(keyPoints.map(reverseGeocodePOI))
-
-  // 연속 중복 제거
+  // ✅ 연속된 중복만 제거 (왕복 루트 보존)
   const cleaned: string[] = []
   for (const n of names) {
     if (!n) continue
@@ -179,27 +151,8 @@ async function generateCourseNameByPOI(
     }
   }
 
-  if (cleaned.length === 0) return "코스명 없음"
-
-  // ✅ POI 중요도 기반 정렬
-  const weighted = cleaned.map(n => ({ name: n, weight: getPOIWeight(n) }))
-  weighted.sort((a, b) => b.weight - a.weight)
-
-  // 상위 2개는 중요도 우선 추출
-  const topByWeight = weighted.slice(0, 2).map(w => w.name)
-
-  // 순서 복원: cleaned 순서에서 topByWeight + 추가 지점 포함
-  const final: string[] = []
-  for (const n of cleaned) {
-    if ((topByWeight.includes(n) || final.length < maxPOI) && !final.includes(n)) {
-      final.push(n)
-    }
-    if (final.length >= maxPOI) break
-  }
-
-  return final.join(" → ")
+  return cleaned.join(" → ")
 }
-
 // =========================================
 // 유틸 함수
 // =========================================
@@ -938,13 +891,13 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
     console.log(`${z}: ${val === null ? 'N/A' : val + ' bpm'}`)
   }
   
-  // ✅ POI 기반 코스명 생성
+   // 코스명 생성
   if (streamsData.latlng?.data) {
     const latlngs = streamsData.latlng.data.map((d: number[]) => ({
       lat: d[0],
       lon: d[1]
     }))
-    results.courseName = await generateCourseNameByPOI(latlngs, streams.distance!)
+    results.courseName = await generateCourseName(latlngs, results.총거리)
   }
 
   console.log('✅ 스트림 데이터 분석 완료')
