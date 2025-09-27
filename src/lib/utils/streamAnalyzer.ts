@@ -39,7 +39,7 @@ interface AnalysisResult {
   ftp20: number | null
   ftp60: number | null
   riderStyle: RiderStyle
-  courseName?: string   // ?? 코스명 필드 추가
+  courseName?: string | null   // ?? 코스명 필드 추가
 }
 
 // =========================================
