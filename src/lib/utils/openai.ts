@@ -110,8 +110,8 @@ ${rankingSection}
 ❤️최고심박수: [최고심박수] bpm
 💫평균케이던스: [평균케이던스] rpm
 
-📍코스명
-👉: [courseName]
+📍코스구간
+👉 [courseName]
 
 📝 간단한분석
 [작성가이드에 맞춰 작성]
