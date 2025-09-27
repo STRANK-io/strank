@@ -82,6 +82,35 @@ function getSegmentCount(distanceKm: number): number {
   if (distanceKm <= 80) return 5
   return 6
 }
+// 개선된 reverseGeocode (구 단위 + 지형지물 우선)
+async function reverseGeocode(point: { lat: number; lon: number }): Promise<string> {
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=16&addressdetails=1&extratags=1`
+  const res = await fetch(url, {
+    headers: { "User-Agent": "STRANK/1.0 (support@strank.io)" },
+  })
+  const data = await res.json()
+
+  const feature =
+    data.extratags?.river ||
+    data.extratags?.park ||
+    data.extratags?.cycleway ||
+    data.extratags?.footway ||
+    data.extratags?.greenfield
+
+  const admin =
+    data.address?.city_district ||
+    data.address?.borough ||
+    data.address?.suburb ||
+    data.address?.neighbourhood ||
+    data.address?.village ||
+    data.address?.town ||
+    data.address?.city
+
+  if (feature && admin) return `${feature}(${admin})`
+  if (feature) return feature
+  if (admin) return admin
+  return "알 수 없음"
+}
 
 // 고도·방향 변화 기반 주요 지점 추출
 function extractKeyPoints(
