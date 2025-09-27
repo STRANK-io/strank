@@ -74,7 +74,7 @@ const HR_ZONES = {
 }
 
 // =========================================
-// POI 탐색 (반경 300m)
+// POI 탐색 (반경 300m, fallback 포함)
 // =========================================
 async function findNearbyPOI(lat: number, lon: number): Promise<string | null> {
   const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&extratags=1&addressdetails=1&radius=300&lat=${lat}&lon=${lon}`
@@ -83,12 +83,15 @@ async function findNearbyPOI(lat: number, lon: number): Promise<string | null> {
   })
   const data = await res.json()
 
-  if (!Array.isArray(data) || data.length === 0) return null
+  if (!Array.isArray(data) || data.length === 0) {
+    return null
+  }
 
-  // POI 중요도 점수 계산
+  // 후보 리스트 생성
   const scored = data.map((d: any) => {
     const name = d.display_name || ""
     let weight = 0
+
     if (name.includes("산")) weight = 5
     else if (name.includes("강")) weight = 4
     else if (name.includes("호수") || name.includes("저수지")) weight = 4
@@ -96,17 +99,30 @@ async function findNearbyPOI(lat: number, lon: number): Promise<string | null> {
     else if (name.includes("사찰") || name.includes("사")) weight = 3
     else if (name.includes("역")) weight = 2
     else weight = 1
-    return { name, weight }
+
+    return { name, weight, address: d.address }
   })
 
-  // 가장 높은 weight의 POI 선택
+  // 가중치 높은 순 정렬
   scored.sort((a, b) => b.weight - a.weight)
-  return scored[0]?.name || null
+
+  // ✅ POI 이름 단순화 (쉼표 기준 첫 번째만)
+  const best = scored[0]
+  if (best && best.name) {
+    const shortName = best.name.split(",")[0].trim()
+    if (shortName && shortName !== "yes") {
+      return shortName
+    }
+  }
+
+  // ✅ fallback: 행정구역 이름 (village / town)
+  const fallback = scored[0]?.address?.village || scored[0]?.address?.town || null
+  return fallback
 }
 
-/**
- * 100m 간격으로 좌표 샘플링
- */
+// =========================================
+// 좌표 샘플링 (100m 간격)
+// =========================================
 function sampleLatLngByDistance(
   latlngs: { lat: number; lon: number }[],
   distanceM: number[],
@@ -129,9 +145,9 @@ function sampleLatLngByDistance(
   return keyPoints
 }
 
-/**
- * 최적화된 코스명 생성 (100m 후보 → 반경 300m POI → 주요 5개)
- */
+// =========================================
+// 코스명 생성 (100m 간격 → 반경 300m POI → 상위 5개)
+// =========================================
 export async function generateCourseNameOptimized(
   latlngs: { lat: number; lon: number }[],
   distanceM: number[],
@@ -143,9 +159,11 @@ export async function generateCourseNameOptimized(
   // 비율 기반 주요 지점 선택 (0%, 25%, 50%, 75%, 100%)
   const total = candidates.length
   const step = Math.floor(total / (maxPOI - 1))
-  const picked = Array.from({ length: maxPOI }, (_, i) => candidates[Math.min(i * step, total - 1)])
+  const picked = Array.from({ length: maxPOI }, (_, i) =>
+    candidates[Math.min(i * step, total - 1)]
+  )
 
-  // 각 지점에서 반경 300m 내 POI 찾기
+  // 각 지점에서 POI 찾기
   const names = await Promise.all(picked.map(p => findNearbyPOI(p.lat, p.lon)))
 
   // 연속 중복 제거
@@ -898,11 +916,11 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
     console.log(`${z}: ${val === null ? 'N/A' : val + ' bpm'}`)
   }
   
-  // ✅ 코스명 생성 (100m 간격 샘플링 → 반경 300m POI 기반)
+  // ✅ 코스명 생성
   if (streamsData.latlng?.data) {
     const latlngs = streamsData.latlng.data.map((d: number[]) => ({
       lat: d[0],
-      lon: d[1]
+      lon: d[1],
     }))
     results.courseName = await generateCourseNameOptimized(latlngs, streams.distance!)
   }
