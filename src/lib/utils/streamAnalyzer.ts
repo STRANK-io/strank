@@ -91,15 +91,15 @@ function splitCourse(latlngs: { lat: number; lon: number }[], distanceKm: number
   )
 }
 
-// 개선된 reverseGeocode (지형지물(행정명) 스타일)
+// 개선된 reverseGeocode (구 단위 + 지형지물 우선)
 async function reverseGeocode(point: { lat: number; lon: number }): Promise<string> {
-  const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=14&addressdetails=1&extratags=1`
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=16&addressdetails=1&extratags=1`
   const res = await fetch(url, {
     headers: { "User-Agent": "STRANK/1.0 (support@strank.io)" },
   })
   const data = await res.json()
 
-  // 구간성 지형지물 (POI 제외)
+  // 지형지물 (river, park, cycleway 등)
   const feature =
     data.extratags?.river ||
     data.extratags?.park ||
@@ -107,13 +107,15 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
     data.extratags?.footway ||
     data.extratags?.greenfield
 
-  // 행정명 후보
+  // 행정명 후보 (구 단위 → 동 단위 → 기타 → 마지막에 city)
   const admin =
+    data.address?.city_district || // ex. 강남구, 마포구
+    data.address?.borough ||
+    data.address?.suburb ||        // ex. 동 단위
     data.address?.neighbourhood ||
-    data.address?.suburb ||
     data.address?.village ||
     data.address?.town ||
-    data.address?.city
+    data.address?.city             // 마지막 fallback: 서울특별시
 
   // 최종 반환 규칙
   if (feature && admin) return `${feature}(${admin})`
