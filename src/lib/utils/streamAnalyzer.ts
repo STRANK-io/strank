@@ -83,36 +83,36 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
   })
   const data = await res.json()
 
+  // 랜드마크/지형지물 후보
   const feature =
-    data.extratags?.river ||
-    data.extratags?.park ||
-    data.extratags?.cycleway ||
-    data.extratags?.footway ||
-    data.extratags?.greenfield
+    data.name ||
+    data.extratags?.peak ||       // 산/봉우리
+    data.extratags?.river ||      // 강
+    data.extratags?.water ||      // 호수/저수지
+    data.extratags?.park ||       // 공원
+    data.extratags?.bridge ||     // 다리
+    data.extratags?.cycleway      // 자전거도로
 
-  // 행정명 우선순위 (작은 단위 → 큰 단위)
+  // 행정구역 (소단위 → 대단위)
   const admin =
-    data.address?.neighbourhood ||   // 동/리/근린
-    data.address?.suburb ||          // 구/동(도시 하위)
-    data.address?.city_district ||   // 자치구
-    data.address?.borough ||         // borough
-    data.address?.town ||            // 읍/면/소도시
-    data.address?.village ||         // 마을
-    data.address?.county ||          // 군
-    data.address?.state_district ||  // 도 하위 행정구
-    null
+    data.address?.neighbourhood ||
+    data.address?.suburb ||
+    data.address?.city_district ||
+    data.address?.borough ||
+    data.address?.town ||
+    data.address?.village ||
+    data.address?.county ||
+    data.address?.state_district
 
-  // 광역 단위는 fallback
-  const fallback =
-    data.address?.city ||
-    data.address?.state ||
-    data.address?.region
+  const fallback = data.address?.city || data.address?.state
 
   if (feature && admin) return `${feature}(${admin})`
   if (feature) return feature
   if (admin) return admin
+  if (fallback) return fallback
   return "알 수 없음"
 }
+
 function getSegmentCount(distanceKm: number): number {
  if (distanceKm <= 5) return 2
  if (distanceKm <= 30) return 4
