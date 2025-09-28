@@ -75,7 +75,7 @@ const HR_ZONES = {
 
 
 // =========================================
-// 코스명 유틸 함수 (Nominatim + Overpass 혼합)
+// 코스명 유틸 함수 (Nominatim + Overpass + 우선순위)
 // =========================================
 
 // 코스 길이에 따라 샘플링 포인트 개수 결정
@@ -86,56 +86,13 @@ function getSegmentCount(distanceKm: number): number {
   return 6
 }
 
-// GPS 경로에서 일정 간격 포인트 추출 (균등 샘플링)
+// GPS 경로에서 일정 간격 포인트 추출
 function splitCourseByIndex(latlngs: { lat: number; lon: number }[], segmentCount = 6) {
   if (latlngs.length <= segmentCount) return latlngs
   const step = Math.floor(latlngs.length / (segmentCount - 1))
   return Array.from({ length: segmentCount }, (_, i) =>
     latlngs[Math.min(i * step, latlngs.length - 1)]
   )
-}
-
-// 각도 계산 (세 점 사이 방향 변화)
-function getAngle(a: { lat: number; lon: number }, b: { lat: number; lon: number }, c: { lat: number; lon: number }): number {
-  const ab = [b.lat - a.lat, b.lon - a.lon]
-  const bc = [c.lat - b.lat, c.lon - b.lon]
-  const dot = ab[0] * bc[0] + ab[1] * bc[1]
-  const magA = Math.sqrt(ab[0]**2 + ab[1]**2)
-  const magB = Math.sqrt(bc[0]**2 + bc[1]**2)
-  const cos = dot / (magA * magB + 1e-6)
-  return Math.acos(Math.min(1, Math.max(-1, cos))) * (180/Math.PI)
-}
-
-// 반환점 / 급격한 꺾임 감지
-function detectSpecialPoints(latlngs: { lat: number; lon: number }[], minAngle = 120): number[] {
-  const specialIdx: number[] = []
-  for (let i = 1; i < latlngs.length - 1; i++) {
-    const angle = getAngle(latlngs[i - 1], latlngs[i], latlngs[i + 1])
-    if (angle > minAngle) specialIdx.push(i)
-  }
-  return specialIdx
-}
-
-// 핵심 포인트 선택: 반환점 우선 + 균등 보충
-function pickKeyPoints(latlngs: { lat: number; lon: number }[], distanceKm: number) {
-  const segmentCount = getSegmentCount(distanceKm)
-
-  // 1) 반환점/특수 포인트 먼저 확보
-  const specialIdx = detectSpecialPoints(latlngs)
-  const specialPoints = specialIdx.map(i => latlngs[i])
-
-  // 2) 균등 분할 포인트 추가 (특수포인트 부족시 보충)
-  const basicPoints = splitCourseByIndex(latlngs, segmentCount)
-
-  // 3) 병합 (특수포인트 → 기본포인트 순서)
-  const merged = [...specialPoints, ...basicPoints]
-
-  // 4) 중복 제거
-  const unique = merged.filter((p, idx, arr) =>
-    arr.findIndex(q => q.lat === p.lat && q.lon === p.lon) === idx
-  )
-
-  return unique
 }
 
 // Nominatim Reverse Geocoding
@@ -185,8 +142,8 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
   }
 }
 
-// Overpass API (실패 시 빈 배열 반환)
-async function getNearbyPOIs(lat: number, lon: number, radius = 1000): Promise<string[]> {
+// Overpass API
+async function getNearbyPOIs(lat: number, lon: number, radius = 1000): Promise<{name: string, tags: any}[]> {
   try {
     const query = `
       [out:json];
@@ -205,40 +162,51 @@ async function getNearbyPOIs(lat: number, lon: number, radius = 1000): Promise<s
 
     return data.elements
       .map((el: any) => ({ name: el.tags?.name, tags: el.tags }))
-      .filter(
-        (el: any) =>
-          el.name &&
-          (
-            el.tags.natural === "peak" ||
-            el.tags.man_made === "dam" ||
-            el.tags.man_made === "bridge" ||
-            el.tags.waterway === "river" ||
-            ["attraction", "viewpoint", "resort", "park"].includes(el.tags.tourism)
-          )
-      )
-      .map((el: any) => el.name)
+      .filter((el: any) => el.name)
   } catch (e) {
     console.warn("⚠️ getNearbyPOIs 실패:", e)
     return []
   }
 }
 
-// ✅ 최종 코스명 생성 (반환점 포함, fallback 보장)
+// POI 우선순위 선정 로직
+function pickBestPOI(pois: {name: string, tags: any}[], baseName: string): string {
+  if (!pois || pois.length === 0) return baseName
+
+  const scored = pois.map(p => {
+    let score = 0
+    if (p.tags.man_made === "dam") score = 100
+    else if (p.tags.natural === "peak") score = 90
+    else if (p.tags.man_made === "bridge") score = 80
+    else if (p.tags.waterway === "river" || p.tags.natural === "water") score = 70
+    else if (["attraction","viewpoint","resort"].includes(p.tags.tourism)) score = 60
+    else if (p.tags.leisure === "park") score = 50
+    else score = 10
+    return { ...p, score }
+  })
+
+  scored.sort((a, b) => b.score - a.score)
+  return scored[0]?.name || baseName
+}
+
+// ✅ 최종 코스명 생성
 export async function generateCourseName(
   latlngs: { lat: number; lon: number }[],
   distanceKm: number
 ): Promise<string> {
-  const keyPoints = pickKeyPoints(latlngs, distanceKm)
+  const segmentCount = getSegmentCount(distanceKm)
+  const keyPoints = splitCourseByIndex(latlngs, segmentCount)
 
   const names = await Promise.all(
     keyPoints.map(async (pt) => {
       const baseName = await reverseGeocode(pt)
       const pois = await getNearbyPOIs(pt.lat, pt.lon, 800)
-      const poi = pois[0]
-      return poi || baseName || "알 수 없음"
+      const best = pickBestPOI(pois, baseName)
+      return best || "알 수 없음"
     })
   )
 
+  // 연속 중복 제거
   const cleaned: string[] = []
   for (const n of names) {
     if (!n) continue
@@ -249,8 +217,6 @@ export async function generateCourseName(
 
   return cleaned.length > 0 ? cleaned.join(" → ") : "등록된 코스 없음"
 }
-
-
 
 
 // =========================================
