@@ -301,26 +301,49 @@ function estimatePower(
   g = 9.81
 ): number[] {
   const distSmooth = rollingMean(distanceM, 5, true, 1)
+
+  // 거리 차이 계산 (gap 보정 포함)
   const dDist: number[] = []
   for (let i = 0; i < distSmooth.length; i++) {
-    dDist.push(i === 0 ? 0 : distSmooth[i] - distSmooth[i - 1])
-  }
-  const speedFromDist = dDist.map((dd, i) => dd / (dt[i] || 1))
+    if (i === 0) {
+      dDist.push(0)
+    } else {
+      const dd = distSmooth[i] - distSmooth[i - 1]
+      const dtVal = dt[i] || 1
 
+      // (A) GPS gap이 너무 길면 제외
+      if (dtVal > 5) {
+        dDist.push(0)
+        continue
+      }
+
+      // (B) 순간 점프가 너무 크면 제외 (100m 이상)
+      if (dd > 100) {
+        dDist.push(0)
+        continue
+      }
+
+      dDist.push(dd)
+    }
+  }
+
+  // 속도 계산
+  const speedFromDist = dDist.map((dd, i) => dd / (dt[i] || 1))
   let speed: number[] = []
+
   if (velocitySmooth && velocitySmooth.some(v => v > 0)) {
-    // 속도센서 기반 → 기존처럼 사용
+    // 속도센서 기반 → 그대로 사용
     speed = velocitySmooth.map((vs, i) => {
       const sdVal = speedFromDist[i] || 0
       const s = (vs || 0 + sdVal) / 2
-      return Math.min(Math.max(s, 0), 15)
+      return Math.min(Math.max(s, 0), 15) // 54km/h 상한
     })
   } else {
     // GPS-only → 보정 강화
     const gpsSpeedRaw = speedFromDist.map(s => Math.min(Math.max(s, 0), 15))
-    // (1) 강한 스무딩 적용
+    // (C) 강한 스무딩 적용
     const gpsSpeedSmooth = rollingMean(gpsSpeedRaw, 15, true, 1)
-    // (2) 2 km/h 미만은 노이즈 처리 (기존 3 → 완화)
+    // (D) 2 km/h 미만은 노이즈 컷
     speed = gpsSpeedSmooth.map(s => (s * 3.6 < 2 ? 0 : s))
   }
 
@@ -342,12 +365,12 @@ function estimatePower(
     const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
 
     let totalPower = gradPower + rollPower + aeroPower
-    // (3) 하한 보정 강화 (30W → 50W)
+    // (E) 최소 50W 보정
     totalPower = Math.max(50, Math.min(1500, totalPower))
     power.push(totalPower)
   }
 
-  // (4) 최종 스무딩
+  // (F) 최종 스무딩
   return rollingMean(power, 7, true, 1)
 }
 
