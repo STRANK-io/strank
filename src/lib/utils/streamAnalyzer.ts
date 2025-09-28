@@ -1052,13 +1052,13 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
     console.log(`${z}: P ${results.powerZoneRatios[z]}% / H ${results.hrZoneRatios[z]}%`)
   }
   
-  console.log('\n? 피크파워 분석')
+  console.log('\n⚡ 피크파워 분석')
   const peakPowerStrings = Object.entries(results.peakPowers).map(([label, val]) => 
     `${label}: ${val === null ? 'N/A' : val + 'W'}`
   )
   console.log(peakPowerStrings.join(' / '))
   
-  console.log('\n?? 심박존 평균 분석 (AI추측)')
+  console.log('\n❤️ 심박존 평균 분석 (AI추측)')
   for (const z of Object.keys(HR_ZONES)) {
     const val = results.hrZoneAverages[z]
     console.log(`${z}: ${val === null ? 'N/A' : val + ' bpm'}`)
