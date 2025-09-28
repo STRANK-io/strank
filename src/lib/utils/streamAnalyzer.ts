@@ -286,6 +286,9 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 /**
  * 파워 추정 함수
  */
+/**
+ * 파워 추정 함수 (GPS-only 보정 강화)
+ */
 function estimatePower(
   distanceM: number[],
   altitudeM: number[],
@@ -317,8 +320,8 @@ function estimatePower(
     const gpsSpeedRaw = speedFromDist.map(s => Math.min(Math.max(s, 0), 15))
     // (1) 강한 스무딩 적용
     const gpsSpeedSmooth = rollingMean(gpsSpeedRaw, 15, true, 1)
-    // (2) 3km/h 미만은 노이즈 처리 (0으로)
-    speed = gpsSpeedSmooth.map(s => (s * 3.6 < 3 ? 0 : s))
+    // (2) 2 km/h 미만은 노이즈 처리 (기존 3 → 완화)
+    speed = gpsSpeedSmooth.map(s => (s * 3.6 < 2 ? 0 : s))
   }
 
   // 고도 스무딩
@@ -339,8 +342,8 @@ function estimatePower(
     const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
 
     let totalPower = gradPower + rollPower + aeroPower
-    // (3) 하한 보정: 추정치가 너무 낮을 때 최소 30W 보장
-    totalPower = Math.max(30, Math.min(1500, totalPower))
+    // (3) 하한 보정 강화 (30W → 50W)
+    totalPower = Math.max(50, Math.min(1500, totalPower))
     power.push(totalPower)
   }
 
