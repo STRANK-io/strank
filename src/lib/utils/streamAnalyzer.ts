@@ -75,7 +75,7 @@ const HR_ZONES = {
 
 
 // =========================================
-// 코스명 유틸 함수 (Nominatim + Overpass + 우선순위 + 반환점 감지)
+// 코스명 유틸 함수 (Nominatim + Overpass + 반환점 + 중복축약)
 // =========================================
 
 // 코스 길이에 따라 샘플링 포인트 개수 결정
@@ -86,28 +86,21 @@ function getSegmentCount(distanceKm: number): number {
   return 6
 }
 
-// 벡터 각도 계산 (세 점의 회전 각도)
-function getAngle(a: {lat:number, lon:number}, b: {lat:number, lon:number}, c: {lat:number, lon:number}): number {
-  const ab = { x: b.lon - a.lon, y: b.lat - a.lat }
-  const bc = { x: c.lon - b.lon, y: c.lat - b.lat }
-  const dot = ab.x * bc.x + ab.y * bc.y
-  const magAB = Math.sqrt(ab.x*ab.x + ab.y*ab.y)
-  const magBC = Math.sqrt(bc.x*bc.x + bc.y*bc.y)
-  if (magAB === 0 || magBC === 0) return 180
-  const cos = dot / (magAB * magBC)
-  return Math.acos(Math.max(-1, Math.min(1, cos))) * (180 / Math.PI)
-}
+// 반환점 감지 (왕복 루트)
+function detectSpecialPoints(latlngs: { lat: number; lon: number }[]): number[] {
+  if (latlngs.length < 20) return []
+  const mid = Math.floor(latlngs.length / 2)
+  const dist = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) =>
+    Math.sqrt(Math.pow(a.lat - b.lat, 2) + Math.pow(a.lon - b.lon, 2))
 
-// 반환점/급격한 꺾임 감지
-function detectSpecialPoints(latlngs: { lat: number; lon: number }[], minAngle = 120): number[] {
-  const specialIdx: number[] = []
-  for (let i = 1; i < latlngs.length - 1; i++) {
-    const angle = getAngle(latlngs[i - 1], latlngs[i], latlngs[i + 1])
-    if (angle > minAngle) {
-      specialIdx.push(i)
-    }
-  }
-  return specialIdx
+  const start = latlngs[0]
+  const midPoint = latlngs[mid]
+  const end = latlngs[latlngs.length - 1]
+
+  const result: number[] = []
+  if (dist(start, midPoint) < 0.003) result.push(mid) // 반환점 감지 (약 300m)
+  if (dist(start, end) < 0.003) result.push(latlngs.length - 1) // 종점이 거의 동일
+  return result
 }
 
 // GPS 경로에서 일정 간격 포인트 추출
@@ -186,8 +179,7 @@ async function getNearbyPOIs(lat: number, lon: number, radius = 500): Promise<{n
 
     return data.elements
       .map((el: any) => ({ name: el.tags?.name, tags: el.tags }))
-      // 잡음 제거: shop, office 등 제외
-      .filter((el: any) => el.name && !el.tags.shop && !el.tags.office)
+      .filter((el: any) => el.name)
   } catch (e) {
     console.warn("⚠️ getNearbyPOIs 실패:", e)
     return []
@@ -200,30 +192,20 @@ function pickBestPOI(pois: {name: string, tags: any}[], baseName: string): strin
 
   const scored = pois.map(p => {
     let score = 0
-    // 1. 최우선: 댐, 산, 대교, 고개
     if (p.tags.man_made === "dam") score = 100
     else if (["peak","hill","ridge"].includes(p.tags.natural)) score = 95
     else if (p.tags.man_made === "bridge") score = 90
     else if (p.tags.highway === "pass") score = 85
-
-    // 2. 물 관련
     else if (p.tags.waterway === "river" || p.tags.natural === "water" || p.tags.place === "sea") score = 80
     else if (p.tags.water === "reservoir" || p.tags.bay) score = 75
-
-    // 3. 관광/문화
     else if (["attraction","viewpoint","theme_park","zoo","museum"].includes(p.tags.tourism)) score = 70
     else if (p.tags.historic) score = 65
     else if (["temple","church","mosque","cathedral","shrine"].includes(p.tags.religion) || p.tags.amenity === "place_of_worship") score = 60
-
-    // 4. 레저/자연
     else if (["park","garden","resort","stadium"].includes(p.tags.leisure)) score = 55
     else if (["cliff","volcano","cape","valley","forest"].includes(p.tags.natural)) score = 50
-
-    // 5. 전망/기타
     else if (["tower","lighthouse"].includes(p.tags.man_made) || p.tags["tower:type"] === "observation") score = 45
     else if (p.tags.man_made === "pier" || p.tags.harbour) score = 40
-
-    else score = 10 // 기타 잡음
+    else score = 10
     return { ...p, score }
   })
 
@@ -238,29 +220,39 @@ export async function generateCourseName(
 ): Promise<string> {
   const segmentCount = getSegmentCount(distanceKm)
 
-  // 1) 반환점/특수 포인트 먼저 확보
+  // 반환점 + 균등 분할
   const specialIdx = detectSpecialPoints(latlngs)
   const specialPoints = specialIdx.map(i => latlngs[i])
-
-  // 2) 균등 분할 포인트 추가
   const basicPoints = splitCourseByIndex(latlngs, segmentCount)
+  let keyPoints = [...specialPoints, ...basicPoints]
 
-  // 3) 병합 (반환점 + 기본 포인트)
-  const keyPoints = [...specialPoints, ...basicPoints]
+  // 최대 8개로 제한
+  if (keyPoints.length > 8) {
+    keyPoints = keyPoints.filter((_, i) => i % Math.ceil(keyPoints.length / 8) === 0)
+  }
 
   const names = await Promise.all(
     keyPoints.map(async (pt) => {
       const baseName = await reverseGeocode(pt)
       const pois = await getNearbyPOIs(pt.lat, pt.lon, 500)
       const best = pickBestPOI(pois, baseName)
-      return best || "알 수 없음"
+      return best
     })
   )
 
-  // 연속 중복 제거
+  // 1) 알 수 없음 제거
+  let filtered = names.filter(n => n && n !== "알 수 없음")
+
+  // 2) 강한 중복 축약 (최대 2번까지만 허용)
+  const seen: Record<string, number> = {}
+  filtered = filtered.filter(n => {
+    seen[n] = (seen[n] || 0) + 1
+    return seen[n] <= 2
+  })
+
+  // 3) 연속 중복 제거
   const cleaned: string[] = []
-  for (const n of names) {
-    if (!n) continue
+  for (const n of filtered) {
     if (cleaned.length === 0 || cleaned[cleaned.length - 1] !== n) {
       cleaned.push(n)
     }
@@ -268,6 +260,7 @@ export async function generateCourseName(
 
   return cleaned.length > 0 ? cleaned.join(" → ") : "등록된 코스 없음"
 }
+
 
 
 
