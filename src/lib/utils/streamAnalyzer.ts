@@ -74,16 +74,34 @@ const HR_ZONES = {
 }
 
 // =========================================
-// 코스명 유틸 함수
+// 코스명 유틸 함수 (Nominatim + Overpass 혼합)
 // =========================================
-// Nominatim Reverse Geocoding (실패 시 admin fallback)
+
+// 코스 길이에 따라 샘플링 포인트 개수 결정
+function getSegmentCount(distanceKm: number): number {
+  if (distanceKm <= 5) return 2
+  if (distanceKm <= 30) return 4
+  if (distanceKm <= 80) return 5
+  return 6
+}
+
+// GPS 경로에서 일정 간격 포인트 추출
+function splitCourseByIndex(latlngs: { lat: number; lon: number }[], segmentCount = 6) {
+  if (latlngs.length <= segmentCount) return latlngs
+  const step = Math.floor(latlngs.length / (segmentCount - 1))
+  return Array.from({ length: segmentCount }, (_, i) =>
+    latlngs[Math.min(i * step, latlngs.length - 1)]
+  )
+}
+
+// Nominatim Reverse Geocoding
 async function reverseGeocode(point: { lat: number; lon: number }): Promise<string> {
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=14&addressdetails=1&extratags=1`;
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=14&addressdetails=1&extratags=1`
     const res = await fetch(url, {
       headers: { "User-Agent": "STRANK/1.0 (support@strank.io)" },
-    });
-    const data = await res.json();
+    })
+    const data = await res.json()
 
     const feature =
       data.name ||
@@ -96,7 +114,7 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
       data.extratags?.water ||
       data.extratags?.bridge ||
       data.extratags?.cycleway ||
-      null;
+      null
 
     const admin =
       data.address?.neighbourhood ||
@@ -108,19 +126,18 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
       data.address?.county ||
       data.address?.state_district ||
       data.address?.city ||
-      null;
+      null
 
     if (feature && admin) {
-      if (feature === admin) return feature;
-      return `${feature}(${admin})`;
+      if (feature === admin) return feature
+      return `${feature}(${admin})`
     }
-    if (feature) return feature;
-    if (admin) return admin;
-
-    return "알 수 없음";
+    if (feature) return feature
+    if (admin) return admin
+    return "알 수 없음"
   } catch (e) {
-    console.warn("⚠️ reverseGeocode 실패:", e);
-    return "알 수 없음"; // 최소한 문자열 보장
+    console.warn("⚠️ reverseGeocode 실패:", e)
+    return "알 수 없음"
   }
 }
 
@@ -134,13 +151,13 @@ async function getNearbyPOIs(lat: number, lon: number, radius = 1000): Promise<s
         way(around:${radius},${lat},${lon})["name"];
         relation(around:${radius},${lat},${lon})["name"];
       );
-      out center;`;
+      out center;`
 
-    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`
     const res = await fetch(url, {
       headers: { "User-Agent": "STRANK/1.0 (support@strank.io)" },
-    });
-    const data = await res.json();
+    })
+    const data = await res.json()
 
     return data.elements
       .map((el: any) => ({ name: el.tags?.name, tags: el.tags }))
@@ -155,11 +172,39 @@ async function getNearbyPOIs(lat: number, lon: number, radius = 1000): Promise<s
             ["attraction", "viewpoint", "resort", "park"].includes(el.tags.tourism)
           )
       )
-      .map((el: any) => el.name);
+      .map((el: any) => el.name)
   } catch (e) {
-    console.warn("⚠️ getNearbyPOIs 실패:", e);
-    return [];
+    console.warn("⚠️ getNearbyPOIs 실패:", e)
+    return []
   }
+}
+
+// 최종 코스명 생성
+export async function generateCourseName(
+  latlngs: { lat: number; lon: number }[],
+  distanceKm: number
+): Promise<string> {
+  const segmentCount = getSegmentCount(distanceKm)
+  const keyPoints = splitCourseByIndex(latlngs, segmentCount)
+
+  const names = await Promise.all(
+    keyPoints.map(async (pt) => {
+      const baseName = await reverseGeocode(pt)
+      const pois = await getNearbyPOIs(pt.lat, pt.lon, 800)
+      const poi = pois[0]
+      return poi || baseName || "알 수 없음"
+    })
+  )
+
+  const cleaned: string[] = []
+  for (const n of names) {
+    if (!n) continue
+    if (cleaned.length === 0 || cleaned[cleaned.length - 1] !== n) {
+      cleaned.push(n)
+    }
+  }
+
+  return cleaned.length > 0 ? cleaned.join(" → ") : "등록된 코스 없음"
 }
 
 // 최종 코스명 생성 (fallback 포함)
