@@ -73,6 +73,7 @@ const HR_ZONES = {
   Z5: [172, 225],
 }
 
+
 // =========================================
 // 코스명 유틸 함수 (Nominatim + Overpass 혼합)
 // =========================================
@@ -85,13 +86,51 @@ function getSegmentCount(distanceKm: number): number {
   return 6
 }
 
-// GPS 경로에서 일정 간격 포인트 추출
+// GPS 경로에서 일정 간격 포인트 추출 (균등 샘플링)
 function splitCourseByIndex(latlngs: { lat: number; lon: number }[], segmentCount = 6) {
   if (latlngs.length <= segmentCount) return latlngs
   const step = Math.floor(latlngs.length / (segmentCount - 1))
   return Array.from({ length: segmentCount }, (_, i) =>
     latlngs[Math.min(i * step, latlngs.length - 1)]
   )
+}
+
+// 각도 계산 (세 점 사이 방향 변화)
+function getAngle(a: { lat: number; lon: number }, b: { lat: number; lon: number }, c: { lat: number; lon: number }): number {
+  const ab = [b.lat - a.lat, b.lon - a.lon]
+  const bc = [c.lat - b.lat, c.lon - b.lon]
+  const dot = ab[0] * bc[0] + ab[1] * bc[1]
+  const magA = Math.sqrt(ab[0]**2 + ab[1]**2)
+  const magB = Math.sqrt(bc[0]**2 + bc[1]**2)
+  const cos = dot / (magA * magB + 1e-6)
+  return Math.acos(Math.min(1, Math.max(-1, cos))) * (180/Math.PI)
+}
+
+// 반환점 / 급격한 꺾임 감지
+function detectSpecialPoints(latlngs: { lat: number; lon: number }[], minAngle = 120): number[] {
+  const specialIdx: number[] = []
+  for (let i = 1; i < latlngs.length - 1; i++) {
+    const angle = getAngle(latlngs[i - 1], latlngs[i], latlngs[i + 1])
+    if (angle > minAngle) specialIdx.push(i)
+  }
+  return specialIdx
+}
+
+// 균등 샘플링 + 반환점 병합
+function pickKeyPoints(latlngs: { lat: number; lon: number }[], distanceKm: number) {
+  const segmentCount = getSegmentCount(distanceKm)
+  const basicPoints = splitCourseByIndex(latlngs, segmentCount)
+
+  const specialIdx = detectSpecialPoints(latlngs)
+  const specialPoints = specialIdx.map(i => latlngs[i])
+
+  // 병합 + 중복 제거
+  const merged = [...basicPoints, ...specialPoints]
+  const unique = merged.filter((p, idx, arr) =>
+    arr.findIndex(q => q.lat === p.lat && q.lon === p.lon) === idx
+  )
+
+  return unique
 }
 
 // Nominatim Reverse Geocoding
@@ -179,13 +218,12 @@ async function getNearbyPOIs(lat: number, lon: number, radius = 1000): Promise<s
   }
 }
 
-// ✅ 최종 코스명 생성 (fallback 포함) — 중복 제거
+// ✅ 최종 코스명 생성 (반환점 포함, fallback 보장)
 export async function generateCourseName(
   latlngs: { lat: number; lon: number }[],
   distanceKm: number
 ): Promise<string> {
-  const segmentCount = getSegmentCount(distanceKm)
-  const keyPoints = splitCourseByIndex(latlngs, segmentCount)
+  const keyPoints = pickKeyPoints(latlngs, distanceKm)
 
   const names = await Promise.all(
     keyPoints.map(async (pt) => {
@@ -206,6 +244,11 @@ export async function generateCourseName(
 
   return cleaned.length > 0 ? cleaned.join(" → ") : "등록된 코스 없음"
 }
+
+
+
+
+
 
 // =========================================
 // 유틸 함수
