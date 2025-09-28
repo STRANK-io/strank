@@ -175,13 +175,30 @@ function pickBestPOI(pois: {name: string, tags: any}[], baseName: string): strin
 
   const scored = pois.map(p => {
     let score = 0
+    // 1. 최우선: 댐, 산, 대교
     if (p.tags.man_made === "dam") score = 100
-    else if (p.tags.natural === "peak") score = 90
-    else if (p.tags.man_made === "bridge") score = 80
-    else if (p.tags.waterway === "river" || p.tags.natural === "water") score = 70
-    else if (["attraction","viewpoint","resort"].includes(p.tags.tourism)) score = 60
-    else if (p.tags.leisure === "park") score = 50
-    else score = 10
+    else if (["peak","hill","ridge"].includes(p.tags.natural)) score = 95
+    else if (p.tags.man_made === "bridge") score = 90
+    else if (p.tags.highway === "pass") score = 85 // 고개
+
+    // 2. 물 관련
+    else if (p.tags.waterway === "river" || p.tags.natural === "water" || p.tags.place === "sea") score = 80
+    else if (p.tags.water === "reservoir" || p.tags.bay) score = 75
+
+    // 3. 관광/문화
+    else if (["attraction","viewpoint","theme_park","zoo","museum"].includes(p.tags.tourism)) score = 70
+    else if (p.tags.historic) score = 65
+    else if (["temple","church","mosque","cathedral","shrine"].includes(p.tags.religion) || p.tags.amenity === "place_of_worship") score = 60
+
+    // 4. 레저/자연
+    else if (["park","garden","resort","stadium"].includes(p.tags.leisure)) score = 55
+    else if (["cliff","volcano","cape","valley","forest"].includes(p.tags.natural)) score = 50
+
+    // 5. 전망/기타
+    else if (["tower","lighthouse"].includes(p.tags.man_made) || p.tags["tower:type"] === "observation") score = 45
+    else if (p.tags.man_made === "pier" || p.tags.harbour) score = 40
+
+    else score = 10 // 기타 잡음
     return { ...p, score }
   })
 
