@@ -116,16 +116,21 @@ function detectSpecialPoints(latlngs: { lat: number; lon: number }[], minAngle =
   return specialIdx
 }
 
-// 균등 샘플링 + 반환점 병합
+// 핵심 포인트 선택: 반환점 우선 + 균등 보충
 function pickKeyPoints(latlngs: { lat: number; lon: number }[], distanceKm: number) {
   const segmentCount = getSegmentCount(distanceKm)
-  const basicPoints = splitCourseByIndex(latlngs, segmentCount)
 
+  // 1) 반환점/특수 포인트 먼저 확보
   const specialIdx = detectSpecialPoints(latlngs)
   const specialPoints = specialIdx.map(i => latlngs[i])
 
-  // 병합 + 중복 제거
-  const merged = [...basicPoints, ...specialPoints]
+  // 2) 균등 분할 포인트 추가 (특수포인트 부족시 보충)
+  const basicPoints = splitCourseByIndex(latlngs, segmentCount)
+
+  // 3) 병합 (특수포인트 → 기본포인트 순서)
+  const merged = [...specialPoints, ...basicPoints]
+
+  // 4) 중복 제거
   const unique = merged.filter((p, idx, arr) =>
     arr.findIndex(q => q.lat === p.lat && q.lon === p.lon) === idx
   )
@@ -244,8 +249,6 @@ export async function generateCourseName(
 
   return cleaned.length > 0 ? cleaned.join(" → ") : "등록된 코스 없음"
 }
-
-
 
 
 
