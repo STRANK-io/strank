@@ -74,29 +74,31 @@ const HR_ZONES = {
 }
 
 // =========================================
-// 코스명 유틸 함수
+// 코스명 유틸 함수 (Nominatim + Overpass 혼합)
 // =========================================
+
+// Nominatim Reverse Geocoding
 async function reverseGeocode(point: { lat: number; lon: number }): Promise<string> {
-  const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=14&addressdetails=1&extratags=1`
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lon}&format=json&zoom=14&addressdetails=1&extratags=1`;
   const res = await fetch(url, {
     headers: { "User-Agent": "STRANK/1.0 (support@strank.io)" },
-  })
-  const data = await res.json()
+  });
+  const data = await res.json();
 
   // 랜드마크/지형지물 후보
   const feature =
-    data.name ||                        // 이름 (삼막사 같은 POI)
-    data.extratags?.temple ||           // 사찰
-    data.extratags?.historic ||         // 문화재
-    data.extratags?.tourism ||          // 관광지
-    data.extratags?.peak ||             // 산
-    data.extratags?.park ||             // 공원
-    data.extratags?.river ||            // 강
-    data.extratags?.water ||      // 호수/저수지
-    data.extratags?.bridge ||     // 다리
-    data.extratags?.cycleway      // 자전거도로
-    null
-  
+    data.name || // 이름 (삼막사, Eiffel Tower)
+    data.extratags?.temple || // 사찰
+    data.extratags?.historic || // 문화재
+    data.extratags?.tourism || // 관광지
+    data.extratags?.peak || // 산
+    data.extratags?.park || // 공원
+    data.extratags?.river || // 강
+    data.extratags?.water || // 호수/저수지
+    data.extratags?.bridge || // 다리
+    data.extratags?.cycleway || // 자전거도로
+    null;
+
   // 행정구역 (소단위 → 대단위)
   const admin =
     data.address?.neighbourhood ||
@@ -108,51 +110,96 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
     data.address?.county ||
     data.address?.state_district ||
     data.address?.city ||
-    null
+    null;
 
-  // 최종 결과 조합 (중복 방지 포함)
   if (feature && admin) {
-    if (feature === admin) return feature   // 중복이면 한 번만
-    return `${feature}(${admin})`
+    if (feature === admin) return feature; // 중복이면 한 번만
+    return `${feature}(${admin})`;
   }
-  if (feature) return feature
-  if (admin) return admin
-  return "알 수 없음"
+  if (feature) return feature;
+  if (admin) return admin;
+  return "알 수 없음";
 }
 
+// Overpass API로 보강 (글로벌 POI)
+async function getNearbyPOIs(lat: number, lon: number, radius = 1000): Promise<string[]> {
+  const query = `
+    [out:json];
+    (
+      node(around:${radius},${lat},${lon})["name"];
+      way(around:${radius},${lat},${lon})["name"];
+      relation(around:${radius},${lat},${lon})["name"];
+    );
+    out center;`;
+
+  const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+  const res = await fetch(url, {
+    headers: { "User-Agent": "STRANK/1.0 (support@strank.io)" },
+  });
+  const data = await res.json();
+
+  return data.elements
+    .map((el: any) => ({ name: el.tags?.name, tags: el.tags }))
+    .filter(
+      (el: any) =>
+        el.name &&
+        (
+          el.tags.natural === "peak" || // 산
+          el.tags.man_made === "dam" || // 댐
+          el.tags.man_made === "bridge" || // 다리
+          el.tags.waterway === "river" || // 강
+          ["attraction", "viewpoint", "resort", "park"].includes(el.tags.tourism) // 관광지/전망대/공원
+        )
+    )
+    .map((el: any) => el.name);
+}
+
+// 코스 길이에 따라 샘플링 포인트 개수 결정
 function getSegmentCount(distanceKm: number): number {
- if (distanceKm <= 5) return 2
- if (distanceKm <= 30) return 4
- if (distanceKm <= 80) return 5
- return 6
+  if (distanceKm <= 5) return 2;
+  if (distanceKm <= 30) return 4;
+  if (distanceKm <= 80) return 5;
+  return 6;
 }
 
+// GPS 경로에서 일정 간격 포인트 추출
 function splitCourseByIndex(latlngs: { lat: number; lon: number }[], segmentCount = 6) {
-  if (latlngs.length <= segmentCount) return latlngs
-  const step = Math.floor(latlngs.length / (segmentCount - 1))
+  if (latlngs.length <= segmentCount) return latlngs;
+  const step = Math.floor(latlngs.length / (segmentCount - 1));
   return Array.from({ length: segmentCount }, (_, i) =>
     latlngs[Math.min(i * step, latlngs.length - 1)]
-  )
+  );
 }
+
+// 최종 코스명 생성
 export async function generateCourseName(
   latlngs: { lat: number; lon: number }[],
   distanceKm: number
 ): Promise<string> {
-  const segmentCount = getSegmentCount(distanceKm)
-  const keyPoints = splitCourseByIndex(latlngs, segmentCount)
-  const names = await Promise.all(keyPoints.map(reverseGeocode))
+  const segmentCount = getSegmentCount(distanceKm);
+  const keyPoints = splitCourseByIndex(latlngs, segmentCount);
 
-  // 연속된 중복만 제거 (왕복 루트 보존)
-  const cleaned: string[] = []
+  const names = await Promise.all(
+    keyPoints.map(async (pt) => {
+      const baseName = await reverseGeocode(pt);
+      const pois = await getNearbyPOIs(pt.lat, pt.lon, 800);
+      const poi = pois[0]; // 대표 POI 하나만 사용
+      return poi || baseName;
+    })
+  );
+
+  // 연속된 중복 제거
+  const cleaned: string[] = [];
   for (const n of names) {
-    if (!n) continue
+    if (!n) continue;
     if (cleaned.length === 0 || cleaned[cleaned.length - 1] !== n) {
-      cleaned.push(n)
+      cleaned.push(n);
     }
   }
 
-  return cleaned.join(" → ")
+  return cleaned.join(" → ");
 }
+
 // =========================================
 // 유틸 함수
 // =========================================
