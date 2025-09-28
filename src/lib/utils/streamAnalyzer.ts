@@ -855,27 +855,27 @@ function determineRiderStyle(data: {
   const cad = data.averageCadence || 0
 
   if (dist < 20 || speed < 20) {
-    return { icon: '??', name: '초보형 (입문형 라이더)', desc: '짧은 주행과 불안정한 리듬으로 기초 체력 단계' }
+    return { icon: '🚲', name: '초보형 (입문형 라이더)', desc: '짧은 주행과 불안정한 리듬으로 기초 체력 단계' }
   }
   if (maxW > 700 && dist < 50) {
-    return { icon: '??', name: '스프린터 (단거리가속형)', desc: '순간 폭발력이 뛰어난 스프린트 중심 주행' }
+    return { icon: '🔥', name: '스프린터 (단거리가속형)', desc: '순간 폭발력이 뛰어난 스프린트 중심 주행' }
   }
   if (elevPerKm >= 15 && elev >= 800) {
-    return { icon: '??', name: '클라이머 (산악형)', desc: '오르막 구간에서 낮은 케이던스로 꾸준히 힘을 낸 주행' }
+    return { icon: '⛰️', name: '클라이머 (산악형)', desc: '오르막 구간에서 낮은 케이던스로 꾸준히 힘을 낸 주행' }
   }
   if (dist >= 40 && dist <= 80 && maxW > 400 && elevPerKm >= 10) {
-    return { icon: '??', name: '펀처 (순간폭발형)', desc: '짧은 언덕과 순간 강도 대응이 돋보이는 주행' }
+    return { icon: '🚀', name: '펀처 (순간폭발형)', desc: '짧은 언덕과 순간 강도 대응이 돋보이는 주행' }
   }
   if (elevPerKm < 10 && dist >= 60 && speed >= 26) {
-    return { icon: '?', name: '롤러/도메스틱 (평지장거리형)', desc: '평지 장거리에서 안정적 페이스 유지' }
+    return { icon: '⚡', name: '롤러/도메스틱 (평지장거리형)', desc: '평지 장거리에서 안정적 페이스 유지' }
   }
   if (dist >= 100) {
-    return { icon: '??', name: '브레이커웨이 스페셜리스트 (장거리형)', desc: '장거리 독주와 꾸준한 페이스 유지' }
+    return { icon: '🐺', name: '브레이커웨이 스페셜리스트 (장거리형)', desc: '장거리 독주와 꾸준한 페이스 유지' }
   }
   if (dist >= 20 && dist <= 60 && avgW > 0.9 * (maxW || avgW) && cad >= 80) {
-    return { icon: '???', name: 'TT 스페셜리스트 (파워유지형)', desc: '에어로 자세로 일정 파워를 유지한 주행' }
+    return { icon: '🏋️', name: 'TT 스페셜리스트 (파워유지형)', desc: '에어로 자세로 일정 파워를 유지한 주행' }
   }
-  return { icon: '??', name: '올라운더 (밸런스형)', desc: '언덕과 평지 모두 균형 잡힌 주행' }
+  return { icon: '🦾', name: '올라운더 (밸런스형)', desc: '언덕과 평지 모두 균형 잡힌 주행' }
 }
 
 
@@ -1036,18 +1036,18 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
   console.log('? 스트림 데이터 분석 완료')
   
   // Python 스크립트와 동일한 출력 형식
-  console.log('??총거리:', results.총거리, 'km')
-  console.log('??총고도:', results.총고도, 'm')
-  console.log('??평균속도:', results.평균속도, 'km/h')
-  console.log('??최고속도:', results.최고속도, 'km/h')
-  console.log('??평균파워:', results.평균파워, 'W')
-  console.log('??최대파워:', results.최대파워, 'W')
-  console.log('?20min FTP:', results.ftp20 || 'N/A', 'W')
-  console.log('?60min FTP:', results.ftp60 || 'N/A', 'W')
-  console.log('??최고심박수:', results.최고심박수, 'bpm')
-  console.log('??평균케이던스:', results.평균케이던스, 'rpm\n')
+  console.log('🚴총거리:', results.총거리, 'km')
+  console.log('🚵총고도:', results.총고도, 'm')
+  console.log('🪫평균속도:', results.평균속도, 'km/h')
+  console.log('🔋최고속도:', results.최고속도, 'km/h')
+  console.log('🦵평균파워:', results.평균파워, 'W')
+  console.log('🦿최대파워:', results.최대파워, 'W')
+  console.log('⚡20min FTP:', results.ftp20 || 'N/A', 'W')
+  console.log('⚡60min FTP:', results.ftp60 || 'N/A', 'W')
+  console.log('❤️최고심박수:', results.최고심박수, 'bpm')
+  console.log('💫평균케이던스:', results.평균케이던스, 'rpm\n')
   
-  console.log('?? 파워·심박 존 훈련 분석')
+  console.log('📈 파워·심박 존 훈련 분석')
   for (const z of Object.keys(POWER_ZONES)) {
     console.log(`${z}: P ${results.powerZoneRatios[z]}% / H ${results.hrZoneRatios[z]}%`)
   }
