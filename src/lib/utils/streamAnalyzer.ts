@@ -179,7 +179,7 @@ async function getNearbyPOIs(lat: number, lon: number, radius = 1000): Promise<s
   }
 }
 
-// 최종 코스명 생성
+// ✅ 최종 코스명 생성 (fallback 포함) — 중복 제거
 export async function generateCourseName(
   latlngs: { lat: number; lon: number }[],
   distanceKm: number
@@ -205,34 +205,6 @@ export async function generateCourseName(
   }
 
   return cleaned.length > 0 ? cleaned.join(" → ") : "등록된 코스 없음"
-}
-
-// 최종 코스명 생성 (fallback 포함)
-export async function generateCourseName(
-  latlngs: { lat: number; lon: number }[],
-  distanceKm: number
-): Promise<string> {
-  const segmentCount = getSegmentCount(distanceKm);
-  const keyPoints = splitCourseByIndex(latlngs, segmentCount);
-
-  const names = await Promise.all(
-    keyPoints.map(async (pt) => {
-      const baseName = await reverseGeocode(pt);
-      const pois = await getNearbyPOIs(pt.lat, pt.lon, 800);
-      const poi = pois[0];
-      return poi || baseName || "알 수 없음"; // 안전 처리
-    })
-  );
-
-  const cleaned: string[] = [];
-  for (const n of names) {
-    if (!n) continue;
-    if (cleaned.length === 0 || cleaned[cleaned.length - 1] !== n) {
-      cleaned.push(n);
-    }
-  }
-
-  return cleaned.length > 0 ? cleaned.join(" → ") : "등록된 코스 없음";
 }
 
 // =========================================
