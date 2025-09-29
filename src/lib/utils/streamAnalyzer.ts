@@ -536,7 +536,7 @@ function estimatePower(
   }
 
   // (F) 최종 스무딩
-  return rollingMean(power, 5, true, 1)
+  return rollingMean(power, 3, true, 1)
 }
 
 /**
