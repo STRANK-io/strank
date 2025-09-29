@@ -531,7 +531,7 @@ function estimatePower(
 
     let totalPower = gradPower + rollPower + aeroPower
     // (E) 최소 80W 보정
-    totalPower = Math.max(80, Math.min(1500, totalPower))
+    totalPower = Math.max(60, Math.min(1500, totalPower))
     power.push(totalPower)
   }
 
@@ -686,17 +686,51 @@ function computeTotalElevationGain(altitudeM: number[]): number {
 }
 
 /**
- * 속도 통계 계산
+ * 속도 통계 계산 (센서 있음 vs GPS-only 구분)
  */
 function computeSpeedStats(speedMps: number[]): { avg: number; max: number } {
-  const validSpeeds = speedMps.filter(s => s != null && s > 0).map(s => s * 3.6) // km/h 변환
-  if (validSpeeds.length === 0) return { avg: 0, max: 0 }
-  
-  const avg = validSpeeds.reduce((sum, s) => sum + s, 0) / validSpeeds.length
-  const max = Math.max(...validSpeeds)
-  
-  return { avg: Math.round(avg), max: Math.round(max) }
+  if (!speedMps || speedMps.length === 0) return { avg: 0, max: 0 }
+
+  // km/h 변환
+  const speedsKmh = speedMps.filter(s => s != null && s > 0).map(s => s * 3.6)
+  if (speedsKmh.length === 0) return { avg: 0, max: 0 }
+
+  // 간단한 센서 여부 판단
+  const hasSensor = speedsKmh.length > 30 && speedsKmh.filter(s => s > 70).length === 0
+
+  if (hasSensor) {
+    // ✅ 속도센서 있음 → 원본 그대로
+    const avg = speedsKmh.reduce((sum, s) => sum + s, 0) / speedsKmh.length
+    const max = Math.max(...speedsKmh)
+    return { avg: Math.round(avg), max: Math.round(max) }
+  } else {
+    // ⚠️ GPS-only → 강한 보정
+    let smoothSpeeds = rollingMean(speedsKmh, 15, true, 1)
+
+    // (1) 중앙값 필터 추가 적용
+    smoothSpeeds = medianFilter(smoothSpeeds, 5)
+
+    // (2) 비정상 가속(>10km/h 차이) 제거
+    smoothSpeeds = smoothSpeeds.map((s, i) => {
+      const prev = smoothSpeeds[Math.max(0, i - 1)]
+      return Math.abs(s - prev) > 10 ? prev : s
+    })
+    
+
+    // 평균속도: 스무딩 기반
+    const avg = smoothSpeeds.reduce((sum, s) => sum + s, 0) / smoothSpeeds.length
+
+    // 최고속도: 상위 5% 평균
+    const sorted = [...smoothSpeeds].sort((a, b) => b - a)
+    const topN = Math.max(1, Math.floor(sorted.length * 0.1))
+    const topAvg = sorted.slice(0, topN).reduce((a, b) => a + b, 0) / topN
+
+    const max = Math.min(Math.round(topAvg), 50) // GPS-only는 상한 50km/h
+
+    return { avg: Math.round(avg), max }
+  }
 }
+
 
 /**
  * 파워 통계 계산
