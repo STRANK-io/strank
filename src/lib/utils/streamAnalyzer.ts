@@ -521,22 +521,37 @@ function estimatePower(
   }
 
   // 파워 계산
-  const power: number[] = []
-  for (let i = 0; i < speed.length; i++) {
-    const s = speed[i]
-    const deltaTime = dt[i] || 1
-    const gradPower = mass * g * dAlt[i] / deltaTime
-    const rollPower = mass * g * cr * s
-    const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
+const power: number[] = []
+for (let i = 0; i < speed.length; i++) {
+  const s = speed[i]
+  const deltaTime = dt[i] || 1
+  const gradPower = mass * g * dAlt[i] / deltaTime
+  const rollPower = mass * g * cr * s
+  const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
 
-    let totalPower = gradPower + rollPower + aeroPower
-    // (E) 최소 80W 보정
-    totalPower = Math.max(80, Math.min(1500, totalPower))
-    power.push(totalPower)
+  let totalPower = gradPower + rollPower + aeroPower
+
+  // ✅ 가중 하한 적용
+  if (s * 3.6 > 10) { 
+    // 평지·주행 중일 때 → 최소 100W
+    totalPower = Math.max(100, totalPower)
+  } else {
+    // 저속·내리막에서는 60W까지 허용
+    totalPower = Math.max(60, totalPower)
   }
 
-  // (F) 최종 스무딩
-  return rollingMean(power, 3, true, 1)
+  // 상한 제한
+  totalPower = Math.min(1500, totalPower)
+
+  power.push(totalPower)
+}
+
+// ✅ 전체 스케일링 적용 (평균값 끌어올리기)
+const scaleFactor = 1.3
+const powerScaled = power.map(p => p * scaleFactor)
+
+// (F) 최종 스무딩
+return rollingMean(powerScaled, 3, true, 1)
 }
 
 /**
