@@ -883,7 +883,7 @@ function determineRiderStyle(data: {
 // 메인 분석 함수
 // =========================================
 export async function analyzeStreamData(streamsData: any): Promise<AnalysisResult> {
-  console.log('?? 스트림 데이터 분석 시작...')
+  console.log('🔍 스트림 데이터 분석 시작...')
 
   
   const streams: StreamData = {}
@@ -922,7 +922,7 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
   let ftp60: number | null = null
 
   if (!streams.watts || streams.watts.every(w => !w)) {
-    console.log('? 파워: 추정값으로 대체')
+    console.log('⚡ 파워: 추정값으로 대체')
     streams.watts = estimatePower(streams.distance!, streams.altitude!, dt, streams.velocity_smooth)
     
     // FTP 추정
@@ -943,7 +943,7 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
 
   // 스무딩 옵션 적용
   if (SMOOTH_POWER && streams.watts) {
-    console.log('? 파워: 스무딩 적용')
+    console.log('⚡ 파워: 스무딩 적용')
     const powerSmooth = rollingMean(streams.watts, 15, true, 1)
     streams.watts = medianFilter(powerSmooth, 9)
   }
@@ -959,12 +959,12 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
   }
   
   if (!streams.heartrate || streams.heartrate.every(h => !h)) {
-    console.log('?? 심박: 추정값으로 대체')
+    console.log('❤️ 심박: 추정값으로 대체')
     streams.heartrate = estimateHrFromGpsAlt(streams.distance!, streams.altitude!, dt)
   }
   
   if (!streams.cadence || streams.cadence.every(c => !c)) {
-    console.log('?? 케이던스: 추정값으로 대체')
+    console.log('🔄 케이던스: 추정값으로 대체')
     streams.cadence = estimateCadenceFromFeatures(streams.velocity_smooth!, streams.altitude!, streams.distance!)
   }
   
@@ -1033,7 +1033,7 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
     results.hrZoneAverages[zone] = hrInZone.length > 0 ? Math.round(hrInZone.reduce((sum, hr) => sum + hr, 0) / hrInZone.length) : null
   }
   
-  console.log('? 스트림 데이터 분석 완료')
+  console.log('🔍 스트림 데이터 분석 완료')
   
   // Python 스크립트와 동일한 출력 형식
   console.log('🚴총거리:', results.총거리, 'km')
