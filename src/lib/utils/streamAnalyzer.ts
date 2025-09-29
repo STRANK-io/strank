@@ -534,7 +534,7 @@ for (let i = 0; i < speed.length; i++) {
   // ✅ 가중 하한 적용
   if (s * 3.6 > 10) { 
     // 평지·주행 중일 때 → 최소 100W
-    totalPower = Math.max(100, totalPower)
+    totalPower = Math.max(90, totalPower)
   } else {
     // 저속·내리막에서는 60W까지 허용
     totalPower = Math.max(60, totalPower)
