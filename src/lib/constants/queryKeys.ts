@@ -29,4 +29,7 @@ export const QUERY_KEYS = {
     STREAMS: (activityId: number, keys: string[]) =>
       [...QUERY_KEYS.STRAVA.DEFAULT, 'streams', activityId, keys] as const,
   },
+  ZONE: {
+    INFO: (userId: string, zoneType: string) => ['zone', 'info', userId, zoneType],
+  },
 } as const

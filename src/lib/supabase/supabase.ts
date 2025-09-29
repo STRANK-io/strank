@@ -218,6 +218,8 @@ export type Database = {
           deleted_at: string | null
           province: string | null
           district: string | null
+          ftp_value: number | null
+          heart_value: number | null
           email: string
           id: string
           last_activity_sync_at: string | null
@@ -231,6 +233,8 @@ export type Database = {
           deleted_at?: string | null
           province?: string | null
           district?: string | null
+          ftp_value?: number | null
+          heart_value?: number | null
           email: string
           id: string
           last_activity_sync_at?: string | null
@@ -244,6 +248,8 @@ export type Database = {
           deleted_at?: string | null
           province?: string | null
           district?: string | null
+          ftp_value?: number | null
+          heart_value?: number | null
           email?: string
           id?: string
           last_activity_sync_at?: string | null
@@ -262,6 +268,38 @@ export type Database = {
           },
         ]
       }
+      zone_info: {
+        Row: {
+          id: number;
+          user_id: string;
+          zone_type: string;
+          zone_name: string;
+          min: number;
+          max: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          user_id: string;
+          zone_type: string;
+          zone_name: string;
+          min: number;
+          max: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          user_id?: string;
+          zone_type?: string;
+          zone_name?: string;
+          min?: number;
+          max?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     }
     Views: {
       user_count: {
