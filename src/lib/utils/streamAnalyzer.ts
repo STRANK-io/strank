@@ -308,7 +308,7 @@ function computeAvgPowerMovingIncludingZeros(
   if (moving && moving.length === N) {
     movingMask = moving.map(v => Boolean(v))
   } else if (velocity && velocity.length === N) {
-    movingMask = velocity.map(v => (v || 0) > 0.5)
+    movingMask = velocity.map(v => (v || 0) > 1.0)
   } else {
     movingMask = Array(N).fill(true)
   }
