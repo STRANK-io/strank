@@ -460,8 +460,8 @@ function estimatePower(
   dt: number[],
   velocitySmooth?: number[],
   mass = 75,
-  cda = 0.35,
-  cr = 0.005,
+  cda = 0.38,
+  cr = 0.006,
   rho = 1.226,
   g = 9.81
 ): number[] {
@@ -955,9 +955,6 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
     dt,
     streams.velocity_smooth
   )
-
-  // 스무딩 적용 (7초 이동평균)
-  est = rollingMean(est, 7, true, 1)
 
   // 600W 이상이 3초 이상 지속되지 않으면 제외
   est = sanitizeZ7(est, dt, 600, 3)
