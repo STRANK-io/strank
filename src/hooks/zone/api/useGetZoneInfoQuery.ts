@@ -2,21 +2,21 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { QUERY_KEYS } from '@/lib/constants/queryKeys'
 
-export const useGetUserInfoQuery = (userId: string) => {
+export const useGetZoneInfoQuery = (userId: string, zoneType: 'power' | 'heart') => {
   const supabase = createClient()
 
   return useQuery({
-    queryKey: QUERY_KEYS.USER.INFO(userId),
+    queryKey: QUERY_KEYS.ZONE.INFO(userId, zoneType),
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('users')
-        .select('profile, name, province, district, last_activity_sync_at, ftp_value, heart_value')
-        .eq('id', userId)
-        .maybeSingle()
+        .from('zone_info')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('zone_type', zoneType)
+        .order('min', { ascending: false })
 
       if (error) throw error
-
-      return data || null
+      return data || []
     },
     enabled: !!userId,
   })

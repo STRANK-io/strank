@@ -7,9 +7,12 @@ import { CompleteButton } from '@/components/common/userInfo/CompleteButton'
 import { LogOutButton } from '@/components/features/auth/LogOutButton'
 import { WithdrawalButton } from '@/components/features/auth/WithdrawalButton'
 import SyncRecentActivitySection from '@/components/features/mypage/SyncRecentActivitySection'
+import ZoneSection from '@/components/features/mypage/ZoneSection'
+import { useGetUserInfoQuery } from '@/hooks/user/api/useGetUserInfoQuery'
 
 export default function MypagePage() {
-  const { userId } = useUserContext()
+  const { userId } = useUserContext();
+  const { data: userInfo } = useGetUserInfoQuery(userId);
 
   return (
     <div className="space-y-16 pb-[75px]">
@@ -20,6 +23,10 @@ export default function MypagePage() {
         <div className="w-full px-5">
           <CompleteButton userId={userId} text="저장 완료" isMypage />
         </div>
+      </section>
+
+      <section className="w-full space-y-2 px-5">
+        <ZoneSection userInfo={userInfo || null} />
       </section>
 
       <section className="w-full space-y-2 px-5">

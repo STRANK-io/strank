@@ -7,6 +7,8 @@ interface UserInfoState {
   nickname: string
   province: string | null
   district: string | null
+  ftpValue: number | null
+  heartValue: number | null
 
   // 액션
   setProfileImage: (file: File | null) => void
@@ -14,6 +16,8 @@ interface UserInfoState {
   setNickname: (name: string) => void
   setProvince: (province: string | null) => void
   setDistrict: (district: string | null) => void
+  setFtpValue: (ftpValue: number | null) => void
+  setHeartValue: (heartValue: number | null) => void
   reset: () => void
 }
 
@@ -24,6 +28,8 @@ export const useUserInfoStore = create<UserInfoState>(set => ({
   nickname: '',
   province: null,
   district: null,
+  ftpValue: null,
+  heartValue: null,
 
   // 액션
   setProfileImage: file => set({ profileImage: file }),
@@ -31,12 +37,16 @@ export const useUserInfoStore = create<UserInfoState>(set => ({
   setNickname: name => set({ nickname: name }),
   setProvince: province => set({ province }),
   setDistrict: district => set({ district }),
-  reset: () =>
+  setFtpValue: ftpValue => set({ ftpValue }),
+  setHeartValue: heartValue => set({ heartValue }),
+  reset: () =>  
     set({
       profileImage: null,
       imagePreviewUrl: null,
       nickname: '',
       province: null,
       district: null,
+      ftpValue: null,
+      heartValue: null,
     }),
 }))
