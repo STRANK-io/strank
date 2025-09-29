@@ -937,7 +937,6 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
   est = sanitizeZ7(est, dt, 600, 3)
 
   streams.watts = est
-}
     
     // FTP 추정
     const ftpResult = estimateFtpWithoutPower(
