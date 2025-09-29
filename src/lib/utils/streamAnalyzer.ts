@@ -460,8 +460,8 @@ function estimatePower(
   dt: number[],
   velocitySmooth?: number[],
   mass = 75,
-  cda = 0.3,
-  cr = 0.004,
+  cda = 0.35,
+  cr = 0.005,
   rho = 1.226,
   g = 9.81
 ): number[] {
