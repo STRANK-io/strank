@@ -923,7 +923,21 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
 
   if (!streams.watts || streams.watts.every(w => !w)) {
     console.log('⚡ 파워: 추정값으로 대체')
-    streams.watts = estimatePower(streams.distance!, streams.altitude!, dt, streams.velocity_smooth)
+    let est = estimatePower(
+      streams.distance!,
+      streams.altitude!,
+      dt,
+      streams.velocity_smooth
+    )
+
+  // 스무딩 적용
+  est = rollingMean(est, 7, true, 1)
+
+  // 600W 이상이 3초 이상 지속되지 않으면 제외
+  est = sanitizeZ7(est, dt, 600, 3)
+
+  streams.watts = est
+}
     
     // FTP 추정
     const ftpResult = estimateFtpWithoutPower(
