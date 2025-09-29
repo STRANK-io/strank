@@ -705,17 +705,15 @@ function computeSpeedStats(speedMps: number[]): { avg: number; max: number } {
     return { avg: Math.round(avg), max: Math.round(max) }
   } else {
     // ⚠️ GPS-only → 강한 보정
-    const smoothSpeeds = rollingMean(speedsKmh, 15, true, 1)
+    let smoothSpeeds = rollingMean(speedsKmh, 15, true, 1)
 
     // (1) 중앙값 필터 추가 적용
     smoothSpeeds = medianFilter(smoothSpeeds, 5)
 
     // (2) 비정상 가속(>10km/h 차이) 제거
     smoothSpeeds = smoothSpeeds.map((s, i) => {
-      if (i > 0 && Math.abs(s - smoothSpeeds[i - 1]) > 10) {
-        return smoothSpeeds[i - 1] // 이전 값 유지
-      }
-      return s
+      const prev = smoothSpeeds[Math.max(0, i - 1)]
+      return Math.abs(s - prev) > 10 ? prev : s
     })
     
 
