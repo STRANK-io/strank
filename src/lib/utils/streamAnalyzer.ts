@@ -707,7 +707,7 @@ function computeSpeedStats(speedMps: number[]): { avg: number; max: number } {
     // ⚠️ GPS-only → 보정
     const smoothSpeeds = rollingMean(speedsKmh, 5, true, 1)
     const avg = smoothSpeeds.reduce((sum, s) => sum + s, 0) / smoothSpeeds.length
-    const max = Math.min(Math.max(...speedsKmh), 50) // 최고속도 상한
+    const max = Math.min(Math.max(...speedsKmh), 40) // 최고속도 상한
     return { avg: Math.round(avg), max: Math.round(max) }
   }
 }
