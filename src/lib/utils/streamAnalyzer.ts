@@ -602,10 +602,10 @@ function estimateCadenceFromFeatures(
   speedMps: number[],
   altitudeM: number[],
   distanceM: number[],
-  baseRpm = 60,
-  alpha = 2.0,
-  beta = -150.0,
-  gamma = -0.0001
+  baseRpm = 75,
+  alpha = 3.0,
+  beta = -80.0,
+  gamma = -0.0005
 ): number[] {
   const s = speedMps.map(sp => sp || 0)
   
