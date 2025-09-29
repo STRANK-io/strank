@@ -531,7 +531,7 @@ function estimatePower(
 
     let totalPower = gradPower + rollPower + aeroPower
     // (E) 최소 80W 보정
-    totalPower = Math.max(50, Math.min(1500, totalPower))
+    totalPower = Math.max(60, Math.min(1500, totalPower))
     power.push(totalPower)
   }
 
@@ -707,7 +707,7 @@ function computeSpeedStats(speedMps: number[]): { avg: number; max: number } {
     // ⚠️ GPS-only → 보정
     const smoothSpeeds = rollingMean(speedsKmh, 5, true, 1)
     const avg = smoothSpeeds.reduce((sum, s) => sum + s, 0) / smoothSpeeds.length
-    const max = Math.min(Math.max(...speedsKmh), 55) // 최고속도 상한
+    const max = Math.min(Math.max(...speedsKmh), 40) // 최고속도 상한
     return { avg: Math.round(avg), max: Math.round(max) }
   }
 }
