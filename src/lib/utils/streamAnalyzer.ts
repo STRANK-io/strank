@@ -395,6 +395,34 @@ function rollingMean(data: number[], window: number, center = true, minPeriods =
   }
   return result
 }
+/**
+ * Z7 노이즈 필터링
+ * - 600W 이상이 3초 이상 연속되지 않으면 제외(0 처리)
+ */
+function sanitizeZ7(
+  values: number[],
+  dt: number[],
+  minWatt = 600,
+  minDuration = 3
+): number[] {
+  const cleaned = [...values]
+  let streak = 0
+
+  for (let i = 0; i < values.length; i++) {
+    const delta = dt[i] || 1
+
+    if (values[i] >= minWatt) {
+      streak += delta
+      if (streak < minDuration) {
+        cleaned[i] = 0 // 조건 불충족 → 제외
+      }
+    } else {
+      streak = 0
+    }
+  }
+
+  return cleaned
+}
 
 
 /**
@@ -922,22 +950,23 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
   let ftp60: number | null = null
 
   if (!streams.watts || streams.watts.every(w => !w)) {
-    console.log('⚡ 파워: 추정값으로 대체')
-    let est = estimatePower(
-      streams.distance!,
-      streams.altitude!,
-      dt,
-      streams.velocity_smooth
-    )
+  console.log('⚡ 파워: 추정값으로 대체')
 
-  // 스무딩 적용
+  let est = estimatePower(
+    streams.distance!,
+    streams.altitude!,
+    dt,
+    streams.velocity_smooth
+  )
+
+  // 스무딩 적용 (7초 이동평균)
   est = rollingMean(est, 7, true, 1)
 
   // 600W 이상이 3초 이상 지속되지 않으면 제외
   est = sanitizeZ7(est, dt, 600, 3)
 
   streams.watts = est
-    
+
     // FTP 추정
     const ftpResult = estimateFtpWithoutPower(
       streams.distance!, 
