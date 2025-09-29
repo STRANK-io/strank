@@ -465,7 +465,7 @@ function estimatePower(
   rho = 1.226,
   g = 9.81
 ): number[] {
-  const distSmooth = rollingMean(distanceM, 5, true, 1)
+  const distSmooth = rollingMean(distanceM, 7, true, 1)
 
   // 거리 차이 계산 (gap 보정 포함)
   const dDist: number[] = []
