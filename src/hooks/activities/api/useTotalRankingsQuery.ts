@@ -33,11 +33,24 @@ const fetchTotalRankings = async (
     return { rankings: [] }
   }
 
-  if (!activities || activities.length === 0) {
+    // 타입 단언 사용
+    const activitiesArray = activities as Array<{
+      result_user_id: string
+      result_rank: number
+      result_distance: number
+      result_elevation: number
+      result_user_name: string
+      result_user_profile: string
+      result_user_district: string
+      result_user_province: string
+      result_athlete_id: number
+    }> | null
+
+  if (!activitiesArray || activitiesArray.length === 0) {
     return { rankings: [] }
   }
 
-  const rankings = activities.map(activity => ({
+  const rankings = activitiesArray.map(activity => ({
     rank: activity.result_rank,
     totalDistance: activity.result_distance || 0,
     totalElevationGain: activity.result_elevation || 0,
