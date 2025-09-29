@@ -308,7 +308,7 @@ function computeAvgPowerMovingIncludingZeros(
   if (moving && moving.length === N) {
     movingMask = moving.map(v => Boolean(v))
   } else if (velocity && velocity.length === N) {
-    movingMask = velocity.map(v => (v || 0) > 0.5)
+    movingMask = velocity.map(v => (v || 0) > 1.0)
   } else {
     movingMask = Array(N).fill(true)
   }
@@ -460,8 +460,8 @@ function estimatePower(
   dt: number[],
   velocitySmooth?: number[],
   mass = 75,
-  cda = 0.3,
-  cr = 0.004,
+  cda = 0.38,
+  cr = 0.006,
   rho = 1.226,
   g = 9.81
 ): number[] {
@@ -501,11 +501,11 @@ function estimatePower(
     speed = velocitySmooth.map((vs, i) => {
       const sdVal = speedFromDist[i] || 0
       const s = (vs || 0 + sdVal) / 2
-      return Math.min(Math.max(s, 0), 15) // 54km/h 상한
+      return Math.min(Math.max(s, 0), 20) // 54km/h 상한
     })
   } else {
     // GPS-only → 보정 강화
-    const gpsSpeedRaw = speedFromDist.map(s => Math.min(Math.max(s, 0), 15))
+    const gpsSpeedRaw = speedFromDist.map(s => Math.min(Math.max(s, 0), 20))
     // (C) 강한 스무딩 적용
     const gpsSpeedSmooth = rollingMean(gpsSpeedRaw, 15, true, 1)
     // (D) 1 km/h 미만은 노이즈 컷
@@ -530,8 +530,8 @@ function estimatePower(
     const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
 
     let totalPower = gradPower + rollPower + aeroPower
-    // (E) 최소 50W 보정
-    totalPower = Math.max(50, Math.min(1500, totalPower))
+    // (E) 최소 80W 보정
+    totalPower = Math.max(80, Math.min(1500, totalPower))
     power.push(totalPower)
   }
 
@@ -955,9 +955,6 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
     dt,
     streams.velocity_smooth
   )
-
-  // 스무딩 적용 (7초 이동평균)
-  est = rollingMean(est, 7, true, 1)
 
   // 600W 이상이 3초 이상 지속되지 않으면 제외
   est = sanitizeZ7(est, dt, 600, 3)
