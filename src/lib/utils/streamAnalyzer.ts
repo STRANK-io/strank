@@ -452,9 +452,6 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 }
 
 /**
- * 파워 추정 함수
- */
-/**
  * 파워 추정 함수 (GPS-only 보정 강화)
  */
 function estimatePower(
@@ -511,8 +508,8 @@ function estimatePower(
     const gpsSpeedRaw = speedFromDist.map(s => Math.min(Math.max(s, 0), 15))
     // (C) 강한 스무딩 적용
     const gpsSpeedSmooth = rollingMean(gpsSpeedRaw, 15, true, 1)
-    // (D) 2 km/h 미만은 노이즈 컷
-    speed = gpsSpeedSmooth.map(s => (s * 3.6 < 2 ? 0 : s))
+    // (D) 1 km/h 미만은 노이즈 컷
+    speed = gpsSpeedSmooth.map(s => (s * 3.6 < 1 ? 0 : s))
   }
 
   // 고도 스무딩
@@ -539,7 +536,7 @@ function estimatePower(
   }
 
   // (F) 최종 스무딩
-  return rollingMean(power, 7, true, 1)
+  return rollingMean(power, 5, true, 1)
 }
 
 /**
