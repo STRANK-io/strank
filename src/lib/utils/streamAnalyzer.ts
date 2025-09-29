@@ -707,12 +707,24 @@ function computeSpeedStats(speedMps: number[]): { avg: number; max: number } {
     // ⚠️ GPS-only → 강한 보정
     const smoothSpeeds = rollingMean(speedsKmh, 15, true, 1)
 
+    // (1) 중앙값 필터 추가 적용
+    smoothSpeeds = medianFilter(smoothSpeeds, 5)
+
+    // (2) 비정상 가속(>10km/h 차이) 제거
+    smoothSpeeds = smoothSpeeds.map((s, i) => {
+      if (i > 0 && Math.abs(s - smoothSpeeds[i - 1]) > 10) {
+        return smoothSpeeds[i - 1] // 이전 값 유지
+      }
+      return s
+    })
+    
+
     // 평균속도: 스무딩 기반
     const avg = smoothSpeeds.reduce((sum, s) => sum + s, 0) / smoothSpeeds.length
 
     // 최고속도: 상위 5% 평균
     const sorted = [...smoothSpeeds].sort((a, b) => b - a)
-    const topN = Math.max(1, Math.floor(sorted.length * 0.05))
+    const topN = Math.max(1, Math.floor(sorted.length * 0.1))
     const topAvg = sorted.slice(0, topN).reduce((a, b) => a + b, 0) / topN
 
     const max = Math.min(Math.round(topAvg), 50) // GPS-only는 상한 50km/h
