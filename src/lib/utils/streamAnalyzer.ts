@@ -501,11 +501,11 @@ function estimatePower(
     speed = velocitySmooth.map((vs, i) => {
       const sdVal = speedFromDist[i] || 0
       const s = (vs || 0 + sdVal) / 2
-      return Math.min(Math.max(s, 0), 15) // 54km/h 상한
+      return Math.min(Math.max(s, 0), 20) // 54km/h 상한
     })
   } else {
     // GPS-only → 보정 강화
-    const gpsSpeedRaw = speedFromDist.map(s => Math.min(Math.max(s, 0), 15))
+    const gpsSpeedRaw = speedFromDist.map(s => Math.min(Math.max(s, 0), 20))
     // (C) 강한 스무딩 적용
     const gpsSpeedSmooth = rollingMean(gpsSpeedRaw, 15, true, 1)
     // (D) 1 km/h 미만은 노이즈 컷
@@ -530,8 +530,8 @@ function estimatePower(
     const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
 
     let totalPower = gradPower + rollPower + aeroPower
-    // (E) 최소 50W 보정
-    totalPower = Math.max(50, Math.min(1500, totalPower))
+    // (E) 최소 80W 보정
+    totalPower = Math.max(80, Math.min(1500, totalPower))
     power.push(totalPower)
   }
 
