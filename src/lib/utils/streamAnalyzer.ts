@@ -938,7 +938,7 @@ function determineRiderStyle(data: {
     return { icon: '⛰️', name: '클라이머 (산악형)', desc: '오르막 구간에서 낮은 케이던스로 꾸준히 힘을 낸 주행' }
   }
   if (dist >= 40 && dist <= 80 && maxW > 400 && elevPerKm >= 10) {
-    return { icon: '🚀', name: '펀처 (순간폭발형)', desc: '짧은 언덕과 순간 강도 대응이 돋보이는 주행' }
+    return { icon: '🚀', name: '펀처 (순간폭발형)', desc: '짧은 언덕 또는 순간 강도 대응이 돋보이는 주행' }
   }
   if (elevPerKm < 10 && dist >= 60 && speed >= 26) {
     return { icon: '⚡', name: '롤러/도메스틱 (평지장거리형)', desc: '평지 장거리에서 안정적 페이스 유지' }
@@ -949,7 +949,7 @@ function determineRiderStyle(data: {
   if (dist >= 20 && dist <= 60 && avgW > 0.9 * (maxW || avgW) && cad >= 80) {
     return { icon: '🏋️', name: 'TT 스페셜리스트 (파워유지형)', desc: '에어로 자세로 일정 파워를 유지한 주행' }
   }
-  return { icon: '🦾', name: '올라운더 (밸런스형)', desc: '언덕과 평지 모두 균형 잡힌 주행' }
+  return { icon: '🦾', name: '올라운더 (밸런스형)', desc: '전반적으로 균형 잡힌 주행' }
 }
 
 
