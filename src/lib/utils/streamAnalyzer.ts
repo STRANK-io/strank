@@ -686,17 +686,32 @@ function computeTotalElevationGain(altitudeM: number[]): number {
 }
 
 /**
- * 속도 통계 계산
+ * 속도 통계 계산 (센서 있음 vs GPS-only 구분)
  */
 function computeSpeedStats(speedMps: number[]): { avg: number; max: number } {
-  const validSpeeds = speedMps.filter(s => s != null && s > 0).map(s => s * 3.6) // km/h 변환
-  if (validSpeeds.length === 0) return { avg: 0, max: 0 }
-  
-  const avg = validSpeeds.reduce((sum, s) => sum + s, 0) / validSpeeds.length
-  const max = Math.max(...validSpeeds)
-  
-  return { avg: Math.round(avg), max: Math.round(max) }
+  if (!speedMps || speedMps.length === 0) return { avg: 0, max: 0 }
+
+  // km/h 변환
+  const speedsKmh = speedMps.filter(s => s != null && s > 0).map(s => s * 3.6)
+  if (speedsKmh.length === 0) return { avg: 0, max: 0 }
+
+  // 간단한 센서 여부 판단
+  const hasSensor = speedsKmh.length > 30 && speedsKmh.filter(s => s > 70).length === 0
+
+  if (hasSensor) {
+    // ✅ 속도센서 있음 → 원본 그대로
+    const avg = speedsKmh.reduce((sum, s) => sum + s, 0) / speedsKmh.length
+    const max = Math.max(...speedsKmh)
+    return { avg: Math.round(avg), max: Math.round(max) }
+  } else {
+    // ⚠️ GPS-only → 보정
+    const smoothSpeeds = rollingMean(speedsKmh, 5, true, 1)
+    const avg = smoothSpeeds.reduce((sum, s) => sum + s, 0) / smoothSpeeds.length
+    const max = Math.min(Math.max(...speedsKmh), 65) // 최고속도 상한
+    return { avg: Math.round(avg), max: Math.round(max) }
+  }
 }
+
 
 /**
  * 파워 통계 계산
