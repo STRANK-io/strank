@@ -75,4 +75,17 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* number 인풋인 경우 위아래 화살표 제거 */
+  /* Chrome, Safari, Edge, Opera */
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button {
+    @apply appearance-none;
+    margin: 0;
+  }
+
+  /* Firefox */
+  input[type=number] {
+    -moz-appearance: textfield;
+  }
 }
