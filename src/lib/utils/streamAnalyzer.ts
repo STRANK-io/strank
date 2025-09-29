@@ -704,11 +704,20 @@ function computeSpeedStats(speedMps: number[]): { avg: number; max: number } {
     const max = Math.max(...speedsKmh)
     return { avg: Math.round(avg), max: Math.round(max) }
   } else {
-    // ⚠️ GPS-only → 보정
-    const smoothSpeeds = rollingMean(speedsKmh, 5, true, 1)
+    // ⚠️ GPS-only → 강한 보정
+    const smoothSpeeds = rollingMean(speedsKmh, 15, true, 1)
+
+    // 평균속도: 스무딩 기반
     const avg = smoothSpeeds.reduce((sum, s) => sum + s, 0) / smoothSpeeds.length
-    const max = Math.min(Math.max(...speedsKmh), 40) // 최고속도 상한
-    return { avg: Math.round(avg), max: Math.round(max) }
+
+    // 최고속도: 상위 5% 평균
+    const sorted = [...smoothSpeeds].sort((a, b) => b - a)
+    const topN = Math.max(1, Math.floor(sorted.length * 0.05))
+    const topAvg = sorted.slice(0, topN).reduce((a, b) => a + b, 0) / topN
+
+    const max = Math.min(Math.round(topAvg), 50) // GPS-only는 상한 50km/h
+
+    return { avg: Math.round(avg), max }
   }
 }
 
