@@ -959,7 +959,6 @@ function determineRiderStyle(data: {
 export async function analyzeStreamData(streamsData: any): Promise<AnalysisResult> {
   console.log('🔍 스트림 데이터 분석 시작...')
 
-  
   const streams: StreamData = {}
   const streamKeys = ['time', 'distance', 'altitude', 'velocity_smooth', 'watts', 'heartrate', 'cadence', 'moving']
   for (const key of streamKeys) {
@@ -979,7 +978,33 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
       streams[key as keyof StreamData] = new Array(maxLength).fill(0)
     }
   }
+  // ✅ streams 채운 직후에 거리/고도 확인
+  const totalDistance = computeTotalDistanceKm(streams.distance!)
+  const totalElevation = computeTotalElevationGain(streams.altitude!)
 
+  if (totalDistance === 0 && totalElevation === 0) {
+    return {
+      총거리: 0,
+      총고도: 0,
+      평균속도: 0,
+      최고속도: 0,
+      평균파워: 0,
+      최대파워: 0,
+      최고심박수: 0,
+      평균케이던스: 0,
+      powerZoneRatios: { Z1:0,Z2:0,Z3:0,Z4:0,Z5:0,Z6:0,Z7:0 },
+      hrZoneRatios: { Z1:0,Z2:0,Z3:0,Z4:0,Z5:0 },
+      peakPowers: { '5s':0,'1min':0,'2min':0,'5min':0,'10min':0,'30min':0,'1h':0 },
+      hrZoneAverages: { Z1:null,Z2:null,Z3:null,Z4:null,Z5:null },
+      ftp20: null,
+      ftp60: null,
+      riderStyle: { icon:'🚲', name:'데이터 없음', desc:'유효한 주행 데이터가 없습니다.' },
+      courseName: null
+    }
+  }
+
+
+  
   const dt: number[] = []
   for (let i = 0; i < maxLength; i++) {
     if (i === 0) dt.push(1)
