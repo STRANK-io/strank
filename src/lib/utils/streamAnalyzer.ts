@@ -73,9 +73,8 @@ const HR_ZONES = {
   Z5: [172, 225],
 }
 
-
 // =========================================
-// 코스명 유틸 함수 (Nominatim + Overpass + 반환점 + 중복축약)
+// 코스명 유틸 함수 (Nominatim + Overpass + 반환점 + 중복축약 + 잡음제거)
 // =========================================
 
 // 코스 길이에 따라 샘플링 포인트 개수 결정
@@ -112,6 +111,18 @@ function splitCourseByIndex(latlngs: { lat: number; lon: number }[], segmentCoun
   )
 }
 
+// 🔎 잡음 제거 유틸
+function sanitizeName(name?: string | null): string | null {
+  if (!name) return null
+  const trimmed = name.trim()
+
+  if (trimmed.toUpperCase() === "N/A") return null
+  if (/^\+?\d{6,}$/.test(trimmed.replace(/\s+/g, ""))) return null // 전화번호
+  if (/^\D*\d{3,}$/.test(trimmed)) return null // 숫자 ID 기반 (예: "0501222551")
+  if (trimmed.length < 2) return null // 너무 짧은 경우
+  return trimmed
+}
+
 // Nominatim Reverse Geocoding
 async function reverseGeocode(point: { lat: number; lon: number }): Promise<string> {
   try {
@@ -146,13 +157,8 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
       data.address?.city ||
       null
 
-    if (feature && admin) {
-      if (feature === admin) return feature
-      return `${feature}(${admin})`
-    }
-    if (feature) return feature
-    if (admin) return admin
-    return "알 수 없음"
+    const picked = feature || admin
+    return sanitizeName(picked) || "알 수 없음"
   } catch (e) {
     console.warn("⚠️ reverseGeocode 실패:", e)
     return "알 수 없음"
@@ -178,8 +184,8 @@ async function getNearbyPOIs(lat: number, lon: number, radius = 500): Promise<{n
     const data = await res.json()
 
     return data.elements
-      .map((el: any) => ({ name: el.tags?.name, tags: el.tags }))
-      .filter((el: any) => el.name)
+      .map((el: any) => ({ name: sanitizeName(el.tags?.name), tags: el.tags }))
+      .filter((el: any) => el.name) // 잡음 제거된 이름만 유지
   } catch (e) {
     console.warn("⚠️ getNearbyPOIs 실패:", e)
     return []
@@ -187,37 +193,28 @@ async function getNearbyPOIs(lat: number, lon: number, radius = 500): Promise<{n
 }
 
 // POI 우선순위 선정 로직
-function pickBestPOI(pois: {name: string, tags: any}[], baseName: string): string {
-  if (!pois || pois.length === 0) return baseName
+function pickBestPOI(pois: {name: string | null, tags: any}[], baseName: string | null): string {
+  if (!pois || pois.length === 0) return baseName || "알 수 없음"
 
   const scored = pois.map(p => {
+    if (!p.name) return { ...p, score: 0 }
     let score = 0
-    const name = p.name || ""
+    const name = p.name
 
     // 1. 최우선: 댐, 보, 산, 대교
     if (p.tags.man_made === "dam") score = 100
     else if (p.tags.waterway === "weir" || p.tags.man_made === "weir") score = 98
     else if (["peak","hill","ridge"].includes(p.tags.natural)) score = 95
-    else if (p.tags.man_made === "bridge" && (name.includes("대교") || name.includes("Bridge"))) {
-      score = 90
-    }
-    else if (p.tags.highway === "pass") score = 85 // 고개
+    else if (p.tags.man_made === "bridge" && (name.includes("대교") || name.includes("Bridge"))) score = 90
+    else if (p.tags.highway === "pass") score = 85
 
     // 2. 물 관련
     else if (p.tags.waterway === "river" || p.tags.natural === "water" || p.tags.place === "sea") score = 80
-    else if (
-      p.tags.water === "reservoir" || 
-      p.tags.landuse === "reservoir" || 
-      p.tags.water === "lake"
-    ) score = 75
+    else if (p.tags.water === "reservoir" || p.tags.landuse === "reservoir" || p.tags.water === "lake") score = 75
 
     // 3. 교통/역사적 거점
-    else if (p.tags.railway === "station" && (p.tags.station === "subway" || p.tags.subway === "yes")) {
-      score = 78 // 지하철역
-    }
-    else if (p.tags.railway === "station") {
-      score = 72 // 일반 기차역
-    }
+    else if (p.tags.railway === "station" && (p.tags.station === "subway" || p.tags.subway === "yes")) score = 78
+    else if (p.tags.railway === "station") score = 72
 
     // 4. 관광/문화
     else if (["attraction","viewpoint","theme_park","zoo","museum"].includes(p.tags.tourism)) score = 70
@@ -235,12 +232,12 @@ function pickBestPOI(pois: {name: string, tags: any}[], baseName: string): strin
     else score = 10
 
     return { ...p, score }
-  })
+  }).filter(p => p.name)
 
+  if (scored.length === 0) return baseName || "알 수 없음"
   scored.sort((a, b) => b.score - a.score)
-  return scored[0]?.name || baseName
+  return scored[0]?.name || baseName || "알 수 없음"
 }
-
 
 // ✅ 최종 코스명 생성
 export async function generateCourseName(
@@ -262,10 +259,10 @@ export async function generateCourseName(
 
   const names = await Promise.all(
     keyPoints.map(async (pt) => {
-      const baseName = await reverseGeocode(pt)
+      const baseName = sanitizeName(await reverseGeocode(pt))
       const pois = await getNearbyPOIs(pt.lat, pt.lon, 500)
       const best = pickBestPOI(pois, baseName)
-      return best
+      return sanitizeName(best)
     })
   )
 
