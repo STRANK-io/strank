@@ -978,7 +978,7 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
       streams[key as keyof StreamData] = new Array(maxLength).fill(0)
     }
   }
-  // ✅ streams 채운 직후에 거리/고도 확인
+  // streams 채운 직후에 거리/고도 확인
   const totalDistance = computeTotalDistanceKm(streams.distance!)
   const totalElevation = computeTotalElevationGain(streams.altitude!)
 
