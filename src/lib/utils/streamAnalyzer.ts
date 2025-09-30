@@ -73,9 +73,8 @@ const HR_ZONES = {
   Z5: [172, 225],
 }
 
-
 // =========================================
-// 코스명 유틸 함수 (Nominatim + Overpass + 반환점 + 중복축약)
+// 코스명 유틸 함수 (Nominatim + Overpass + 반환점 + 중복축약 + 잡음제거)
 // =========================================
 
 // 코스 길이에 따라 샘플링 포인트 개수 결정
@@ -112,6 +111,18 @@ function splitCourseByIndex(latlngs: { lat: number; lon: number }[], segmentCoun
   )
 }
 
+// 🔎 잡음 제거 유틸
+function sanitizeName(name?: string | null): string | null {
+  if (!name) return null
+  const trimmed = name.trim()
+
+  if (trimmed.toUpperCase() === "N/A") return null
+  if (/^\+?\d{6,}$/.test(trimmed.replace(/\s+/g, ""))) return null // 전화번호
+  if (/^\D*\d{3,}$/.test(trimmed)) return null // 숫자 ID 기반 (예: "0501222551")
+  if (trimmed.length < 2) return null // 너무 짧은 경우
+  return trimmed
+}
+
 // Nominatim Reverse Geocoding
 async function reverseGeocode(point: { lat: number; lon: number }): Promise<string> {
   try {
@@ -146,13 +157,8 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
       data.address?.city ||
       null
 
-    if (feature && admin) {
-      if (feature === admin) return feature
-      return `${feature}(${admin})`
-    }
-    if (feature) return feature
-    if (admin) return admin
-    return "알 수 없음"
+    const picked = feature || admin
+    return sanitizeName(picked) || "알 수 없음"
   } catch (e) {
     console.warn("⚠️ reverseGeocode 실패:", e)
     return "알 수 없음"
@@ -178,8 +184,8 @@ async function getNearbyPOIs(lat: number, lon: number, radius = 500): Promise<{n
     const data = await res.json()
 
     return data.elements
-      .map((el: any) => ({ name: el.tags?.name, tags: el.tags }))
-      .filter((el: any) => el.name)
+      .map((el: any) => ({ name: sanitizeName(el.tags?.name), tags: el.tags }))
+      .filter((el: any) => el.name) // 잡음 제거된 이름만 유지
   } catch (e) {
     console.warn("⚠️ getNearbyPOIs 실패:", e)
     return []
@@ -187,37 +193,28 @@ async function getNearbyPOIs(lat: number, lon: number, radius = 500): Promise<{n
 }
 
 // POI 우선순위 선정 로직
-function pickBestPOI(pois: {name: string, tags: any}[], baseName: string): string {
-  if (!pois || pois.length === 0) return baseName
+function pickBestPOI(pois: {name: string | null, tags: any}[], baseName: string | null): string {
+  if (!pois || pois.length === 0) return baseName || "알 수 없음"
 
   const scored = pois.map(p => {
+    if (!p.name) return { ...p, score: 0 }
     let score = 0
-    const name = p.name || ""
+    const name = p.name
 
     // 1. 최우선: 댐, 보, 산, 대교
     if (p.tags.man_made === "dam") score = 100
     else if (p.tags.waterway === "weir" || p.tags.man_made === "weir") score = 98
     else if (["peak","hill","ridge"].includes(p.tags.natural)) score = 95
-    else if (p.tags.man_made === "bridge" && (name.includes("대교") || name.includes("Bridge"))) {
-      score = 90
-    }
-    else if (p.tags.highway === "pass") score = 85 // 고개
+    else if (p.tags.man_made === "bridge" && (name.includes("대교") || name.includes("Bridge"))) score = 90
+    else if (p.tags.highway === "pass") score = 85
 
     // 2. 물 관련
     else if (p.tags.waterway === "river" || p.tags.natural === "water" || p.tags.place === "sea") score = 80
-    else if (
-      p.tags.water === "reservoir" || 
-      p.tags.landuse === "reservoir" || 
-      p.tags.water === "lake"
-    ) score = 75
+    else if (p.tags.water === "reservoir" || p.tags.landuse === "reservoir" || p.tags.water === "lake") score = 75
 
     // 3. 교통/역사적 거점
-    else if (p.tags.railway === "station" && (p.tags.station === "subway" || p.tags.subway === "yes")) {
-      score = 78 // 지하철역
-    }
-    else if (p.tags.railway === "station") {
-      score = 72 // 일반 기차역
-    }
+    else if (p.tags.railway === "station" && (p.tags.station === "subway" || p.tags.subway === "yes")) score = 78
+    else if (p.tags.railway === "station") score = 72
 
     // 4. 관광/문화
     else if (["attraction","viewpoint","theme_park","zoo","museum"].includes(p.tags.tourism)) score = 70
@@ -235,12 +232,12 @@ function pickBestPOI(pois: {name: string, tags: any}[], baseName: string): strin
     else score = 10
 
     return { ...p, score }
-  })
+  }).filter(p => p.name)
 
+  if (scored.length === 0) return baseName || "알 수 없음"
   scored.sort((a, b) => b.score - a.score)
-  return scored[0]?.name || baseName
+  return scored[0]?.name || baseName || "알 수 없음"
 }
-
 
 // ✅ 최종 코스명 생성
 export async function generateCourseName(
@@ -262,15 +259,15 @@ export async function generateCourseName(
 
   const names = await Promise.all(
     keyPoints.map(async (pt) => {
-      const baseName = await reverseGeocode(pt)
+      const baseName = sanitizeName(await reverseGeocode(pt))
       const pois = await getNearbyPOIs(pt.lat, pt.lon, 500)
       const best = pickBestPOI(pois, baseName)
-      return best
+      return sanitizeName(best)
     })
   )
 
   // 1) 알 수 없음 제거
-  let filtered = names.filter(n => n && n !== "알 수 없음")
+  let filtered = names.filter((n): n is string => !!n && n !== "알 수 없음")
 
   // 2) 강한 중복 축약 (최대 2번까지만 허용)
   const seen: Record<string, number> = {}
@@ -460,8 +457,8 @@ function estimatePower(
   dt: number[],
   velocitySmooth?: number[],
   mass = 75,
-  cda = 0.38,
-  cr = 0.006,
+  cda = 0.6,
+  cr = 0.007,
   rho = 1.226,
   g = 9.81
 ): number[] {
@@ -501,15 +498,15 @@ function estimatePower(
     speed = velocitySmooth.map((vs, i) => {
       const sdVal = speedFromDist[i] || 0
       const s = (vs || 0 + sdVal) / 2
-      return Math.min(Math.max(s, 0), 20) // 54km/h 상한
+      return Math.min(Math.max(s, 0), 20) // 72km/h 상한
     })
   } else {
     // GPS-only → 보정 강화
     const gpsSpeedRaw = speedFromDist.map(s => Math.min(Math.max(s, 0), 20))
     // (C) 강한 스무딩 적용
-    const gpsSpeedSmooth = rollingMean(gpsSpeedRaw, 15, true, 1)
+    const gpsSpeedSmooth = rollingMean(gpsSpeedRaw, 10, true, 1)
     // (D) 1 km/h 미만은 노이즈 컷
-    speed = gpsSpeedSmooth.map(s => (s * 3.6 < 1 ? 0 : s))
+    speed = gpsSpeedSmooth.map(s => (s * 3.6 < 0.5 ? 0 : s))
   }
 
   // 고도 스무딩
@@ -521,22 +518,37 @@ function estimatePower(
   }
 
   // 파워 계산
-  const power: number[] = []
-  for (let i = 0; i < speed.length; i++) {
-    const s = speed[i]
-    const deltaTime = dt[i] || 1
-    const gradPower = mass * g * dAlt[i] / deltaTime
-    const rollPower = mass * g * cr * s
-    const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
+const power: number[] = []
+for (let i = 0; i < speed.length; i++) {
+  const s = speed[i]
+  const deltaTime = dt[i] || 1
+  const gradPower = mass * g * dAlt[i] / deltaTime
+  const rollPower = mass * g * cr * s
+  const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
 
-    let totalPower = gradPower + rollPower + aeroPower
-    // (E) 최소 80W 보정
-    totalPower = Math.max(60, Math.min(1500, totalPower))
-    power.push(totalPower)
+  let totalPower = gradPower + rollPower + aeroPower
+
+  // ✅ 가중 하한 적용
+  if (s * 3.6 > 10) { 
+    // 평지·주행 중일 때 → 최소 100W
+    totalPower = Math.max(90, totalPower)
+  } else {
+    // 저속·내리막에서는 60W까지 허용
+    totalPower = Math.max(60, totalPower)
   }
 
-  // (F) 최종 스무딩
-  return rollingMean(power, 3, true, 1)
+  // 상한 제한
+  totalPower = Math.min(1500, totalPower)
+
+  power.push(totalPower)
+}
+
+// ✅ 전체 스케일링 적용 (평균값 끌어올리기)
+const scaleFactor = 1.3
+const powerScaled = power.map(p => p * scaleFactor)
+
+// (F) 최종 스무딩
+return rollingMean(powerScaled, 3, true, 1)
 }
 
 /**
@@ -602,10 +614,10 @@ function estimateCadenceFromFeatures(
   speedMps: number[],
   altitudeM: number[],
   distanceM: number[],
-  baseRpm = 60,
-  alpha = 2.0,
-  beta = -150.0,
-  gamma = -0.0001
+  baseRpm = 75,
+  alpha = 3.0,
+  beta = -80.0,
+  gamma = -0.0005
 ): number[] {
   const s = speedMps.map(sp => sp || 0)
   
@@ -923,7 +935,7 @@ function determineRiderStyle(data: {
     return { icon: '⛰️', name: '클라이머 (산악형)', desc: '오르막 구간에서 낮은 케이던스로 꾸준히 힘을 낸 주행' }
   }
   if (dist >= 40 && dist <= 80 && maxW > 400 && elevPerKm >= 10) {
-    return { icon: '🚀', name: '펀처 (순간폭발형)', desc: '짧은 언덕과 순간 강도 대응이 돋보이는 주행' }
+    return { icon: '🚀', name: '펀처 (순간폭발형)', desc: '짧은 언덕 또는 순간 강도 대응이 돋보이는 주행' }
   }
   if (elevPerKm < 10 && dist >= 60 && speed >= 26) {
     return { icon: '⚡', name: '롤러/도메스틱 (평지장거리형)', desc: '평지 장거리에서 안정적 페이스 유지' }
@@ -934,7 +946,7 @@ function determineRiderStyle(data: {
   if (dist >= 20 && dist <= 60 && avgW > 0.9 * (maxW || avgW) && cad >= 80) {
     return { icon: '🏋️', name: 'TT 스페셜리스트 (파워유지형)', desc: '에어로 자세로 일정 파워를 유지한 주행' }
   }
-  return { icon: '🦾', name: '올라운더 (밸런스형)', desc: '언덕과 평지 모두 균형 잡힌 주행' }
+  return { icon: '🦾', name: '올라운더 (밸런스형)', desc: '전반적으로 균형 잡힌 주행' }
 }
 
 
@@ -944,7 +956,6 @@ function determineRiderStyle(data: {
 export async function analyzeStreamData(streamsData: any): Promise<AnalysisResult> {
   console.log('🔍 스트림 데이터 분석 시작...')
 
-  
   const streams: StreamData = {}
   const streamKeys = ['time', 'distance', 'altitude', 'velocity_smooth', 'watts', 'heartrate', 'cadence', 'moving']
   for (const key of streamKeys) {
@@ -964,7 +975,33 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
       streams[key as keyof StreamData] = new Array(maxLength).fill(0)
     }
   }
+  // streams 채운 직후에 거리/고도 확인
+  const totalDistance = computeTotalDistanceKm(streams.distance!)
+  const totalElevation = computeTotalElevationGain(streams.altitude!)
 
+  if (totalDistance === 0 && totalElevation === 0) {
+    return {
+      총거리: 0,
+      총고도: 0,
+      평균속도: 0,
+      최고속도: 0,
+      평균파워: 0,
+      최대파워: 0,
+      최고심박수: 0,
+      평균케이던스: 0,
+      powerZoneRatios: { Z1:0,Z2:0,Z3:0,Z4:0,Z5:0,Z6:0,Z7:0 },
+      hrZoneRatios: { Z1:0,Z2:0,Z3:0,Z4:0,Z5:0 },
+      peakPowers: { '5s':0,'1min':0,'2min':0,'5min':0,'10min':0,'30min':0,'1h':0 },
+      hrZoneAverages: { Z1:null,Z2:null,Z3:null,Z4:null,Z5:null },
+      ftp20: null,
+      ftp60: null,
+      riderStyle: { icon:'🚲', name:'데이터 없음', desc:'유효한 주행 데이터가 없습니다.' },
+      courseName: null
+    }
+  }
+
+
+  
   const dt: number[] = []
   for (let i = 0; i < maxLength; i++) {
     if (i === 0) dt.push(1)
