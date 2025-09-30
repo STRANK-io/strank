@@ -267,7 +267,7 @@ export async function generateCourseName(
   )
 
   // 1) 알 수 없음 제거
-  let filtered = names.filter(n => n && n !== "알 수 없음")
+  let filtered = names.filter((n): n is string => !!n && n !== "알 수 없음")
 
   // 2) 강한 중복 축약 (최대 2번까지만 허용)
   const seen: Record<string, number> = {}
