@@ -1058,16 +1058,10 @@ export async function analyzeStreamData(userId: string, streamsData: any): Promi
     streams.watts = medianFilter(powerSmooth, 9)
   }
   
-  // 파워존 선택 (설정 기반)
+  // 존 선택 (설정 기반)
   const supabase = await createServiceRoleClient();
   const zonesForPower = await getZoneInfo('power', userId, POWER_ZONES, supabase);
   const zonesForHr = await getZoneInfo('heart', userId, HR_ZONES, supabase);
-
-  // const zonesForPower = POWER_ZONES;
-  // const zonesForHr = HR_ZONES;
-
-  console.log("🚀파워존: ", {zonesForPower});
-  console.log("🚀심박존: ", {zonesForHr});
   
   // 존 비율 계산 (설정 기반)
   if (ZONE_METHOD === 'count') {
