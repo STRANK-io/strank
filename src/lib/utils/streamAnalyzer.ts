@@ -959,7 +959,7 @@ function determineRiderStyle(data: {
   if (cad < 75) scores.climber += 1
 
   // 4. 펀처 🚀 (언덕 필수)
-  if (elevPerKm >= 5) { // 언덕 조건이 있어야만 펀처 판정
+  if (elevPerKm >= 8) { // 언덕 조건이 있어야만 펀처 판정
     if (maxW > 320) scores.puncheur += 2
     if (elevPerKm >= 8) scores.puncheur += 2
     if (dist >= 30 && dist <= 80) scores.puncheur += 2
@@ -969,7 +969,7 @@ function determineRiderStyle(data: {
   // 5. 롤러 ⚡ (평지 장거리)
   if (dist >= 60) scores.roller += 2
   if (speed >= 26) scores.roller += 2
-  if (elevPerKm < 10) scores.roller += 2
+  if (elevPerKm < 7) scores.roller += 2
   if (avgW >= 150 && avgW <= 250) scores.roller += 1
 
   // 6. 브레이커웨이 🐺
