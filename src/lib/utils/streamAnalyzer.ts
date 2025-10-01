@@ -907,7 +907,7 @@ function peakPower(watts: number[], windowSec: number, dt: number[], totalTime: 
 }
 
 // =========================================
-// RiderStyle 판정 로직 (스코어링 방식, 완화 버전)
+// RiderStyle 판정 로직 (스코어링 방식, 언덕형 펀처 반영)
 // =========================================
 function determineRiderStyle(data: {
   distance: number
@@ -945,25 +945,28 @@ function determineRiderStyle(data: {
   if (avgW < 120) scores.beginner += 2
   if (cad < 70) scores.beginner += 1
 
-  // 2. 스프린터 🔥
+  // 2. 스프린터 🔥 (평지 폭발력 중심)
   if (maxW > 700) scores.sprinter += 3
   if (avgW > 0 && maxW / avgW >= 5) scores.sprinter += 2
+  if (avgW > 0 && maxW / avgW >= 3.5 && elevPerKm < 5) scores.sprinter += 2 // 평지 폭발력은 스프린터로
   if (dist < 50) scores.sprinter += 1
   if (cad >= 110) scores.sprinter += 1
 
-  // 3. 클라이머 ⛰️ (완화)
+  // 3. 클라이머 ⛰️
   if (elev >= 600) scores.climber += 3       // 기존 800 → 600
   if (elevPerKm >= 12) scores.climber += 2   // 기존 15 → 12
   if (speed < 23) scores.climber += 1
   if (cad < 75) scores.climber += 1
 
-  // 4. 펀처 🚀 (완화)
-  if (maxW > 350) scores.puncheur += 2       // 기존 400 → 350
-  if (elevPerKm >= 8) scores.puncheur += 2   // 기존 10 → 8
-  if (dist >= 30 && dist <= 80) scores.puncheur += 2   // 기존 40 → 30
-  if (avgW > 0 && maxW / avgW >= 3.5) scores.puncheur += 2 // FTP 대신 폭발력 비율
+  // 4. 펀처 🚀 (언덕 필수)
+  if (elevPerKm >= 5) { // 언덕 조건이 있어야만 펀처 판정
+    if (maxW > 320) scores.puncheur += 2
+    if (elevPerKm >= 8) scores.puncheur += 2
+    if (dist >= 30 && dist <= 80) scores.puncheur += 2
+    if (avgW > 0 && maxW / avgW >= 3.5) scores.puncheur += 2
+  }
 
-  // 5. 롤러 ⚡
+  // 5. 롤러 ⚡ (평지 장거리)
   if (dist >= 60) scores.roller += 2
   if (speed >= 26) scores.roller += 2
   if (elevPerKm < 10) scores.roller += 2
@@ -978,7 +981,7 @@ function determineRiderStyle(data: {
   if (cad >= 80) scores.tt += 2
   if (avgW > 0 && avgW >= 0.85 * maxW) scores.tt += 2   // 기존 0.9 → 0.85
   if (dist >= 20 && dist <= 60) scores.tt += 1
-  if (speed >= 30) scores.tt += 2   // FTP 대신 속도 조건 추가
+  if (speed >= 30) scores.tt += 2   // FTP 대신 속도 조건
 
   // 8. 올라운더 🦾
   scores.allrounder = Math.floor(
@@ -990,7 +993,7 @@ function determineRiderStyle(data: {
 
   switch (best[0]) {
     case "beginner": return { icon: '🚲', name: '초보형 (입문형 라이더)', desc: '기초 체력 단계의 라이더' }
-    case "sprinter": return { icon: '🔥', name: '스프린터 (단거리가속형)', desc: '순간 폭발력이 뛰어난 주행' }
+    case "sprinter": return { icon: '🔥', name: '스프린터 (단거리가속형)', desc: '평지에서 순간 폭발력이 뛰어난 주행' }
     case "climber": return { icon: '⛰️', name: '클라이머 (산악형)', desc: '고도 상승에 특화된 꾸준한 주행' }
     case "puncheur": return { icon: '🚀', name: '펀처 (순간폭발형)', desc: '언덕에서 폭발적 가속이 돋보이는 주행' }
     case "roller": return { icon: '⚡', name: '롤러/도메스틱 (평지장거리형)', desc: '평지 장거리에서 페이스 유지에 강점' }
