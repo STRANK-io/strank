@@ -907,7 +907,7 @@ function peakPower(watts: number[], windowSec: number, dt: number[], totalTime: 
 }
 
 // =========================================
-// RiderStyle 판정 로직 (스코어링 방식, 언덕형 펀처 반영)
+// RiderStyle 판정 로직 (최종 점수 미세조정)
 // =========================================
 function determineRiderStyle(data: {
   distance: number
@@ -925,7 +925,6 @@ function determineRiderStyle(data: {
   const maxW = data.maxWatts || 0
   const cad = data.averageCadence || 0
 
-  // 점수판
   const scores: Record<string, number> = {
     beginner: 0,
     sprinter: 0,
@@ -933,11 +932,8 @@ function determineRiderStyle(data: {
     puncheur: 0,
     roller: 0,
     breaker: 0,
-    tt: 0,
-    allrounder: 0
+    tt: 0
   }
-
-  // --- 점수 계산 로직 ---
 
   // 1. 초보형 🚲
   if (speed < 20) scores.beginner += 3
@@ -946,47 +942,42 @@ function determineRiderStyle(data: {
   if (cad < 70) scores.beginner += 1
 
   // 2. 스프린터 🔥 (평지 폭발력 중심)
-  if (maxW > 700) scores.sprinter += 3
+  if (maxW > 600) scores.sprinter += 3
   if (avgW > 0 && maxW / avgW >= 5) scores.sprinter += 2
-  if (avgW > 0 && maxW / avgW >= 3.5 && elevPerKm < 5) scores.sprinter += 2 // 평지 폭발력은 스프린터로
+  if (avgW > 0 && maxW / avgW >= 3.5 && elevPerKm < 5) scores.sprinter += 1
   if (dist < 50) scores.sprinter += 1
-  if (cad >= 110) scores.sprinter += 1
+  if (cad >= 90) scores.sprinter += 1
 
   // 3. 클라이머 ⛰️
-  if (elev >= 600) scores.climber += 3       // 기존 800 → 600
-  if (elevPerKm >= 12) scores.climber += 2   // 기존 15 → 12
-  if (speed < 23) scores.climber += 1
+  if (elev >= 800) scores.climber += 3
+  if (elevPerKm >= 12) scores.climber += 2
+  if (speed < 25) scores.climber += 1
   if (cad < 75) scores.climber += 1
 
-  // 4. 펀처 🚀 (언덕 필수)
-  if (elevPerKm >= 8) { // 언덕 조건이 있어야만 펀처 판정
-    if (maxW > 320) scores.puncheur += 2
+  // 4. 펀처 🚀 (언덕 + 순간폭발)
+  if (elevPerKm >= 8) {
+    if (maxW > 350) scores.puncheur += 3
     if (elevPerKm >= 8) scores.puncheur += 2
-    if (dist >= 30 && dist <= 80) scores.puncheur += 2
+    if (dist >= 30 && dist <= 80) scores.puncheur += 1
     if (avgW > 0 && maxW / avgW >= 3.5) scores.puncheur += 2
   }
 
   // 5. 롤러 ⚡ (평지 장거리)
-  if (dist >= 60) scores.roller += 2
+  if (dist >= 80) scores.roller += 3
   if (speed >= 26) scores.roller += 2
   if (elevPerKm < 7) scores.roller += 2
   if (avgW >= 150 && avgW <= 250) scores.roller += 1
 
-  // 6. 브레이커웨이 🐺
-  if (dist >= 100) scores.breaker += 3
+  // 6. 브레이커웨이 🐺 (장거리 독주)
+  if (dist >= 120) scores.breaker += 3
   if (speed >= 24) scores.breaker += 2
-  if (avgW >= 150) scores.breaker += 1
+  if (avgW >= 120) scores.breaker += 2
 
-  // 7. TT 🏋️
-  if (cad >= 80) scores.tt += 2
-  if (avgW > 0 && avgW >= 0.85 * maxW) scores.tt += 2   // 기존 0.9 → 0.85
+  // 7. TT 🏋️ (파워 유지형)
+  if (cad >= 75) scores.tt += 1
+  if (avgW > 0 && avgW >= 0.85 * maxW) scores.tt += 3
   if (dist >= 20 && dist <= 60) scores.tt += 1
-  if (speed >= 30) scores.tt += 2   // FTP 대신 속도 조건
-
-  // 8. 올라운더 🦾
-  scores.allrounder = Math.floor(
-    (scores.sprinter + scores.climber + scores.puncheur + scores.roller + scores.breaker + scores.tt) / 3
-  )
+  if (speed >= 32) scores.tt += 2
 
   // --- 최고 점수 스타일 선택 ---
   const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0]
@@ -999,9 +990,11 @@ function determineRiderStyle(data: {
     case "roller": return { icon: '⚡', name: '롤러/도메스틱 (평지장거리형)', desc: '평지 장거리에서 페이스 유지에 강점' }
     case "breaker": return { icon: '🐺', name: '브레이커웨이 (장거리형)', desc: '장거리 독주에 강한 라이더' }
     case "tt": return { icon: '🏋️', name: 'TT 스페셜리스트 (파워유지형)', desc: '에어로 자세로 일정 파워를 유지한 주행' }
-    default: return { icon: '🦾', name: '올라운더 (밸런스형)', desc: '전반적으로 균형 잡힌 주행' }
+    default: return { icon: '🦾', name: '올라운더 (밸런스형)', desc: '특정 스타일에 치우치지 않은 균형 잡힌 주행' }
   }
 }
+
+
 
 
 // =========================================
