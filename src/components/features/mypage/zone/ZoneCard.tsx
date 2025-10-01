@@ -76,19 +76,19 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
 
     console.log("🚀zoneData: ", zoneData);
 
-    // updateZoneInfo({
-    //   userId,
-    //   zoneType: type as 'power' | 'heart',
-    //   zones: zoneData,
-    //   value: Number(value) || 0
-    // }, {
-    //   onSuccess: () => {
-    //     toast(<ToastContent text="저장되었습니다." />);
-    //   },
-    //   onError: () => {
-    //     toast(<ToastContent text="저장에 실패했습니다. 다시 시도해주세요." />);
-    //   }
-    // }); 
+    updateZoneInfo({
+      userId,
+      zoneType: type as 'power' | 'heart',
+      zones: zoneData,
+      value: Number(value) || 0
+    }, {
+      onSuccess: () => {
+        toast(<ToastContent text="저장되었습니다." />);
+      },
+      onError: () => {
+        toast(<ToastContent text="저장에 실패했습니다. 다시 시도해주세요." />);
+      }
+    }); 
   };
 
   // 취소 핸들러
