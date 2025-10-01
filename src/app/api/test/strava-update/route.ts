@@ -16,10 +16,11 @@ export async function POST(request: Request) {
     const { searchParams } = new URL(request.url)
     const accessToken = searchParams.get('token')
     const activityId = searchParams.get('activityId')
+    const userId = searchParams.get('userId')
 
-    if (!accessToken || !activityId) {
+    if (!accessToken || !activityId || !userId) {
       return NextResponse.json(
-        { success: false, error: 'token과 activityId가 필요합니다.' },
+        { success: false, error: 'token, activityId, userId가 필요합니다.' },
         { status: 400 }
       )
     }
@@ -78,6 +79,7 @@ export async function POST(request: Request) {
 
     // OpenAI를 사용하여 디스크립션 생성
     const description = await generateActivityDescriptionWithGPT(
+      userId,
       {
         date: activity.start_date,
         distance: activity.distance || 0,
