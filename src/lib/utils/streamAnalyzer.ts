@@ -1,3 +1,6 @@
+import { getZoneInfo } from '@/lib/utils/zone';
+import { createServiceRoleClient } from '@/lib/supabase/server';
+
 // =========================================
 // 설정
 // =========================================
@@ -45,32 +48,32 @@ interface AnalysisResult {
 // =========================================
 // 존 정의
 // =========================================
-const POWER_ZONES = {
-  Z1: [0, 110],
-  Z2: [111, 191],
-  Z3: [192, 209],
-  Z4: [210, 220],
-  Z5: [221, 244],
-  Z6: [245, 660],
-  Z7: [661, 2500],
+const POWER_ZONES = { // FTP : 200W 기준
+  Z1: [0, 110] as [number, number],
+  Z2: [111, 150] as [number, number],
+  Z3: [151, 180] as [number, number],
+  Z4: [181, 210] as [number, number],
+  Z5: [211, 240] as [number, number],
+  Z6: [241, 300] as [number, number],
+  Z7: [301, 2500] as [number, number],
 }
 
 const POWER_ZONES_FTP = {
-  Z1: [0, Math.round(FTP_RESET * 0.55)],
-  Z2: [Math.round(FTP_RESET * 0.56), Math.round(FTP_RESET * 0.75)],
-  Z3: [Math.round(FTP_RESET * 0.76), Math.round(FTP_RESET * 0.90)],
-  Z4: [Math.round(FTP_RESET * 0.91), Math.round(FTP_RESET * 1.05)],
-  Z5: [Math.round(FTP_RESET * 1.06), Math.round(FTP_RESET * 1.20)],
-  Z6: [Math.round(FTP_RESET * 1.21), Math.round(FTP_RESET * 1.50)],
-  Z7: [Math.round(FTP_RESET * 1.51), 2500],
+  Z1: [0, Math.round(FTP_RESET * 0.55)] as [number, number],
+  Z2: [Math.round(FTP_RESET * 0.56), Math.round(FTP_RESET * 0.75)] as [number, number],
+  Z3: [Math.round(FTP_RESET * 0.76), Math.round(FTP_RESET * 0.90)] as [number, number],
+  Z4: [Math.round(FTP_RESET * 0.91), Math.round(FTP_RESET * 1.05)] as [number, number],
+  Z5: [Math.round(FTP_RESET * 1.06), Math.round(FTP_RESET * 1.20)] as [number, number],
+  Z6: [Math.round(FTP_RESET * 1.21), Math.round(FTP_RESET * 1.50)] as [number, number],
+  Z7: [Math.round(FTP_RESET * 1.51), 2500] as [number, number],
 }
 
-const HR_ZONES = {
-  Z1: [0, 114],
-  Z2: [115, 133],
-  Z3: [134, 152],
-  Z4: [153, 171],
-  Z5: [172, 225],
+const HR_ZONES = { // 심박수 : 190bpm 기준
+  Z1: [0, 114] as [number, number],
+  Z2: [115, 133] as [number, number],
+  Z3: [134, 152] as [number, number],
+  Z4: [153, 171] as [number, number],
+  Z5: [172, 190] as [number, number],
 }
 
 // =========================================
@@ -953,7 +956,7 @@ function determineRiderStyle(data: {
 // =========================================
 // 메인 분석 함수
 // =========================================
-export async function analyzeStreamData(streamsData: any): Promise<AnalysisResult> {
+export async function analyzeStreamData(userId: string, streamsData: any): Promise<AnalysisResult> {
   console.log('🔍 스트림 데이터 분석 시작...')
 
   const streams: StreamData = {}
@@ -1055,8 +1058,16 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
     streams.watts = medianFilter(powerSmooth, 9)
   }
   
-  // 존 선택 (설정 기반)
-  const zonesForPower = USE_ABSOLUTE_ZONES ? POWER_ZONES : POWER_ZONES_FTP
+  // 파워존 선택 (설정 기반)
+  const supabase = await createServiceRoleClient();
+  const zonesForPower = await getZoneInfo('power', userId, POWER_ZONES, supabase);
+  const zonesForHr = await getZoneInfo('heart', userId, HR_ZONES, supabase);
+
+  // const zonesForPower = POWER_ZONES;
+  // const zonesForHr = HR_ZONES;
+
+  console.log("🚀파워존: ", {zonesForPower});
+  console.log("🚀심박존: ", {zonesForHr});
   
   // 존 비율 계산 (설정 기반)
   if (ZONE_METHOD === 'count') {
@@ -1078,9 +1089,9 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
   // 심박존 비율 계산 (설정 기반)
   let hrZoneRatios: Record<string, number>
   if (ZONE_METHOD === 'count') {
-    hrZoneRatios = countBasedZoneRatios(streams.heartrate!, HR_ZONES, true)
+    hrZoneRatios = countBasedZoneRatios(streams.heartrate!, zonesForHr, true)
   } else {
-    hrZoneRatios = timeBasedZoneRatios(streams.heartrate!, dt, HR_ZONES, true)
+    hrZoneRatios = timeBasedZoneRatios(streams.heartrate!, dt, zonesForHr, true)
   }
   
   // 분석 실행
@@ -1135,7 +1146,7 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
   }
   
   // 심박존 평균 계산
-  for (const [zone, [low, high]] of Object.entries(HR_ZONES)) {
+  for (const [zone, [low, high]] of Object.entries(zonesForHr)) {
     const hrInZone = streams.heartrate!.filter(hr => hr >= low && hr <= high)
     results.hrZoneAverages[zone] = hrInZone.length > 0 ? Math.round(hrInZone.reduce((sum, hr) => sum + hr, 0) / hrInZone.length) : null
   }
@@ -1155,7 +1166,7 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
   console.log('💫평균케이던스:', results.평균케이던스, 'rpm\n')
   
   console.log('📈 파워·심박 존 훈련 분석')
-  for (const z of Object.keys(POWER_ZONES)) {
+  for (const z of Object.keys(zonesForPower)) {
     console.log(`${z}: P ${results.powerZoneRatios[z]}% / H ${results.hrZoneRatios[z]}%`)
   }
   
@@ -1166,7 +1177,7 @@ export async function analyzeStreamData(streamsData: any): Promise<AnalysisResul
   console.log(peakPowerStrings.join(' / '))
   
   console.log('\n❤️ 심박존 평균 분석 (AI추측)')
-  for (const z of Object.keys(HR_ZONES)) {
+  for (const z of Object.keys(zonesForHr)) {
     const val = results.hrZoneAverages[z]
     console.log(`${z}: ${val === null ? 'N/A' : val + ' bpm'}`)
   }

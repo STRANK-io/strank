@@ -36,6 +36,7 @@ const rankingDataSchema = z.object({
 })
 
 export async function generateActivityDescriptionWithGPT(
+  userId: string,
   activityData: z.infer<typeof activityDataSchema>,
   rankingData?: z.infer<typeof rankingDataSchema>
 ): Promise<string> {
@@ -48,7 +49,7 @@ export async function generateActivityDescriptionWithGPT(
   if (activityData.streamsData) {
     try {
       console.log('\n📊 스트림 데이터 분석 시작...')
-      streamAnalysis = await analyzeStreamData(activityData.streamsData)
+      streamAnalysis = await analyzeStreamData(userId, activityData.streamsData)
       console.log('✅ 스트림 데이터 분석 완료\n')
     } catch (error) {
       console.log('❌ 스트림 데이터 분석 실패:', error)

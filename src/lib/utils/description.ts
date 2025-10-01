@@ -105,6 +105,7 @@ async function fetchStreams(activityId: number | string, accessToken: string): P
  */
 export async function generateActivityDescription(
   activity: StravaActivity,
+  userId: string,
   rankingsWithDistrict: CalculateActivityRankingReturn | null,
   accessToken: string
 ): Promise<string> {
@@ -117,6 +118,7 @@ export async function generateActivityDescription(
 
     // GPT 프롬프트에 우선 적용(없으면 activity.average_watts)
     const description = await generateActivityDescriptionWithGPT(
+      userId,
       {
         date: activity.start_date_local,
         distance: (activity.distance || 0) / 1000,
@@ -357,11 +359,12 @@ export async function updateStravaActivityDescription(
  * 필요 시 프로젝트 라우터에 맞춰 가져다 쓰세요.
  */
 export async function generateAndUpdate(
+  userId: string,
   accessToken: string,
   activity: StravaActivity,
   rankingsWithDistrict: CalculateActivityRankingReturn | null
 ) {
-  const description = await generateActivityDescription(activity, rankingsWithDistrict, accessToken)
+  const description = await generateActivityDescription(activity, userId, rankingsWithDistrict, accessToken)
   await updateStravaActivityDescription(accessToken, activity, description)
   return description
 }

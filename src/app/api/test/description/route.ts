@@ -11,10 +11,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const token = searchParams.get('token')
     const activityId = searchParams.get('activityId')
+    const userId = searchParams.get('userId')
 
-    if (!token || !activityId) {
+    if (!token || !activityId || !userId) {
       return NextResponse.json(
-        { success: false, error: 'token과 activityId가 필요합니다.' },
+        { success: false, error: 'token, activityId, userId가 필요합니다.' },
         { status: 400 }
       )
     }
@@ -69,6 +70,7 @@ export async function GET(request: Request) {
     // 1. 스트림 데이터 없이 디스크립션 생성 (기존 방식)
     console.log('\n🔍 1단계: 스트림 데이터 없이 디스크립션 생성...')
     const descriptionWithoutStreams = await generateActivityDescriptionWithGPT(
+      userId,
       {
         date: activity.start_date_local,
         distance: (activity.distance || 0) / 1000, // m를 km로 변환
@@ -94,6 +96,7 @@ export async function GET(request: Request) {
     // 2. 스트림 데이터와 함께 디스크립션 생성 (새로운 방식)
     console.log('\n🔍 2단계: 스트림 데이터와 함께 디스크립션 생성...')
     const descriptionWithStreams = await generateActivityDescriptionWithGPT(
+      userId,
       {
         date: activity.start_date_local,
         distance: (activity.distance || 0) / 1000, // m를 km로 변환

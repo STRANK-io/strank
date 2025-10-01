@@ -48,8 +48,15 @@ async function testDescriptionGeneration() {
       ranking: testRankingData,
     })
 
+
+    if (!process.env.TEST_USER_ID) {
+      throw new Error('TEST_USER_ID가 설정되지 않았습니다.')
+    }
+
+    const userId = process.env.TEST_USER_ID;
+
     // 디스크립션 생성
-    const description = await generateActivityDescriptionWithGPT(testActivityData, testRankingData)
+    const description = await generateActivityDescriptionWithGPT(userId, testActivityData, testRankingData)
 
     console.log('\n✅ 생성된 디스크립션:')
     console.log(description)
