@@ -949,7 +949,7 @@ function determineRiderStyle(data: {
   if (cad >= 90) scores.sprinter += 1
 
   // 3. 클라이머 ⛰️
-  if (elev >= 800) scores.climber += 3
+  if (elev >= 700) scores.climber += 3
   if (elevPerKm >= 12) scores.climber += 2
   if (speed < 25) scores.climber += 1
   if (cad < 75) scores.climber += 1
@@ -963,8 +963,8 @@ function determineRiderStyle(data: {
   }
 
   // 5. 롤러 ⚡ (평지 장거리)
-  if (dist >= 80) scores.roller += 3
-  if (speed >= 26) scores.roller += 2
+  if (dist >= 60) scores.roller += 3
+  if (speed >= 24) scores.roller += 2
   if (elevPerKm < 7) scores.roller += 2
   if (avgW >= 150 && avgW <= 250) scores.roller += 1
 
