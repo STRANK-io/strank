@@ -2,10 +2,10 @@ import { Zone } from "@/lib/types/zone";
 
 interface ZoneRowProps {
   zone: Zone;
-  onMaxChange: (name: string, newMax: number) => void;
+  onMinChange: (name: string, newMin: number) => void;
 }
 
-export default function ZoneRow({ zone, onMaxChange }: ZoneRowProps) {
+export default function ZoneRow({ zone, onMinChange }: ZoneRowProps) {
   return (
     <div className="flex justify-between items-center py-2 border-b last:border-none">
       <div className="flex items-center gap-2">
@@ -15,13 +15,13 @@ export default function ZoneRow({ zone, onMaxChange }: ZoneRowProps) {
       </div>
 
       <div className="flex items-center gap-1 text-gray-600">
-        <span>{zone.min} - </span>
         <input
           type="number"
-          value={zone.max}
+          value={zone.min}
           className="w-12 border rounded px-1 bg-white text-center"
-          onChange={(e) => onMaxChange(zone.name, Number(e.target.value))}
+          onChange={(e) => onMinChange(zone.name, Number(e.target.value))}
         />
+        <span> - {(zone.name === 'Z7') ? '∞' : zone.max}</span>
       </div>
     </div>
   );

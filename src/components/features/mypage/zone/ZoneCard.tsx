@@ -22,7 +22,7 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
   const [value, setValue] = useState<string>((flagValue || 0).toString());
   const [isCalculated, setIsCalculated] = useState(false); // 자동계산 실행 여부
 
-  const { zones, calculateZones, handleZoneMaxChange, resetZones } = useZoneCalculation({
+  const { zones, calculateZones, handleZoneMinChange, resetZones } = useZoneCalculation({
     zoneType: type as 'power' | 'heart',
     zoneInfo: zoneInfo || [],
     isOpen,
@@ -74,19 +74,21 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
       max: zone.max,
     }));
 
-    updateZoneInfo({
-      userId,
-      zoneType: type as 'power' | 'heart',
-      zones: zoneData,
-      value: Number(value) || 0
-    }, {
-      onSuccess: () => {
-        toast(<ToastContent text="저장되었습니다." />);
-      },
-      onError: () => {
-        toast(<ToastContent text="저장에 실패했습니다. 다시 시도해주세요." />);
-      }
-    }); 
+    console.log("🚀zoneData: ", zoneData);
+
+    // updateZoneInfo({
+    //   userId,
+    //   zoneType: type as 'power' | 'heart',
+    //   zones: zoneData,
+    //   value: Number(value) || 0
+    // }, {
+    //   onSuccess: () => {
+    //     toast(<ToastContent text="저장되었습니다." />);
+    //   },
+    //   onError: () => {
+    //     toast(<ToastContent text="저장에 실패했습니다. 다시 시도해주세요." />);
+    //   }
+    // }); 
   };
 
   // 취소 핸들러
@@ -181,7 +183,7 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
                 <ZoneRow 
                   key={zone.name} 
                   zone={zone}
-                  onMaxChange={handleZoneMaxChange} 
+                  onMinChange={handleZoneMinChange} 
                 />
               ))
             ) : (

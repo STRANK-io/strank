@@ -19,20 +19,20 @@ export const createDefaultZones = (zoneType: 'power' | 'heart'): Zone[] => {
   const config = ZONE_CONFIG[zoneType];
   const defaultValues = {
     power: [
-      { min: 601, max: 800 },
-      { min: 223, max: 600 },
-      { min: 201, max: 222 },
-      { min: 191, max: 200 },
-      { min: 175, max: 190 },
-      { min: 101, max: 174 },
-      { min: 0, max: 100 },
+      { min: 301, max: 2500 },
+      { min: 241, max: 300 },
+      { min: 211, max: 240 },
+      { min: 181, max: 210 },
+      { min: 151, max: 180 },
+      { min: 111, max: 150 },
+      { min: 0, max: 110 },
     ],
     heart: [
-      { min: 201, max: 222 },
-      { min: 191, max: 200 },
-      { min: 175, max: 190 },
-      { min: 101, max: 174 },
-      { min: 0, max: 100 },
+      { min: 172, max: 190 },
+      { min: 153, max: 171 },
+      { min: 134, max: 152 },
+      { min: 115, max: 133 },
+      { min: 0, max: 114 },
     ],
   };
 

@@ -60,27 +60,33 @@ export const useZoneCalculation = ({
         updatedZones[zoneIndex].max = Math.round(inputValue * ratios[ratioIndex]);
       } else {
         updatedZones[zoneIndex].min = updatedZones[zoneIndex + 1].max + 1;
-        updatedZones[zoneIndex].max = Math.round(inputValue * ratios[ratioIndex]);
+
+        // Z7은 2500으로 고정
+        if (updatedZones[zoneIndex].name === 'Z7') {
+          updatedZones[zoneIndex].max = 2500;
+        } else {
+          updatedZones[zoneIndex].max = Math.round(inputValue * ratios[ratioIndex]);
+        }
       }
     }
 
     setZones(updatedZones);
   };
 
-  // Zone max 값 변경
-  const handleZoneMaxChange = (name: string, newMax: number) => {
+  // Zone min 값 변경
+  const handleZoneMinChange = (name: string, newMin: number) => {
     setZones((prevZones) => {
       const updatedZones = [...prevZones];
       const index = updatedZones.findIndex((z) => z.name === name);
 
       if (index !== -1) {
-        updatedZones[index] = { ...updatedZones[index], max: newMax };
+        updatedZones[index] = { ...updatedZones[index], min: newMin };
 
-        // 다음 zone의 min = 현재 zone max + 1
-        if (index - 1 >= 0) {
-          updatedZones[index - 1] = {
-            ...updatedZones[index - 1],
-            min: newMax + 1,
+        // 이전 zone의 max = 현재 zone min - 1
+        if (index + 1 < updatedZones.length) {
+          updatedZones[index + 1] = {
+            ...updatedZones[index + 1],
+            max: newMin - 1,
           };
         }
       }
@@ -96,7 +102,7 @@ export const useZoneCalculation = ({
   return {
     zones,
     calculateZones,
-    handleZoneMaxChange,
+    handleZoneMinChange,
     resetZones,
   };
 };
