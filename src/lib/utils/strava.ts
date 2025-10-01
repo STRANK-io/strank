@@ -259,6 +259,7 @@ export async function processActivities(
       id: activity.id,
       activity_hash: activity.activity_hash,
       name: activity.name,
+      type: activity.type,
       distance: activity.distance,
       average_speed: activity.average_speed,
       max_speed: activity.max_speed,
