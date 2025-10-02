@@ -73,7 +73,7 @@ const HR_ZONES = { // 심박수 : 190bpm 기준
   Z2: [115, 133] as [number, number],
   Z3: [134, 152] as [number, number],
   Z4: [153, 171] as [number, number],
-  Z5: [172, 190] as [number, number],
+  Z5: [172, 250] as [number, number],
 }
 
 // =========================================

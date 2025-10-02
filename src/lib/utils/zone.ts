@@ -1,21 +1,21 @@
 import { ZONE_CONFIG } from '@/lib/constants/zone';
-import { Zone } from '@/lib/types/zone';
+import { Zone, ZoneType } from '@/lib/types/zone';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/lib/supabase/supabase';
 
-export const getZoneColor = (zoneName: string, zoneType: 'power' | 'heart'): string => {
+export const getZoneColor = (zoneName: string, zoneType: ZoneType): string => {
   const config = ZONE_CONFIG[zoneType];
   const zone = config.find(z => z.name === zoneName || z.description === zoneName);
   return zone?.color || 'bg-gray-400';
 };
 
-export const getZoneDescription = (zoneName: string, zoneType: 'power' | 'heart'): string => {
+export const getZoneDescription = (zoneName: string, zoneType: ZoneType): string => {
   const config = ZONE_CONFIG[zoneType];
   const zone = config.find(z => z.name === zoneName);
   return zone?.description || '';
 };
 
-export const createDefaultZones = (zoneType: 'power' | 'heart'): Zone[] => {
+export const createDefaultZones = (zoneType: ZoneType): Zone[] => {
   const config = ZONE_CONFIG[zoneType];
   const defaultValues = {
     power: [
@@ -28,7 +28,7 @@ export const createDefaultZones = (zoneType: 'power' | 'heart'): Zone[] => {
       { min: 0, max: 110 },
     ],
     heart: [
-      { min: 172, max: 190 },
+      { min: 172, max: 250 },
       { min: 153, max: 171 },
       { min: 134, max: 152 },
       { min: 115, max: 133 },

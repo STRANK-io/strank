@@ -6,9 +6,10 @@ import { useUpdateZoneInfo } from '@/hooks/zone/api/useUpdateZoneSettings';
 import { useZoneCalculation } from '@/hooks/zone/useZoneCalculation';
 import { toast } from 'sonner';
 import { ToastContent } from '@/components/common/ToastContent'
+import { ZoneType } from '@/lib/types/zone';
 
 interface ZoneCardProps {
-  type: string;
+  type: ZoneType;
   flagValue?: number | null;
   isOpen: boolean;
   onToggle: () => void;
@@ -16,14 +17,14 @@ interface ZoneCardProps {
 
 export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCardProps) {
   const { userId } = useUserContext();
-  const { data: zoneInfo } = useGetZoneInfoQuery(userId, type as 'power' | 'heart');
+  const { data: zoneInfo } = useGetZoneInfoQuery(userId, type);
   const { mutate: updateZoneInfo } = useUpdateZoneInfo();
   
   const [value, setValue] = useState(flagValue);
   const [isCalculated, setIsCalculated] = useState(false); // 자동계산 실행 여부
 
   const { zones, calculateZones, handleZoneMinChange, resetZones } = useZoneCalculation({
-    zoneType: type as 'power' | 'heart',
+    zoneType: type,
     zoneInfo: zoneInfo || [],
     isOpen
   });
@@ -67,7 +68,7 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
 
     const zoneData = zones.map(zone => ({
       user_id: userId,
-      zone_type: type as 'power' | 'heart',
+      zone_type: type,
       zone_name: zone.name,
       min: zone.min,
       max: zone.max,
@@ -77,7 +78,7 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
 
     updateZoneInfo({
       userId,
-      zoneType: type as 'power' | 'heart',
+      zoneType: type,
       zones: zoneData,
       value: value
     }, {
@@ -182,6 +183,7 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
                 <ZoneRow 
                   key={zone.name} 
                   zone={zone}
+                  type={type}
                   onMinChange={handleZoneMinChange} 
                 />
               ))

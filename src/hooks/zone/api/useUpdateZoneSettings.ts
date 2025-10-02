@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { QUERY_KEYS } from '@/lib/constants/queryKeys'
-import { ZoneInfo } from '@/lib/types/zone'
+import { ZoneInfo, ZoneType } from '@/lib/types/zone'
 
 interface UpdateZoneSettingsParams {
   userId: string
-  zoneType: 'power' | 'heart'
+  zoneType: ZoneType
   zones: Omit<ZoneInfo, 'id' | 'user_id' | 'created_at' | 'updated_at'>[]
   value: number | null
 }

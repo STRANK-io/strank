@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { QUERY_KEYS } from '@/lib/constants/queryKeys'
+import { ZoneType } from '@/lib/types/zone'
 
-export const useGetZoneInfoQuery = (userId: string, zoneType: 'power' | 'heart') => {
+export const useGetZoneInfoQuery = (userId: string, zoneType: ZoneType) => {
   const supabase = createClient()
 
   return useQuery({
