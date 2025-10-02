@@ -77,7 +77,7 @@ export const useZoneCalculation = ({
   };
 
   // Zone min 값 변경
-  const handleZoneMinChange = (name: string, newMin: number) => {
+  const handleZoneMinChange = (name: string, newMin: string) => {
     setZones((prevZones) => {
       const updatedZones = [...prevZones];
       const currentZoneIndex = updatedZones.findIndex((zone) => zone.name === name);
@@ -89,7 +89,7 @@ export const useZoneCalculation = ({
       // 현재 Zone의 min 값 업데이트
       updatedZones[currentZoneIndex] = { 
         ...updatedZones[currentZoneIndex], 
-        min: newMin 
+        min: Number(newMin) 
       };
 
       // 이전 Zone의 max 값을 현재 Zone의 min - 1로 설정
@@ -97,7 +97,7 @@ export const useZoneCalculation = ({
       if (previousZoneIndex < updatedZones.length) {
         updatedZones[previousZoneIndex] = {
           ...updatedZones[previousZoneIndex],
-          max: newMin - 1,
+          max: Number(newMin) - 1,
         };
       }
 
