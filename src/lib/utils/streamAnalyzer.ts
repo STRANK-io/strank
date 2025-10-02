@@ -49,13 +49,13 @@ interface AnalysisResult {
 // 존 정의
 // =========================================
 const POWER_ZONES = { // FTP : 200W 기준
-  Z1: [0, 110] as [number, number],
-  Z2: [111, 150] as [number, number],
-  Z3: [151, 180] as [number, number],
-  Z4: [181, 210] as [number, number],
-  Z5: [211, 240] as [number, number],
-  Z6: [241, 300] as [number, number],
-  Z7: [301, 2500] as [number, number],
+  Z1: [0, 100] as [number, number],
+  Z2: [101, 174] as [number, number],
+  Z3: [175, 190] as [number, number],
+  Z4: [191, 20] as [number, number],
+  Z5: [201, 222] as [number, number],
+  Z6: [223, 600] as [number, number],
+  Z7: [601, 2500] as [number, number],
 }
 
 const POWER_ZONES_FTP = {
@@ -69,11 +69,11 @@ const POWER_ZONES_FTP = {
 }
 
 const HR_ZONES = { // 심박수 : 190bpm 기준
-  Z1: [0, 114] as [number, number],
-  Z2: [115, 133] as [number, number],
-  Z3: [134, 152] as [number, number],
-  Z4: [153, 171] as [number, number],
-  Z5: [172, 250] as [number, number],
+  Z1: [0, 124] as [number, number],
+  Z2: [125, 143] as [number, number],
+  Z3: [144, 162] as [number, number],
+  Z4: [163, 181] as [number, number],
+  Z5: [182, 250] as [number, number],
 }
 
 // =========================================

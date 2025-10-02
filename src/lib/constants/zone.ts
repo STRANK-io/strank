@@ -18,8 +18,8 @@ export const ZONE_CONFIG = {
 } as const;
   
 export const ZONE_RATIOS = {
-  power: [0.55, 0.75, 0.90, 1.05, 1.20, 1.50, 2.0],
-  heart: [0.6, 0.7, 0.8, 0.9, 1.0],
+  power: [0.5, 0.87, 0.95, 1.0, 1.11, 3.0, 0.0],
+  heart: [0.65, 0.75, 0.85, 0.95, 1.0],
 } as const;
 
 // Zone max 값 계산을 위한 상수
