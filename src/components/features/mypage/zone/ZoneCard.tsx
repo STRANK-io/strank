@@ -19,35 +19,34 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
   const { data: zoneInfo } = useGetZoneInfoQuery(userId, type as 'power' | 'heart');
   const { mutate: updateZoneInfo } = useUpdateZoneInfo();
   
-  const [value, setValue] = useState<string>((flagValue || 0).toString());
+  const [value, setValue] = useState(flagValue);
   const [isCalculated, setIsCalculated] = useState(false); // 자동계산 실행 여부
 
   const { zones, calculateZones, handleZoneMinChange, resetZones } = useZoneCalculation({
     zoneType: type as 'power' | 'heart',
     zoneInfo: zoneInfo || [],
-    isOpen,
-    flagValue: flagValue || 0,
+    isOpen
   });
 
   // 카드가 열릴 때마다 value 초기화
   useEffect(() => {
     if (isOpen) {
-      setValue((flagValue || 0).toString());
+      setValue(flagValue);
       setIsCalculated(false); // 카드 열릴 때 계산 상태 초기화
     }
   }, [isOpen, flagValue]);
 
   // 저장 핸들러
   const handleSave = () => {
-    // 1. FTP/심박수 값 검증
-    if (!value || value.trim() === '') {
-      const fieldName = type === 'power' ? 'FTP(와트)' : '최대 심박수';
-      toast(<ToastContent text={`${fieldName}를 입력해주세요.`} />);
+    if (Number(value) <= 0) {
+      toast(<ToastContent text="0보다 큰 값을 입력해주세요." />);
       return;
     }
 
-    if (Number(value) <= 0) {
-      toast(<ToastContent text="0보다 큰 값을 입력해주세요." />);
+    // 1. FTP/심박수 값 검증
+    if (!value) {
+      const fieldName = type === 'power' ? 'FTP(와트)' : '최대 심박수';
+      toast(<ToastContent text={`${fieldName}를 입력해주세요.`} />);
       return;
     }
 
@@ -80,7 +79,7 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
       userId,
       zoneType: type as 'power' | 'heart',
       zones: zoneData,
-      value: Number(value) || 0
+      value: value
     }, {
       onSuccess: () => {
         toast(<ToastContent text="저장되었습니다." />);
@@ -93,23 +92,23 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
 
   // 취소 핸들러
   const handleCancel = () => {
-    setValue((flagValue || 0).toString());
+    setValue(flagValue);
     resetZones();
     onToggle();
   };
 
   // 자동계산 핸들러
   const handleCalculate = () => {
-    // 값이 비어있는 경우
-    if (!value || value.trim() === '') {
-      const fieldName = type === 'power' ? 'FTP(와트)' : '최대 심박수';
-      toast(<ToastContent text={`${fieldName}를 입력해주세요.`} />);
-      return;
-    }
-    
     // 값이 0 이하인 경우
     if (Number(value) <= 0) {
       toast(<ToastContent text="0보다 큰 값을 입력해주세요." />);
+      return;
+    }
+
+    // 값이 비어있는 경우
+    if (!value) {
+      const fieldName = type === 'power' ? 'FTP(와트)' : '최대 심박수';
+      toast(<ToastContent text={`${fieldName}를 입력해주세요.`} />);
       return;
     }
     
@@ -119,7 +118,7 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
   };
 
   // value 변경 핸들러
-  const handleValueChange = (newValue: string) => {
+  const handleValueChange = (newValue: number) => {
     setValue(newValue);
     setIsCalculated(false); // 값이 변경되면 계산 상태 초기화
   };
@@ -149,8 +148,8 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
             <input
               id={type}
               type="number"
-              value={value}
-              onChange={(e) => handleValueChange(e.target.value)}
+              value={value || 0}
+              onChange={(e) => handleValueChange(Number(e.target.value))}
               className="border rounded px-2 py-1 bg-white w-4/6"
               placeholder="숫자만 입력하세요"
             />
