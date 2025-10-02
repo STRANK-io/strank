@@ -77,8 +77,6 @@ export async function GET(request: Request) {
       success: true,
       data: {
         zoneAnalysis: {
-          averageFtp: 140,
-          averageHr: 140,
           파워존분포: {
             "Z1 (회복)": `${powerZoneRatios.Z1}%`,
             "Z2 (지구력)": `${powerZoneRatios.Z2}%`,
