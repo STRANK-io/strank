@@ -48,7 +48,7 @@ interface AnalysisResult {
 // =========================================
 // 존 정의
 // =========================================
-const POWER_ZONES = { // FTP : 200W 기준
+const POWER_ZONES = { // FTP : 220W 기준
   Z1: [0, 110] as [number, number],
   Z2: [111, 191] as [number, number],
   Z3: [192, 209] as [number, number],
@@ -68,7 +68,7 @@ const POWER_ZONES_FTP = {
   Z7: [Math.round(FTP_RESET * 1.51), 2500] as [number, number],
 }
 
-const HR_ZONES = { // 심박수 : 190bpm 기준
+const HR_ZONES = { // 심박수 : 180bpm 기준
   Z1: [0, 117] as [number, number],
   Z2: [118, 135] as [number, number],
   Z3: [136, 153] as [number, number],

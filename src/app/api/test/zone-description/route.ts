@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
-import { generateActivityDescriptionWithGPT } from '@/lib/utils/openai'
-import { STRAVA_ACTIVITY_BY_ID_ENDPOINT, STRAVA_API_URL } from '@/lib/constants/strava'
+import { STRAVA_ACTIVITY_BY_ID_ENDPOINT, STRAVA_API_URL, STRAVA_VISIBILITY } from '@/lib/constants/strava'
 import { StravaActivity } from '@/lib/types/strava'
 import { ERROR_CODES } from '@/lib/constants/error'
 import { generateActivityDescription } from '@/lib/utils/description'
+import { calculateActivityRanking } from '@/lib/utils/webhook'
+import { CalculateActivityRankingReturn } from '@/lib/types/ranking'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export const maxDuration = 300
 
@@ -42,19 +44,20 @@ export async function GET(request: Request) {
 
     const activity: StravaActivity = await response.json()
 
+    let rankingsWithDistrict: CalculateActivityRankingReturn | null = null
+
+    const isEveryone = activity.visibility === STRAVA_VISIBILITY.EVERYONE
+    // * 랭킹 정보 계산
+    // activity.visibility가 everyone이 아닌 경우는 랭킹 데이터 계산 생략 및 디스크립션에 넣지 않음
+    if (isEveryone) {
+      const supabase = await createServiceRoleClient()
+      rankingsWithDistrict = await calculateActivityRanking(activity, userId, supabase)
+    }
+
     const description = await generateActivityDescription(
       activity,
       userId,
-      {
-        rankings: {
-          distanceRankCity: 84,
-          distanceRankDistrict: 9,
-          elevationRankCity: 89,
-          elevationRankDistrict: 9,
-        },
-        district: '신사동',
-        province: '서울시',
-      },
+      rankingsWithDistrict,
       token
     )
 
