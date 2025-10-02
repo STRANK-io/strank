@@ -20,7 +20,7 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
   const { data: zoneInfo } = useGetZoneInfoQuery(userId, type);
   const { mutate: updateZoneInfo } = useUpdateZoneInfo();
   
-  const [value, setValue] = useState(flagValue);
+  const [value, setValue] = useState<string>((flagValue || 0).toString());
   const [isCalculated, setIsCalculated] = useState(false); // 자동계산 실행 여부
 
   const { zones, calculateZones, handleZoneMinChange, resetZones } = useZoneCalculation({
@@ -32,7 +32,7 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
   // 카드가 열릴 때마다 value 초기화
   useEffect(() => {
     if (isOpen) {
-      setValue(flagValue);
+      setValue((flagValue || 0).toString());
       setIsCalculated(false); // 카드 열릴 때 계산 상태 초기화
     }
   }, [isOpen, flagValue]);
@@ -45,7 +45,7 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
     }
 
     // 1. FTP/심박수 값 검증
-    if (!value) {
+    if (!value || value.trim() === '') {
       const fieldName = type === 'power' ? 'FTP(와트)' : '최대 심박수';
       toast(<ToastContent text={`${fieldName}를 입력해주세요.`} />);
       return;
@@ -80,7 +80,7 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
       userId,
       zoneType: type,
       zones: zoneData,
-      value: value
+      value: Number(value)
     }, {
       onSuccess: () => {
         toast(<ToastContent text="저장되었습니다." />);
@@ -93,7 +93,7 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
 
   // 취소 핸들러
   const handleCancel = () => {
-    setValue(flagValue);
+    setValue((flagValue || 0).toString());
     resetZones();
     onToggle();
   };
@@ -107,7 +107,7 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
     }
 
     // 값이 비어있는 경우
-    if (!value) {
+    if (!value || value.trim() === '') {
       const fieldName = type === 'power' ? 'FTP(와트)' : '최대 심박수';
       toast(<ToastContent text={`${fieldName}를 입력해주세요.`} />);
       return;
@@ -119,7 +119,7 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
   };
 
   // value 변경 핸들러
-  const handleValueChange = (newValue: number) => {
+  const handleValueChange = (newValue: string) => {
     setValue(newValue);
     setIsCalculated(false); // 값이 변경되면 계산 상태 초기화
   };
@@ -149,8 +149,8 @@ export default function ZoneCard({ type, flagValue, isOpen, onToggle }: ZoneCard
             <input
               id={type}
               type="number"
-              value={value || 0}
-              onChange={(e) => handleValueChange(Number(e.target.value))}
+              value={value}
+              onChange={(e) => handleValueChange(e.target.value)}
               className="border rounded px-2 py-1 bg-white w-4/6"
               placeholder="숫자만 입력하세요"
             />

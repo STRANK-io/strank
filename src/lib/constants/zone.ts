@@ -22,6 +22,11 @@ export const ZONE_RATIOS = {
   heart: [0.65, 0.75, 0.85, 0.95, 1.0],
 } as const;
 
+export const DEFAULT_ZONE_VALUES = {
+  POWER: 220,
+  HEART: 180,
+} as const;
+
 // Zone max 값 계산을 위한 상수
 export const ZONE_MAX_VALUES = {
   power: { 'Z7': 2500 },

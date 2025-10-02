@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import ZoneCard from './zone/ZoneCard';
 import { UserInfo } from '@/lib/types/userInfo';
+import { DEFAULT_ZONE_VALUES } from '@/lib/constants/zone';
 
 export default function ZoneSection({ userInfo }: { userInfo: UserInfo | null}) {
   const [openCard, setOpenCard] = useState<string | null>(null);
 
-  const ftp = userInfo?.ftp_value;
-  const heart = userInfo?.heart_value;
+  const ftp = userInfo?.ftp_value === 0 ? DEFAULT_ZONE_VALUES.POWER : userInfo?.ftp_value;
+  const heart = userInfo?.heart_value === 0 ? DEFAULT_ZONE_VALUES.HEART : userInfo?.heart_value;
 
   return (
     <div className="max-w-md mx-auto space-y-4">
