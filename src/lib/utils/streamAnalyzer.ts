@@ -692,7 +692,7 @@ function computeTotalElevationGain(altitudeM: number[]): number {
   let totalGain = 0
   for (let i = 1; i < smoothed.length; i++) {
     const diff = smoothed[i] - smoothed[i - 1]
-    if (diff >= 0.098) { 
+    if (diff >= 0.1) { 
       totalGain += diff
     }
   }
