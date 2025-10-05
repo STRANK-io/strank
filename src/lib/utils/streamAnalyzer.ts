@@ -39,7 +39,6 @@ interface AnalysisResult {
   hrZoneRatios: Record<string, number>
   peakPowers: Record<string, number | null>
   hrZoneAverages: Record<string, number | null>
-  ftp20: number | null
   ftp60: number | null
   riderStyle: RiderStyle
   courseName?: string | null
@@ -363,10 +362,9 @@ function estimateFtpWithoutPower(
   const wattsEst = estimatePowerFunc(distanceM, altitudeM, dt, velocitySmooth)
   const wattsSmooth = rollingMean(wattsEst, 15, true, 1)
   
-  const ftp20 = computeFtpFromPower(wattsSmooth, dt, totalTime, 20 * 60, 0.95)
   const ftp60 = computeFtpFromPower(wattsSmooth, dt, totalTime, 60 * 60, 1.0)
   
-  return { ftp20, ftp60 }
+  return { ftp60 }
 }
 
 /**
@@ -1043,7 +1041,6 @@ export async function analyzeStreamData(userId: string, streamsData: any): Promi
       hrZoneRatios: { Z1:0,Z2:0,Z3:0,Z4:0,Z5:0 },
       peakPowers: { '5s':0,'1min':0,'2min':0,'5min':0,'10min':0,'20min':0,'1h':0 },
       hrZoneAverages: { Z1:null,Z2:null,Z3:null,Z4:null,Z5:null },
-      ftp20: null,
       ftp60: null,
       riderStyle: { icon:'🚲', name:'데이터 없음', desc:'유효한 주행 데이터가 없습니다.' },
       courseName: null
@@ -1064,7 +1061,6 @@ export async function analyzeStreamData(userId: string, streamsData: any): Promi
   const totalTime = streams.time![streams.time!.length - 1] || 0
 
   let powerZoneRatios: Record<string, number>
-  let ftp20: number | null = null
   let ftp60: number | null = null
 
   if (!streams.watts || streams.watts.every(w => !w)) {
@@ -1091,10 +1087,8 @@ export async function analyzeStreamData(userId: string, streamsData: any): Promi
       totalTime, 
       estimatePower
     )
-    ftp20 = ftpResult.ftp20
     ftp60 = ftpResult.ftp60
   } else {
-    ftp20 = computeFtpFromPower(streams.watts, dt, totalTime, 20 * 60, 0.95)
     ftp60 = computeFtpFromPower(streams.watts, dt, totalTime, 60 * 60, 1.0)
   }
 
@@ -1154,7 +1148,6 @@ export async function analyzeStreamData(userId: string, streamsData: any): Promi
   hrZoneRatios: hrZoneRatios,
   peakPowers: {},
   hrZoneAverages: {},
-  ftp20: ftp20,
   ftp60: ftp60,
   riderStyle: determineRiderStyle({
     distance: computeTotalDistanceKm(streams.distance!),
@@ -1201,7 +1194,6 @@ export async function analyzeStreamData(userId: string, streamsData: any): Promi
   console.log('🔋최고속도:', results.최고속도, 'km/h')
   console.log('🦵평균파워:', results.평균파워, 'W')
   console.log('🦿최대파워:', results.최대파워, 'W')
-  console.log('⚡20min FTP:', results.ftp20 || 'N/A', 'W')
   console.log('⚡60min FTP:', results.ftp60 || 'N/A', 'W')
   console.log('❤️최고심박수:', results.최고심박수, 'bpm')
   console.log('💫평균케이던스:', results.평균케이던스, 'rpm\n')
