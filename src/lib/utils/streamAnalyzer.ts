@@ -246,6 +246,10 @@ export async function generateCourseName(
   latlngs: { lat: number; lon: number }[],
   distanceKm: number
 ): Promise<string> {
+    // 🧭 실내 트레이닝 감지
+  if (!latlngs || latlngs.length < 5 || distanceKm < 2) {
+    return "실내 트레이닝"
+  }
   const segmentCount = getSegmentCount(distanceKm)
 
   // 반환점 + 균등 분할
