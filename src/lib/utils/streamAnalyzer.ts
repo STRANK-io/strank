@@ -1041,7 +1041,7 @@ export async function analyzeStreamData(userId: string, streamsData: any): Promi
       평균케이던스: 0,
       powerZoneRatios: { Z1:0,Z2:0,Z3:0,Z4:0,Z5:0,Z6:0,Z7:0 },
       hrZoneRatios: { Z1:0,Z2:0,Z3:0,Z4:0,Z5:0 },
-      peakPowers: { '5s':0,'1min':0,'2min':0,'5min':0,'10min':0,'30min':0,'1h':0 },
+      peakPowers: { '5s':0,'1min':0,'2min':0,'5min':0,'10min':0,'20min':0,'1h':0 },
       hrZoneAverages: { Z1:null,Z2:null,Z3:null,Z4:null,Z5:null },
       ftp20: null,
       ftp60: null,
@@ -1178,7 +1178,7 @@ export async function analyzeStreamData(userId: string, streamsData: any): Promi
     { sec: 120, label: '2min' },
     { sec: 300, label: '5min' },
     { sec: 600, label: '10min' },
-    { sec: 1800, label: '30min' },
+    { sec: 1200, label: '20min' },
     { sec: 3600, label: '1h' }
   ]
   
