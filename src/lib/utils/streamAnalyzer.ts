@@ -683,8 +683,8 @@ function computeTotalElevationGain(altitudeM: number[]): number {
   // 이동평균으로 노이즈 제거
   const smoothed = []
   for (let i = 0; i < altitudeM.length; i++) {
-    const start = Math.max(0, i - 3)
-    const end = Math.min(altitudeM.length, i + 3)
+    const start = Math.max(0, i - 2)
+    const end = Math.min(altitudeM.length, i + 2)
     const window = altitudeM.slice(start, end).filter(a => a != null)
     smoothed.push(window.reduce((sum, a) => sum + a, 0) / window.length)
   }
@@ -692,7 +692,7 @@ function computeTotalElevationGain(altitudeM: number[]): number {
   let totalGain = 0
   for (let i = 1; i < smoothed.length; i++) {
     const diff = smoothed[i] - smoothed[i - 1]
-    if (diff >= 0.12) { 
+    if (diff >= 0.1) { 
       totalGain += diff
     }
   }
