@@ -66,7 +66,7 @@ export default function MypagePage() {
       </section>
 
       {/* 로그아웃 / 회원탈퇴 */}
-      <section className="flex w-full flex-col items-center justify-center gap-12 text-sm font-bold leading-[18.2px]">
+      <section className="flex w-full flex-row items-center justify-center gap-12 text-sm font-bold leading-[18.2px]">
         <LogOutButton />
         <WithdrawalButton />
       </section>
