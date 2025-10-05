@@ -197,7 +197,16 @@ ${streamAnalysis ? `
 - 최대파워: ${streamAnalysis.최대파워}W
 - 최고심박수: ${streamAnalysis.최고심박수}bpm
 - 평균케이던스: ${streamAnalysis.평균케이던스}rpm
-- courseName: ${(streamAnalysis as any)?.courseName || 'N/A'}
+- courseName: ${
+  (streamAnalysis as any)?.courseName 
+    || (
+      (activityData?.streamsData?.latlng?.data?.length ?? 0) < 5 
+      || (activityData as any)?.trainer === true 
+      || (activityData as any)?.type === 'VirtualRide'
+        ? '실내 트레이닝'
+        : '등록된 코스 없음'
+    )
+}
 
 FTP 분석:
 - 60분 FTP: ${streamAnalysis.ftp60 || 'N/A'}W
