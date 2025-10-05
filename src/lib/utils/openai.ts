@@ -139,7 +139,7 @@ ${rankingSection}
 
 ⚡ 피크파워 분석 (AI분석)
 5초: [P_5s]W / 1분: [P_1min]W / 2분: [P_2min]W
-5분: [P_5min]W / 10분: [P_10min]W / 20분: [P_30min]W / 1시간: [P_1h]W
+5분: [P_5min]W / 10분: [P_10min]W / 20분: [P_20min]W / 1시간: [P_1h]W
 
 ❤️ 심박존 평균 분석 (AI분석)
 Z1: [H_Z1]bpm / Z2: [H_Z2]bpm / Z3: [H_Z3]bpm
