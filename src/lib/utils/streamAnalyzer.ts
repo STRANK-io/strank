@@ -1225,8 +1225,24 @@ export async function analyzeStreamData(userId: string, streamsData: any): Promi
       lat: d[0],
       lon: d[1]
     }))
+  // 🧭 실내 트레이닝 감지 (GPS 거의 없거나 가상주행)
+  if (
+    !latlngs ||
+    latlngs.length < 5 ||
+    results.총거리 < 2 ||
+    streamsData.trainer === true ||
+    streamsData.type === 'VirtualRide'
+  ) {
+    results.courseName = '실내 트레이닝'
+  } else {
     results.courseName = await generateCourseName(latlngs, results.총거리)
   }
+} else {
+  // latlng 데이터 자체가 없을 때
+  results.courseName = '실내 트레이닝'
+}
+
+  console.log('📍코스명 감지 결과:', results.courseName)
 
   console.log('✅ 스트림 데이터 분석 완료')
   return results
