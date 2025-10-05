@@ -139,7 +139,7 @@ ${rankingSection}
 
 ⚡ 피크파워 분석 (AI분석)
 5초: [P_5s]W / 1분: [P_1min]W / 2분: [P_2min]W
-5분: [P_5min]W / 10분: [P_10min]W / 30분: [P_30min]W / 1시간: [P_1h]W
+5분: [P_5min]W / 10분: [P_10min]W / 20분: [P_30min]W / 1시간: [P_1h]W
 
 ❤️ 심박존 평균 분석 (AI분석)
 Z1: [H_Z1]bpm / Z2: [H_Z2]bpm / Z3: [H_Z3]bpm
@@ -211,7 +211,7 @@ FTP 분석:
 
 피크파워 분석:
 - 5초: ${streamAnalysis.peakPowers['5s']}W / 1분: ${streamAnalysis.peakPowers['1min']}W / 2분: ${streamAnalysis.peakPowers['2min']}W
-- 5분: ${streamAnalysis.peakPowers['5min']}W / 10분: ${streamAnalysis.peakPowers['10min']}W / 30분: ${streamAnalysis.peakPowers['30min']}W / 1시간: ${streamAnalysis.peakPowers['1h']}W
+- 5분: ${streamAnalysis.peakPowers['5min']}W / 10분: ${streamAnalysis.peakPowers['10min']}W / 20분: ${streamAnalysis.peakPowers['20min']}W / 1시간: ${streamAnalysis.peakPowers['1h']}W
 
 심박존 평균:
 - Z1: ${streamAnalysis.hrZoneAverages.Z1}bpm / Z2: ${streamAnalysis.hrZoneAverages.Z2}bpm / Z3: ${streamAnalysis.hrZoneAverages.Z3}bpm
@@ -278,7 +278,7 @@ ${streamAnalysis ? `${streamAnalysis.riderStyle.icon} 라이딩스타일 : ${str
 피크파워분석의 데이터가 0이면 값을 추측하지말고 0으로 표현해줘
 예시)
 ⏱️ 5초: ???W | 1분: ???W | 2분: ???W
-⏱️ 5분: ???W | 10분: ???W | 30분: ???W | 1시간: ???W
+⏱️ 5분: ???W | 10분: ???W | 20분: ???W | 1시간: ???W
 
 ■ 심박존 평균 분석 (AI분석)
 심박존평균분석의 데이터가 0이면 값을 추측하지말고 0으로 표현해줘
