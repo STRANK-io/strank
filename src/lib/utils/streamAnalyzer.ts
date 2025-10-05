@@ -952,6 +952,7 @@ function determineRiderStyle(data: {
   if (avgW > 0 && maxW / avgW >= 3.5 && elevPerKm < 5) scores.sprinter += 1
   if (dist < 50) scores.sprinter += 1
   if (cad >= 90) scores.sprinter += 1
+  if (speed >= 30) scores.sprinter += 2   // 추가: 고속 평지 주행 반영
 
   // 3. 클라이머 ⛰️
   if (elev >= 700) scores.climber += 3
