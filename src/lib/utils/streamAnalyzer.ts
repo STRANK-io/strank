@@ -947,8 +947,8 @@ function determineRiderStyle(data: {
   if (cad < 70) scores.beginner += 1
 
   // 2. 스프린터 🔥 (평지 폭발력 중심)
-  if (maxW > 600) scores.sprinter += 3
-  if (avgW > 0 && maxW / avgW >= 5) scores.sprinter += 2
+  if (maxW > 500) scores.sprinter += 3
+  if (avgW > 0 && maxW / avgW >= 4.5) scores.sprinter += 2
   if (avgW > 0 && maxW / avgW >= 3.5 && elevPerKm < 5) scores.sprinter += 1
   if (dist < 50) scores.sprinter += 1
   if (cad >= 90) scores.sprinter += 1
@@ -984,6 +984,13 @@ function determineRiderStyle(data: {
   if (dist >= 20 && dist <= 60) scores.tt += 1
   if (speed >= 32) scores.tt += 2
 
+  // --- 거리 보정 (짧은 주행은 롤러/브레이커 감점) ---
+  if (dist < 20) {
+    scores.roller -= 2      // 짧은 주행은 지속형 아님
+    scores.breaker -= 3     // 장거리 독주는 불가능
+    if (maxW > 400) scores.sprinter += 1 // 단거리 폭발력 보정
+  }
+  
   // --- 최고 점수 스타일 선택 ---
   const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0]
 
