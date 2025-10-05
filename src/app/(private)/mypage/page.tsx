@@ -16,6 +16,7 @@ export default function MypagePage() {
 
   return (
     <div className="space-y-12 pb-[75px]">
+      {/* 사용자 정보 섹션 */}      
       <section className="flex flex-col items-center gap-6">
         <div className="mt-6 w-full">
           <UserInfoForm userId={userId} />
@@ -25,15 +26,19 @@ export default function MypagePage() {
         </div>
       </section>
 
+      {/* 존 정보 */}      
       <section className="w-full space-y-2 px-5">
         <ZoneSection userInfo={userInfo || null} />
       </section>
 
+      {/* 최근 활동 동기화 */}      
       <section className="w-full space-y-2 px-5">
         <SyncRecentActivitySection />
       </section>
 
+      {/* 안내 및 연락 섹션 */}      
       <section className="flex w-full flex-col items-center justify-center gap-4 text-sm font-bold leading-[18.2px] text-brand-dark">
+        {/*
         <Link
           href="https://strank.framer.website/notice/description-error"
           target="_blank"
@@ -42,6 +47,7 @@ export default function MypagePage() {
         >
           디스크립션 오류 해결 방법
         </Link>
+        */}
         <Link
           href="https://strank.framer.website/notice"
           target="_blank"
@@ -50,6 +56,7 @@ export default function MypagePage() {
         >
           공지사항
         </Link>
+        
         <div className="flex items-center gap-1">
           <span>제안 & 오류 신고 : </span>
           <a href="mailto:support@strank.io" className="hover:underline">
@@ -58,6 +65,7 @@ export default function MypagePage() {
         </div>
       </section>
 
+      {/* 로그아웃 / 회원탈퇴 */}
       <section className="flex w-full flex-col items-center justify-center gap-12 text-sm font-bold leading-[18.2px]">
         <LogOutButton />
         <WithdrawalButton />
