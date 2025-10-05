@@ -964,10 +964,10 @@ function determineRiderStyle(data: {
   }
 
   // 5. 롤러 ⚡ (평지 장거리)
-  if (dist >= 60) scores.roller += 3
-  if (speed >= 24) scores.roller += 2
+  if (dist >= 40) scores.roller += 3
+  if (speed >= 25) scores.roller += 2
   if (elevPerKm < 7) scores.roller += 2
-  if (avgW >= 150 && avgW <= 250) scores.roller += 1
+  if (avgW >= 120 && avgW <= 250) scores.roller += 1
 
   // 6. 브레이커웨이 🐺 (장거리 독주)
   if (dist >= 120) scores.breaker += 3
@@ -988,8 +988,8 @@ function determineRiderStyle(data: {
     case "sprinter": return { icon: '🔥', name: '스프린터 (단거리가속형)', desc: '평지에서 순간 폭발력이 뛰어난 주행' }
     case "climber": return { icon: '⛰️', name: '클라이머 (산악형)', desc: '고도 상승에 특화된 꾸준한 주행' }
     case "puncheur": return { icon: '🚀', name: '펀처 (순간폭발형)', desc: '언덕에서 폭발적 가속이 돋보이는 주행' }
-    case "roller": return { icon: '⚡', name: '롤러/도메스틱 (장거리형)', desc: '장거리에서 페이스 유지에 강점' }
-    case "breaker": return { icon: '🐺', name: '브레이커웨이 (파워지속형)', desc: '파워지속 독주에 강한 라이더' }
+    case "roller": return { icon: '⚡', name: '롤러/페이스메이커 (지속형)', desc: '페이스 유지력과 리듬감이 좋은 주행' }
+    case "breaker": return { icon: '🐺', name: '브레이커웨이 (파워지속형)', desc: '파워지속 독주에 강한 주' }
     case "tt": return { icon: '🏋️', name: 'TT 스페셜리스트 (파워유지형)', desc: '에어로 자세로 일정 파워를 유지한 주행' }
     default: return { icon: '🦾', name: '올라운더 (밸런스형)', desc: '특정 스타일에 치우치지 않은 균형 잡힌 주행' }
   }
