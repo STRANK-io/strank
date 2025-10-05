@@ -17,6 +17,7 @@ export default function HomePage() {
         <section className="mb-3 mt-6 flex flex-col gap-6">
           <StrankTitleLogo width={120} height={23} />
           <div className="flex flex-col text-base font-bold leading-[21px] text-brand-dark">
+            <span>AI분석이 함께하는</span>
             <span>지역별 랭킹으로 더 가까워진</span>
             <span>라이딩 커뮤니티</span>
           </div>
@@ -33,6 +34,8 @@ export default function HomePage() {
           </Link>
           <Link
             href="https://strank.framer.website"
+            target="_blank"
+            rel="noopener noreferrer"
             className="mt-6 text-lg font-medium leading-[23px] text-brand-dark"
           >
             서비스 둘러보기
