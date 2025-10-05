@@ -358,7 +358,7 @@ function estimateFtpWithoutPower(
   velocitySmooth: number[] | undefined,
   totalTime: number,
   estimatePowerFunc: (dist: number[], alt: number[], dt: number[], vel?: number[]) => number[]
-): { ftp20: number | null; ftp60: number | null } {
+): { ftp60: number | null } {
   const wattsEst = estimatePowerFunc(distanceM, altitudeM, dt, velocitySmooth)
   const wattsSmooth = rollingMean(wattsEst, 15, true, 1)
   
