@@ -101,7 +101,7 @@ export async function generateActivityDescriptionWithGPT(
 
 ${rankingSection}
 
-◾ 라이딩 분석 정보 ◾
+🔍라이딩 분석 정보
 🚴총거리: [총거리] km
 🚵총고도: [총고도] m
 🪫평균속도: [평균속도] km/h
