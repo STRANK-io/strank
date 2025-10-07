@@ -119,6 +119,7 @@ function sanitizeName(name?: string | null): string | null {
   const trimmed = name.trim()
 
   if (trimmed.toUpperCase() === "N/A") return null
+  if (/[\u0600-\u06FF]/.test(trimmed)) return null   // 🇴 아랍어 문자 제거
   if (/^\+?\d{6,}$/.test(trimmed.replace(/\s+/g, ""))) return null // 전화번호
   if (/^\D*\d{3,}$/.test(trimmed)) return null // 숫자 ID 기반 (예: "0501222551")
   if (trimmed.length < 2) return null // 너무 짧은 경우
