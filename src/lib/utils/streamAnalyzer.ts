@@ -113,13 +113,25 @@ function splitCourseByIndex(latlngs: { lat: number; lon: number }[], segmentCoun
   )
 }
 
+// ✅ 비정상 좌표 감지 (글로벌 대응)
+function isInvalidLocation(lat: number, lon: number): boolean {
+  if (isNaN(lat) || isNaN(lon)) return true
+  // (1) GPS 없음 or 0,0 근처
+  if (Math.abs(lat) < 1 && Math.abs(lon) < 1) return true
+  // (2) 위도/경도 유효 범위 벗어남
+  if (lat < -60 || lat > 80) return true
+  if (lon < -180 || lon > 180) return true
+  // (3) 인구 희박/비현실적 지역 (남극, 사막 등)
+  if (lat > 10 && lat < 30 && lon > 30 && lon < 60) return true // 대략 아라비아 반도
+  return false
+}
+
 // 🔎 잡음 제거 유틸
 function sanitizeName(name?: string | null): string | null {
   if (!name) return null
   const trimmed = name.trim()
 
   if (trimmed.toUpperCase() === "N/A") return null
-  if (/[\u0600-\u06FF]/.test(trimmed)) return null   // 🇴 아랍어 문자 제거
   if (/^\+?\d{6,}$/.test(trimmed.replace(/\s+/g, ""))) return null // 전화번호
   if (/^\D*\d{3,}$/.test(trimmed)) return null // 숫자 ID 기반 (예: "0501222551")
   if (trimmed.length < 2) return null // 너무 짧은 경우
@@ -134,6 +146,13 @@ async function reverseGeocode(point: { lat: number; lon: number }): Promise<stri
       headers: { "User-Agent": "STRANK/1.0 (support@strank.io)" },
     })
     const data = await res.json()
+
+    
+    // GPS 품질 확인
+    if (isInvalidLocation(point.lat, point.lon)) {
+      return "실내 트레이닝"
+    }
+    
 
     const feature =
       data.name ||
@@ -251,6 +270,14 @@ export async function generateCourseName(
   if (!latlngs || latlngs.length < 5 || distanceKm < 2) {
     return "실내 트레이닝"
   }
+
+  // 🌍 좌표 검증
+  const avgLat = latlngs.reduce((s, p) => s + p.lat, 0) / latlngs.length
+  const avgLon = latlngs.reduce((s, p) => s + p.lon, 0) / latlngs.length
+  if (isInvalidLocation(avgLat, avgLon)) {
+    return "실내 트레이닝"
+  }
+  
   const segmentCount = getSegmentCount(distanceKm)
 
   // 반환점 + 균등 분할
