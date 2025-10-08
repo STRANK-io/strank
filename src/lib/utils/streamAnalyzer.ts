@@ -484,9 +484,9 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 
 
 /**
- * 파워 추정 함수 (현실형 v3 - 보수형)
- * - 평균·최대 파워 모두 현실적으로 낮게 보정
- * - GPS-only 주행의 과대추정 완화용
+ * 파워 추정 함수 (현실형 v4 - 저강도 중심 보수형)
+ * - GPS-only 주행 기준으로 실제보다 살짝 낮게 계산
+ * - 평균파워 110~130W, 최대파워 450~520W 수준 목표
  */
 function estimatePower(
   distanceM: number[],
@@ -518,7 +518,7 @@ function estimatePower(
   }
 
   // ------------------------------------------
-  // ② 속도 계산 및 튐 필터링
+  // ② 속도 계산 + 튐 필터링
   // ------------------------------------------
   const gpsSpeed = dDist.map((dd, i) => dd / Math.max(1, dt[i] || 1))
   const rawSpeed = velocitySmooth && velocitySmooth.some(v => v > 0)
@@ -531,24 +531,24 @@ function estimatePower(
     else {
       const prev = limitedSpeed[i - 1]
       const accel = (rawSpeed[i] - prev) / Math.max(1, dt[i] || 1)
-      if (Math.abs(accel) > 3) limitedSpeed.push(prev)
+      if (Math.abs(accel) > 2.5) limitedSpeed.push(prev)
       else limitedSpeed.push(rawSpeed[i])
     }
   }
 
   const speed = rollingMean(medianFilter(limitedSpeed, 3), 5, true, 1)
-    .map(s => Math.min(Math.max(s, 0), 20)) // 상한 72 km/h
+    .map(s => Math.min(Math.max(s, 0), 20)) // 72 km/h 상한
 
   // ------------------------------------------
-  // ③ 고도 변화 (±1.5 m 이하만 반영)
+  // ③ 고도 변화 (±1 m 이하만 반영)
   // ------------------------------------------
-  const altSmooth = rollingMean(altitudeM, 12, true, 1)
+  const altSmooth = rollingMean(altitudeM, 10, true, 1)
   const dAlt: number[] = []
   for (let i = 0; i < altSmooth.length; i++) {
     if (i === 0) dAlt.push(0)
     else {
       const diff = altSmooth[i] - altSmooth[i - 1]
-      dAlt.push(Math.abs(diff) > 1.5 ? 0 : diff)
+      dAlt.push(Math.abs(diff) > 1 ? 0 : diff)
     }
   }
 
@@ -564,33 +564,39 @@ function estimatePower(
     const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
     let totalPower = gradPower + rollPower + aeroPower
 
-    // 속도별 최소파워 하한 (완화)
-    const minPower = 25 + 3 * (s * 3.6)
+    const speedKmh = s * 3.6
+
+    // 하한 완화 (저속일수록 더 낮게)
+    const minPower = 20 + 2.5 * speedKmh
     totalPower = Math.max(minPower, totalPower)
 
-    // 저속 감쇠 강화 (30km/h 기준)
-    const speedKmh = s * 3.6
-    if (speedKmh < 30) {
-      totalPower *= speedKmh / 30
+    // 저속 감쇠 (35km/h 기준)
+    if (speedKmh < 35) {
+      totalPower *= speedKmh / 35
     }
 
-    // 상한 제한 (보수형)
-    totalPower = Math.min(800, totalPower)
+    // 아주 느린 구간 추가 감쇠 (<15km/h)
+    if (speedKmh < 15) {
+      totalPower *= 0.5
+    }
+
+    // 상한 제한 (700W)
+    totalPower = Math.min(700, totalPower)
 
     power.push(totalPower)
   }
 
   // ------------------------------------------
-  // ⑤ 평균 기반 스케일링 (보수형)
+  // ⑤ 평균 기반 스케일링 (더 약하게)
   // ------------------------------------------
   const rawAvg = power.reduce((a, b) => a + b, 0) / power.length
   const scaleFactor =
-    rawAvg < 120 ? 1.15 :
-    rawAvg < 180 ? 1.1 :
+    rawAvg < 100 ? 1.05 :
+    rawAvg < 150 ? 1.02 :
     1.0
 
   const powerScaled = power.map(p =>
-    p < rawAvg * 1.5 ? p * scaleFactor : p
+    p < rawAvg * 1.4 ? p * scaleFactor : p
   )
 
   // ------------------------------------------
