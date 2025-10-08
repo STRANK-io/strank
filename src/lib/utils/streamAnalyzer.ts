@@ -484,8 +484,8 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 
 
 /**
- * 파워 추정 함수 (현실형 v5 - 초보·일반 보수형)
- * - 평균파워 80~110W, 최대파워 350~450W 목표
+ * 파워 추정 함수 (v5.1 - 평균 유지, 최대파워만 추가 하향)
+ * - 평균: 80~110W / 최대: 300~350W 목표
  */
 function estimatePower(
   distanceM: number[],
@@ -500,7 +500,7 @@ function estimatePower(
 ): number[] {
   if (distanceM.length < 2) return []
 
-  // ① 거리·시간 gap 보정
+  // 거리·시간 gap 보정
   const distSmooth = rollingMean(distanceM, 5, true, 1)
   const dDist: number[] = []
   for (let i = 0; i < distSmooth.length; i++) {
@@ -514,7 +514,7 @@ function estimatePower(
     }
   }
 
-  // ② 속도 계산 및 필터링
+  // 속도 계산
   const gpsSpeed = dDist.map((dd, i) => dd / Math.max(1, dt[i] || 1))
   const rawSpeed = velocitySmooth && velocitySmooth.some(v => v > 0)
     ? velocitySmooth.map((vs, i) => (vs + gpsSpeed[i]) / 2)
@@ -532,9 +532,9 @@ function estimatePower(
   }
 
   const speed = rollingMean(medianFilter(limitedSpeed, 3), 5, true, 1)
-    .map(s => Math.min(Math.max(s, 0), 20)) // 72 km/h 상한
+    .map(s => Math.min(Math.max(s, 0), 20))
 
-  // ③ 고도 변화 (±0.8 m 이하만 반영)
+  // 고도 변화 (±0.8m 이하만 반영)
   const altSmooth = rollingMean(altitudeM, 10, true, 1)
   const dAlt: number[] = []
   for (let i = 0; i < altSmooth.length; i++) {
@@ -545,39 +545,37 @@ function estimatePower(
     }
   }
 
-  // ④ 물리모델 계산
+  // 파워 계산
   const power: number[] = []
   for (let i = 0; i < speed.length; i++) {
     const s = speed[i]
     const deltaTime = Math.max(1, dt[i] || 1)
-    const gradPower = mass * g * dAlt[i] / deltaTime
+    let gradPower = mass * g * dAlt[i] / deltaTime
+    gradPower *= 0.7 // 고도항 감쇠
+
     const rollPower = mass * g * cr * s
     const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
     let totalPower = gradPower + rollPower + aeroPower
 
     const speedKmh = s * 3.6
 
-    // 하한 완화
+    // 하한
     const minPower = 15 + 2 * speedKmh
     totalPower = Math.max(minPower, totalPower)
 
-    // 저속 감쇠 (40 km/h 기준)
-    if (speedKmh < 40) {
-      totalPower *= speedKmh / 40
-    }
+    // 저속 감쇠
+    if (speedKmh < 40) totalPower *= speedKmh / 40
+    if (speedKmh < 15) totalPower *= 0.4
 
-    // 초저속 감쇠 (15 km/h 이하)
-    if (speedKmh < 15) {
-      totalPower *= 0.4
-    }
+    // 고속 피크 감쇠
+    if (speedKmh > 30) totalPower *= 0.9
 
-    // 상한 제한
-    totalPower = Math.min(600, totalPower)
+    // 상한 제한 (450W)
+    totalPower = Math.min(450, totalPower)
 
     power.push(totalPower)
   }
 
-  // ⑤ 스무딩 (3포인트 이동평균)
   return rollingMean(power, 3, true, 1)
 }
 
