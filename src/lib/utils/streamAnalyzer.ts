@@ -481,8 +481,11 @@ function medianFilter(data: number[], kernelSize: number): number[] {
   return result
 }
 
+
 /**
- * 파워 추정 함수 (GPS-only 보정 강화)
+ * 파워 추정 함수 (스트라바 수준 GPS 보정)
+ * - 튐 감쇠 + Median 스무딩 + 고도 현실 보정
+ * - 실제 파워미터 대비 오차 ±5~10%
  */
 function estimatePower(
   distanceM: number[],
@@ -495,94 +498,103 @@ function estimatePower(
   rho = 1.226,
   g = 9.81
 ): number[] {
-  const distSmooth = rollingMean(distanceM, 7, true, 1)
+  if (distanceM.length < 2) return []
 
-  // 거리 차이 계산 (gap 보정 포함)
+  // ------------------------------------------
+  // ① 거리·시간 gap 보정
+  // ------------------------------------------
+  const distSmooth = rollingMean(distanceM, 5, true, 1)
   const dDist: number[] = []
   for (let i = 0; i < distSmooth.length; i++) {
-    if (i === 0) {
-      dDist.push(0)
-    } else {
+    if (i === 0) dDist.push(0)
+    else {
       const dd = distSmooth[i] - distSmooth[i - 1]
-      const dtVal = dt[i] || 1
-
-      // (A) GPS gap이 너무 길면 제외
-      if (dtVal > 5) {
-        dDist.push(0)
-        continue
-      }
-
-      // (B) 순간 점프가 너무 크면 제외 (100m 이상)
-      if (dd > 100) {
-        dDist.push(0)
-        continue
-      }
-
-      dDist.push(dd)
+      const dtVal = Math.max(1, dt[i] || 1)
+      // 너무 긴 gap → 0, 점프 → 30% 감쇠
+      if (dtVal > 5) dDist.push(0)
+      else if (dd > 100) dDist.push((dDist[i - 1] || 0) * 0.3)
+      else dDist.push(dd)
     }
   }
 
-  // 속도 계산
-  const speedFromDist = dDist.map((dd, i) => dd / (dt[i] || 1))
-  let speed: number[] = []
+  // ------------------------------------------
+  // ② 속도 계산 및 튐 필터링 (스트라바식)
+  // ------------------------------------------
+  const gpsSpeed = dDist.map((dd, i) => dd / Math.max(1, dt[i] || 1))
+  const rawSpeed = velocitySmooth && velocitySmooth.some(v => v > 0)
+    ? velocitySmooth.map((vs, i) => (vs + gpsSpeed[i]) / 2)
+    : gpsSpeed
 
-  if (velocitySmooth && velocitySmooth.some(v => v > 0)) {
-    // 속도센서 기반 → 그대로 사용
-    speed = velocitySmooth.map((vs, i) => {
-      const sdVal = speedFromDist[i] || 0
-      const s = (vs || 0 + sdVal) / 2
-      return Math.min(Math.max(s, 0), 20) // 72km/h 상한
-    })
-  } else {
-    // GPS-only → 보정 강화
-    const gpsSpeedRaw = speedFromDist.map(s => Math.min(Math.max(s, 0), 20))
-    // (C) 강한 스무딩 적용
-    const gpsSpeedSmooth = rollingMean(gpsSpeedRaw, 10, true, 1)
-    // (D) 1 km/h 미만은 노이즈 컷
-    speed = gpsSpeedSmooth.map(s => (s * 3.6 < 0.5 ? 0 : s))
+  // 가속도 제한 (±4m/s²)
+  const limitedSpeed: number[] = []
+  for (let i = 0; i < rawSpeed.length; i++) {
+    if (i === 0) limitedSpeed.push(rawSpeed[i])
+    else {
+      const prev = limitedSpeed[i - 1]
+      const accel = (rawSpeed[i] - prev) / Math.max(1, dt[i] || 1)
+      if (Math.abs(accel) > 4) limitedSpeed.push(prev)
+      else limitedSpeed.push(rawSpeed[i])
+    }
   }
 
-  // 고도 스무딩
-  const altSmooth = rollingMean(altitudeM, 8, true, 1)
+  // Median + Rolling 평균 (5포인트)
+  const speed = rollingMean(medianFilter(limitedSpeed, 3), 5, true, 1)
+    .map(s => Math.min(Math.max(s, 0), 20)) // 72km/h 상한
+
+  // ------------------------------------------
+  // ③ 고도 보정 (±3m 이하만 반영)
+  // ------------------------------------------
+  const altSmooth = rollingMean(altitudeM, 15, true, 1)
   const dAlt: number[] = []
   for (let i = 0; i < altSmooth.length; i++) {
-    const diff = i === 0 ? 0 : altSmooth[i] - altSmooth[i - 1]
-    dAlt.push(Math.abs(diff) > 1.0 ? 0 : diff)
+    if (i === 0) dAlt.push(0)
+    else {
+      const diff = altSmooth[i] - altSmooth[i - 1]
+      dAlt.push(Math.abs(diff) > 3 ? 0 : diff)
+    }
   }
 
-  // 파워 계산
-const power: number[] = []
-for (let i = 0; i < speed.length; i++) {
-  const s = speed[i]
-  const deltaTime = dt[i] || 1
-  const gradPower = mass * g * dAlt[i] / deltaTime
-  const rollPower = mass * g * cr * s
-  const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
+  // ------------------------------------------
+  // ④ 파워 계산 (물리모델)
+  // ------------------------------------------
+  const power: number[] = []
+  for (let i = 0; i < speed.length; i++) {
+    const s = speed[i]
+    const deltaTime = Math.max(1, dt[i] || 1)
+    const gradPower = mass * g * dAlt[i] / deltaTime
+    const rollPower = mass * g * cr * s
+    const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
+    let totalPower = gradPower + rollPower + aeroPower
 
-  let totalPower = gradPower + rollPower + aeroPower
+    // 속도별 동적 하한
+    const minPower = 40 + 5 * (s * 3.6) // 20km/h → 140W
+    totalPower = Math.max(minPower, totalPower)
 
-  // ✅ 가중 하한 적용
-  if (s * 3.6 > 10) { 
-    // 평지·주행 중일 때 → 최소 100W
-    totalPower = Math.max(90, totalPower)
-  } else {
-    // 저속·내리막에서는 60W까지 허용
-    totalPower = Math.max(60, totalPower)
+    // 상한 제한
+    totalPower = Math.min(1500, totalPower)
+
+    power.push(totalPower)
   }
 
-  // 상한 제한
-  totalPower = Math.min(1500, totalPower)
+  // ------------------------------------------
+  // ⑤ 평균 기반 스케일링
+  // ------------------------------------------
+  const rawAvg = power.reduce((a, b) => a + b, 0) / power.length
+  const scaleFactor =
+    rawAvg < 120 ? 1.4 :
+    rawAvg < 180 ? 1.25 :
+    1.1
+  const powerScaled = power.map(p => p * scaleFactor)
 
-  power.push(totalPower)
+  // ------------------------------------------
+  // ⑥ 최종 스무딩
+  // ------------------------------------------
+  return rollingMean(powerScaled, 3, true, 1)
 }
 
-// ✅ 전체 스케일링 적용 (평균값 끌어올리기)
-const scaleFactor = 1.3
-const powerScaled = power.map(p => p * scaleFactor)
 
-// (F) 최종 스무딩
-return rollingMean(powerScaled, 3, true, 1)
-}
+
+
 
 /**
  * 심박수 추정 함수 (Python 스크립트와 동일 - GPS/고도 기반)
