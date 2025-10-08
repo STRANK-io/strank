@@ -484,9 +484,9 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 
 
 /**
- * 파워 추정 함수 (현실형 v2, 스트라바 수준 ±10%)
- * - 평균/최대 파워 모두 현실값으로 보정
- * - 저속/평지 구간 과대 추정 방지
+ * 파워 추정 함수 (현실형 v3 - 보수형)
+ * - 평균·최대 파워 모두 현실적으로 낮게 보정
+ * - GPS-only 주행의 과대추정 완화용
  */
 function estimatePower(
   distanceM: number[],
@@ -525,7 +525,6 @@ function estimatePower(
     ? velocitySmooth.map((vs, i) => (vs + gpsSpeed[i]) / 2)
     : gpsSpeed
 
-  // 가속도 제한 (±3 m/s² → 약 0~11 km/h/s)
   const limitedSpeed: number[] = []
   for (let i = 0; i < rawSpeed.length; i++) {
     if (i === 0) limitedSpeed.push(rawSpeed[i])
@@ -537,12 +536,11 @@ function estimatePower(
     }
   }
 
-  // Median + Rolling 평균
   const speed = rollingMean(medianFilter(limitedSpeed, 3), 5, true, 1)
     .map(s => Math.min(Math.max(s, 0), 20)) // 상한 72 km/h
 
   // ------------------------------------------
-  // ③ 고도 변화 (±2 m 이하만 반영)
+  // ③ 고도 변화 (±1.5 m 이하만 반영)
   // ------------------------------------------
   const altSmooth = rollingMean(altitudeM, 12, true, 1)
   const dAlt: number[] = []
@@ -550,7 +548,7 @@ function estimatePower(
     if (i === 0) dAlt.push(0)
     else {
       const diff = altSmooth[i] - altSmooth[i - 1]
-      dAlt.push(Math.abs(diff) > 2 ? 0 : diff)
+      dAlt.push(Math.abs(diff) > 1.5 ? 0 : diff)
     }
   }
 
@@ -566,33 +564,33 @@ function estimatePower(
     const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
     let totalPower = gradPower + rollPower + aeroPower
 
-    // 속도별 최소파워 하한 완화 (저속일수록 완만)
-    const minPower = 30 + 3.5 * (s * 3.6)
+    // 속도별 최소파워 하한 (완화)
+    const minPower = 25 + 3 * (s * 3.6)
     totalPower = Math.max(minPower, totalPower)
 
-    // 저속 감쇠 (25 km/h 미만은 선형 비율)
+    // 저속 감쇠 강화 (30km/h 기준)
     const speedKmh = s * 3.6
-    if (speedKmh < 25) {
-      totalPower *= speedKmh / 25
+    if (speedKmh < 30) {
+      totalPower *= speedKmh / 30
     }
 
-    // 상한 제한 (현실형)
-    totalPower = Math.min(900, totalPower)
+    // 상한 제한 (보수형)
+    totalPower = Math.min(800, totalPower)
 
     power.push(totalPower)
   }
 
   // ------------------------------------------
-  // ⑤ 평균 기반 부분 스케일링 (피크 제외)
+  // ⑤ 평균 기반 스케일링 (보수형)
   // ------------------------------------------
   const rawAvg = power.reduce((a, b) => a + b, 0) / power.length
   const scaleFactor =
-    rawAvg < 120 ? 1.25 :
-    rawAvg < 180 ? 1.15 :
-    1.05
+    rawAvg < 120 ? 1.15 :
+    rawAvg < 180 ? 1.1 :
+    1.0
 
   const powerScaled = power.map(p =>
-    p < rawAvg * 1.5 ? p * scaleFactor : p // 피크값은 제외
+    p < rawAvg * 1.5 ? p * scaleFactor : p
   )
 
   // ------------------------------------------
