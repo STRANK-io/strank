@@ -975,12 +975,20 @@ function determineRiderStyle(data: {
   if (cad < 70) scores.beginner += 1
 
   // 2. 스프린터 🔥 (평지 폭발력 중심)
-  if (maxW > 500) scores.sprinter += 3
+  if (maxW > 600) scores.sprinter += 3
   if (avgW > 0 && maxW / avgW >= 4.5) scores.sprinter += 2
   if (avgW > 0 && maxW / avgW >= 3.5 && elevPerKm < 5) scores.sprinter += 1
   if (dist < 50) scores.sprinter += 1
   if (cad >= 90) scores.sprinter += 1
   if (speed >= 30) scores.sprinter += 2   // 추가: 고속 평지 주행 반영
+
+    // --- ✅ 현실형 보정 (저강도 장거리 시 감점) ---
+  if (avgW < 100) scores.sprinter -= 2          // 저강도 주행은 스프린터 아님
+  if (speed < 25) scores.sprinter -= 1           // 속도 낮으면 감점
+  if (dist >= 60 && avgW < 150) {                // 장거리 + 저파워 시
+    scores.sprinter -= 2
+    scores.roller += 2                           // 지속형 성향 강화
+  }
 
   // 3. 클라이머 ⛰️
   if (elev >= 700) scores.climber += 3
@@ -1001,6 +1009,7 @@ function determineRiderStyle(data: {
   if (speed >= 25) scores.roller += 2
   if (elevPerKm < 7) scores.roller += 2
   if (avgW >= 120 && avgW <= 250) scores.roller += 1
+  if (dist >= 80) scores.roller += 1              // 추가: 80km 이상 장거리 보정
 
   // 6. 브레이커웨이 🐺 (장거리 독주)
   if (dist >= 120) scores.breaker += 3
