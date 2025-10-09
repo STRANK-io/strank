@@ -1196,14 +1196,15 @@ export async function analyzeStreamData(userId: string, streamsData: any): Promi
   streams.watts = estResult.power
 
   // ✅ FTP 추정 (파워 없음 시 대체)
-  const ftpResult = estimateFtpWithoutPower(
-    streams.distance!,
-    streams.altitude!,
-    dt,
-    streams.velocity_smooth,
-    totalTime,
-    estimatePower // ⚡ estimatePower 함수 전달
-  )
+const ftpResult = estimateFtpWithoutPower(
+  streams.distance!,
+  streams.altitude!,
+  dt,
+  streams.velocity_smooth,
+  totalTime,
+  // ⚡ estimatePower.power 만 반환하도록 래핑
+  (dist, alt, dtArr, vel) => estimatePower(dist, alt, dtArr, vel).power
+)
   ftp60 = ftpResult.ftp60
 } else {
   // ⚡ 실제 파워센서 데이터 있는 경우
