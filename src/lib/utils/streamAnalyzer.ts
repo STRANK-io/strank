@@ -484,11 +484,10 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 
 
 /**
- * 파워 추정 함수 (v5.5 - 중속 강화 + Z6 억제 강화)
- * - 평균파워 저평균 보정(80W 기준)
- * - 저속 감쇠 완화, 중속(20~35km/h) 강화
- * - Z6 과대 검출 시 자동 감쇠(0.8배)
- * - GPS 안정도 계산 포함
+ * 파워 추정 함수 (v5.4 - 저평균 보정 + 최소파워 하한)
+ * - 평균파워가 70W 미만일 경우 자동 스케일업
+ * - 모든 구간 최소 파워 70W 이상 유지
+ * - Z6 과대 감쇠, GPS 안정도 계산 포함
  */
 
 function estimatePower(
@@ -535,7 +534,7 @@ function estimatePower(
     else {
       const prev = limitedSpeed[i - 1]
       const accel = (rawSpeed[i] - prev) / Math.max(1, dt[i] || 1)
-      if (Math.abs(accel) > 1.0) limitedSpeed.push(prev)
+      if (Math.abs(accel) > 1.5) limitedSpeed.push(prev)
       else limitedSpeed.push(rawSpeed[i])
     }
   }
@@ -543,7 +542,7 @@ function estimatePower(
   const speed = rollingMean(medianFilter(limitedSpeed, 3), 5, true, 1)
     .map(s => Math.min(Math.max(s, 0), 20))
 
-  // GPS 안정도 계산
+  // GPS 안정도 평가
   let unstableCount = 0
   for (let i = 1; i < speed.length; i++) {
     const diff = Math.abs(speed[i] - speed[i - 1])
@@ -565,13 +564,13 @@ function estimatePower(
   }
 
   // -------------------------------
-  // ④ 파워 계산 (중속 강화 + Z6 억제 강화)
+  // ④ 파워 계산
   // -------------------------------
   const power: number[] = []
   for (let i = 0; i < speed.length; i++) {
     const s = speed[i]
     const deltaTime = Math.max(1, dt[i] || 1)
-    let gradPower = (mass * g * dAlt[i]) / deltaTime
+    let gradPower = mass * g * dAlt[i] / deltaTime
     gradPower *= 0.9
 
     const rollPower = mass * g * cr * s
@@ -579,64 +578,62 @@ function estimatePower(
     let totalPower = gradPower + rollPower + aeroPower
 
     const speedKmh = s * 3.6
-    const minPower = 15 + 1.8 * speedKmh
+    const minPower = 15 + 2 * speedKmh
     totalPower = Math.max(minPower, totalPower)
 
-    // ✅ 저속 감쇠 완화 + 중속 강화
-    if (speedKmh < 15) totalPower *= 0.8
-    else if (speedKmh < 30) totalPower *= 0.9 + (speedKmh / 100)
-    else if (speedKmh < 35) totalPower *= 1.1
-    else totalPower *= 0.9
+    if (speedKmh < 40) totalPower *= speedKmh / 40
+    if (speedKmh < 15) totalPower *= 0.7
+    if (speedKmh > 30) totalPower *= 0.95
+    totalPower = Math.min(600, totalPower)
 
-    // ✅ 순간 파워 급등 제한 (강화)
     if (i > 0) {
       const prev = power[i - 1] || totalPower
-      const ratio = totalPower / Math.max(prev, 1)
-      if (ratio > 1.15) totalPower = prev * 1.15
-      if (ratio < 0.8) totalPower = prev * 0.8
+      totalPower = Math.min(totalPower, prev * 1.4)
     }
 
-    totalPower = Math.min(600, totalPower)
     power.push(totalPower)
   }
 
   // -------------------------------
-  // ⑤ 평균 보정 (80W 기준)
+  // ⑤ 평균 보정 (저평균 보정)
   // -------------------------------
   const avg = mean(power)
   let adjusted = power
 
-  if (avg < 80) {
-    const scale = Math.min(2.0, 80 / Math.max(avg, 1))
+  if (avg < 70) {
+    const scale = Math.min(2.0, 70 / Math.max(avg, 1))
     adjusted = adjusted.map(p => p * scale)
   }
 
   // -------------------------------
-  // ⑥ 최소 파워 하한 (60W)
+  // ⑥ 최소 파워 하한 설정 (70W)
   // -------------------------------
-  adjusted = adjusted.map(p => Math.max(60, p))
+  adjusted = adjusted.map(p => Math.max(70, p))
 
   // -------------------------------
-  // ⑦ Z6 과대 검출 + 자동 감쇠 강화
+  // ⑦ Z6 과대 검출 + 자동 감쇠
   // -------------------------------
-  const thresholdZ6 = 0.9 * max(adjusted)
+  const thresholdZ6 = 0.85 * max(adjusted)
   const zone6Count = adjusted.filter(p => p >= thresholdZ6).length
   const zone6Ratio = zone6Count / adjusted.length
 
-  if (zone6Ratio > 0.08) {
-    adjusted = adjusted.map(p => p * 0.8)
+  if (zone6Ratio > 0.1) {
+    adjusted = adjusted.map(p => p * 0.9)
+  }
+
+  // -------------------------------
+  // ⑧ 스무딩 후 반환
+  // -------------------------------
+  return {
+    power: rollingMean(adjusted, 3, true, 1),
+    gpsStability,
+    zone6Ratio
+  }
 }
 
 // -------------------------------
-// ⑧ 스무딩 후 반환
+// 유틸 함수
 // -------------------------------
-return {
-  power: rollingMean(adjusted, 3, true, 1),
-  gpsStability,
-  zone6Ratio
-}
-}
-
 function mean(arr: number[]): number {
   const valid = arr.filter(v => !isNaN(v))
   return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0
@@ -645,6 +642,8 @@ function mean(arr: number[]): number {
 function max(arr: number[]): number {
   return arr.length ? Math.max(...arr.filter(v => !isNaN(v))) : 0
 }
+
+
 
 
 
