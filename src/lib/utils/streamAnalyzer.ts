@@ -612,16 +612,27 @@ function estimatePower(
   // -------------------------------
   adjusted = adjusted.map(p => Math.max(60, p))
 
-  // -------------------------------
-  // ⑦ Z6 과대 검출 억제
-  // -------------------------------
-  const thresholdZ6 = 0.9 * max(adjusted) // 상위 10%만 Z6로 판정
-  const zone6Count = adjusted.filter(p => p >= thresholdZ6).length
-  const zone6Ratio = zone6Count / adjusted.length
+// -------------------------------
+// ⑦ Z6 과대 검출 억제 (지속시간 + 강도 기준)
+// -------------------------------
+const thresholdZ6 = 0.93 * max(adjusted) // 상위 7%만 Z6로 인식
+let zone6Count = 0
+let consecutive = 0
 
-  if (zone6Ratio > 0.08) {
-    adjusted = adjusted.map(p => p * 0.85)
+for (let i = 0; i < adjusted.length; i++) {
+  if (adjusted[i] >= thresholdZ6) {
+    consecutive++
+    if (consecutive >= 2) zone6Count++
+  } else {
+    consecutive = 0
   }
+}
+const zone6Ratio = zone6Count / adjusted.length
+
+if (zone6Ratio > 0.05) {
+  adjusted = adjusted.map(p => p * 0.8) // 감쇠 강화
+}
+
 
   // -------------------------------
   // ⑧ 스무딩 후 반환
