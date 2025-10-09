@@ -483,14 +483,19 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 
 
 /**
- * 파워 추정 함수 (v5.9 - Z6 지속시간 기반 안정화 최종버전)
- * - 평균파워 현실화 (60W 기준 보정)
- * - 저속 감쇠 완화 / 고속 감쇠 강화
- * - Z6 지속시간(≥2초) 기반 판정으로 과대 검출 방지
- * - GPS 안정도 포함
+ * 파워 추정 함수 (v8.4 - 완전 안정판 / 현실표시보정 OFF)
+ * -----------------------------------------------------------
+ * ✅ GPS 튐 완화 및 속도 안정화 (median + rolling mean)
+ * ✅ 고도 변화율 gradient 기반 안정화 (clip ±0.5)
+ * ✅ 중속 구간(20~35km/h) 강화 1.2배
+ * ✅ 고속 구간(>35km/h) 감쇠 0.65배
+ * ✅ 파워 상한 470W
+ * ✅ 평균 스케일 보정 (목표 평균 110~120W)
+ * ✅ Z6 인식 0.88×max 파워 기준
+ * -----------------------------------------------------------
  */
 
-function estimatePower(
+function estimatePower_v84(
   distanceM: number[],
   altitudeM: number[],
   dt: number[],
@@ -501,11 +506,11 @@ function estimatePower(
   rho = 1.226,
   g = 9.81
 ): { power: number[]; gpsStability: number; zone6Ratio: number } {
-  if (distanceM.length < 2)
+  if (distanceM.length < 3)
     return { power: [], gpsStability: 0, zone6Ratio: 0 }
 
   // -------------------------------
-  // ① 거리 gap 보정
+  // ① 거리 gap 보정 (GPS 튐 완화)
   // -------------------------------
   const distSmooth = rollingMean(distanceM, 5, true, 1)
   const dDist: number[] = []
@@ -513,17 +518,17 @@ function estimatePower(
     if (i === 0) dDist.push(0)
     else {
       const dd = distSmooth[i] - distSmooth[i - 1]
-      const dtVal = Math.max(1, dt[i] || 1)
+      const dtVal = Math.max(1.0, dt[i] || 1.0)
       if (dtVal > 5) dDist.push(0)
-      else if (dd > 80) dDist.push((dDist[i - 1] || 0) * 0.2)
+      else if (dd > 15) dDist.push((dDist[i - 1] || 0) * 0.5)
       else dDist.push(dd)
     }
   }
 
   // -------------------------------
-  // ② 속도 계산 및 튐 보정
+  // ② 속도 계산 및 안정화
   // -------------------------------
-  const gpsSpeed = dDist.map((dd, i) => dd / Math.max(1, dt[i] || 1))
+  const gpsSpeed = dDist.map((dd, i) => dd / Math.max(1.0, dt[i] || 1.0))
   const rawSpeed =
     velocitySmooth && velocitySmooth.some(v => v > 0)
       ? velocitySmooth.map((vs, i) => (vs + gpsSpeed[i]) / 2)
@@ -534,14 +539,13 @@ function estimatePower(
     if (i === 0) limitedSpeed.push(rawSpeed[i])
     else {
       const prev = limitedSpeed[i - 1]
-      const accel = (rawSpeed[i] - prev) / Math.max(1, dt[i] || 1)
-      if (Math.abs(accel) > 1.5) limitedSpeed.push(prev)
-      else limitedSpeed.push(rawSpeed[i])
+      const accel = (rawSpeed[i] - prev) / Math.max(1.0, dt[i] || 1.0)
+      limitedSpeed.push(Math.abs(accel) > 0.8 ? prev : rawSpeed[i])
     }
   }
 
   const speed = rollingMean(medianFilter(limitedSpeed, 3), 5, true, 1)
-    .map(s => Math.min(Math.max(s, 0), 22)) // 속도상한 22 m/s (~79 km/h)
+    .map(s => Math.min(Math.max(s, 0), 22))
 
   // -------------------------------
   // ③ GPS 안정도 계산
@@ -554,17 +558,13 @@ function estimatePower(
   const gpsStability = 1 - unstableCount / speed.length
 
   // -------------------------------
-  // ④ 고도 변화 반영
+  // ④ 고도 변화 안정화 (gradient + clip)
   // -------------------------------
   const altSmooth = rollingMean(altitudeM, 10, true, 1)
-  const dAlt: number[] = []
-  for (let i = 0; i < altSmooth.length; i++) {
-    if (i === 0) dAlt.push(0)
-    else {
-      const diff = altSmooth[i] - altSmooth[i - 1]
-      dAlt.push(Math.abs(diff) > 1.5 ? 0 : diff)
-    }
-  }
+  const grad = gradient(altSmooth)
+  const dAlt = rollingMean(grad, 20, true, 1).map(v =>
+    Math.min(Math.max(v, -0.5), 0.5)
+  )
 
   // -------------------------------
   // ⑤ 파워 계산
@@ -572,77 +572,61 @@ function estimatePower(
   const power: number[] = []
   for (let i = 0; i < speed.length; i++) {
     const s = speed[i]
-    const deltaTime = Math.max(1, dt[i] || 1)
-    let gradPower = (mass * g * dAlt[i]) / deltaTime
-    gradPower *= 0.9
-
+    const deltaTime = Math.max(1.0, dt[i] || 1.0)
+    let gradPower = (mass * g * dAlt[i]) / deltaTime * 0.9
     const rollPower = mass * g * cr * s
     const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
     let totalPower = gradPower + rollPower + aeroPower
 
     const speedKmh = s * 3.6
-    const minPower = 10 + 1.8 * speedKmh
-    totalPower = Math.max(minPower, totalPower)
+    totalPower = Math.max(10 + 1.8 * speedKmh, totalPower)
+    if (speedKmh < 15) totalPower *= 1.05
+    else if (speedKmh >= 20 && speedKmh <= 35) totalPower *= 1.2
+    else if (speedKmh > 35) totalPower *= 0.65
 
-    // 속도별 감쇠 곡선
-    if (speedKmh < 40) totalPower *= speedKmh / 40
-    if (speedKmh < 15) totalPower *= 0.8
-    if (speedKmh > 30) totalPower *= 0.8 // 고속 감쇠 강화
-    totalPower = Math.min(700, totalPower)
+    // 가속 급등 제한
+    if (i > 0) totalPower = Math.min(totalPower, power[i - 1] * 1.12)
+    if (i > 1 && totalPower > power[i - 1] * 1.15 && totalPower > power[i - 2] * 1.15)
+      totalPower = power[i - 1]
 
-    if (i > 0) {
-      const prev = power[i - 1] || totalPower
-      totalPower = Math.min(totalPower, prev * 1.3)
-    }
+    // 고속 구간 리얼리티 강화 (32km/h 이상)
+    if (speedKmh > 32) totalPower *= 1.05
 
-    power.push(totalPower)
+    power.push(Math.min(totalPower, 470))
   }
 
   // -------------------------------
-  // ⑥ 평균 보정 (저평균 보정)
+  // ⑥ 평균파워 보정 (목표 110~120W)
   // -------------------------------
   const avg = mean(power)
-  let adjusted = power
-
-  if (avg < 60) {
-    const scale = Math.min(1.8, 60 / Math.max(avg, 1))
-    adjusted = adjusted.map(p => p * scale)
-  }
+  const scale = Math.min(1.8, Math.max(0.8, 115 / (avg || 1)))
+  let adjusted = power.map(p => p * scale * Math.max(0.9, gpsStability))
 
   // -------------------------------
-  // ⑦ 최소 파워 하한
+  // ⑦ Z6 구간 비율 계산 (상위 12% 인식)
   // -------------------------------
-  adjusted = adjusted.map(p => Math.max(60, p))
-
-  // -------------------------------
-  // ⑧ Z6 지속시간 기반 과대 검출 억제
-  // -------------------------------
-  const thresholdZ6 = 0.93 * max(adjusted) // 상위 7 %만 인식
-  let zone6Segments = 0
-  let segmentLength = 0
-
+  const thresholdZ6 = 0.88 * Math.max(...adjusted)
+  let zone6Segments = 0,
+    segmentLength = 0
   for (let i = 0; i < adjusted.length; i++) {
-    if (adjusted[i] >= thresholdZ6) {
-      segmentLength++
-    } else {
-      if (segmentLength >= 2) zone6Segments += segmentLength // 2초 이상만 유효
+    if (adjusted[i] >= thresholdZ6) segmentLength++
+    else {
+      if (segmentLength >= 2) zone6Segments += segmentLength
       segmentLength = 0
     }
   }
   if (segmentLength >= 2) zone6Segments += segmentLength
-
   const zone6Ratio = zone6Segments / adjusted.length
 
-  // 과도 시 감쇠
-  if (zone6Ratio > 0.05) {
-    adjusted = adjusted.map(p => p * 0.8)
-  }
+  // -------------------------------
+  // ⑧ 스무딩 및 반환
+  // -------------------------------
+  const finalPower = rollingMean(adjusted, 5, true, 1).map(p =>
+    Math.max(60, p)
+  )
 
-  // -------------------------------
-  // ⑨ 스무딩 후 반환
-  // -------------------------------
   return {
-    power: rollingMean(adjusted, 5, true, 1),
+    power: finalPower,
     gpsStability,
     zone6Ratio,
   }
@@ -656,9 +640,38 @@ function mean(arr: number[]): number {
   return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0
 }
 
-function max(arr: number[]): number {
-  return arr.length ? Math.max(...arr.filter(v => !isNaN(v))) : 0
+function rollingMean(arr: number[], window = 5, centered = true, pad = 1): number[] {
+  const result = []
+  for (let i = 0; i < arr.length; i++) {
+    const start = Math.max(0, i - Math.floor(window / 2))
+    const end = Math.min(arr.length, i + Math.floor(window / 2))
+    const slice = arr.slice(start, end)
+    result.push(slice.reduce((a, b) => a + b, 0) / slice.length)
+  }
+  return result
 }
+
+function medianFilter(arr: number[], window = 3): number[] {
+  const result = []
+  for (let i = 0; i < arr.length; i++) {
+    const start = Math.max(0, i - Math.floor(window / 2))
+    const end = Math.min(arr.length, i + Math.floor(window / 2))
+    const slice = arr.slice(start, end).sort((a, b) => a - b)
+    result.push(slice[Math.floor(slice.length / 2)] || arr[i])
+  }
+  return result
+}
+
+function gradient(arr: number[]): number[] {
+  const grad = []
+  for (let i = 0; i < arr.length; i++) {
+    if (i === 0) grad.push(arr[1] - arr[0])
+    else if (i === arr.length - 1) grad.push(arr[i] - arr[i - 1])
+    else grad.push((arr[i + 1] - arr[i - 1]) / 2)
+  }
+  return grad
+}
+
 
 
 
