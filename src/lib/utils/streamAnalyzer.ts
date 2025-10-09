@@ -613,25 +613,29 @@ function estimatePower(
   adjusted = adjusted.map(p => Math.max(60, p))
 
 // -------------------------------
-// ⑦ Z6 과대 검출 억제 (지속시간 + 강도 기준)
+// ⑦ Z6 과대 검출 억제 (지속시간 + 강도 기준 완전 적용)
 // -------------------------------
 const thresholdZ6 = 0.93 * max(adjusted) // 상위 7%만 Z6로 인식
-let zone6Count = 0
-let consecutive = 0
+let zone6Segments = 0
+let segmentLength = 0
 
 for (let i = 0; i < adjusted.length; i++) {
   if (adjusted[i] >= thresholdZ6) {
-    consecutive++
-    if (consecutive >= 2) zone6Count++
+    segmentLength++
   } else {
-    consecutive = 0
+    if (segmentLength >= 2) zone6Segments += segmentLength // 연속 2초 이상만 유효
+    segmentLength = 0
   }
 }
-const zone6Ratio = zone6Count / adjusted.length
+if (segmentLength >= 2) zone6Segments += segmentLength // 끝부분 처리
 
+const zone6Ratio = zone6Segments / adjusted.length
+
+// 비율이 여전히 높으면 감쇠
 if (zone6Ratio > 0.05) {
-  adjusted = adjusted.map(p => p * 0.8) // 감쇠 강화
+  adjusted = adjusted.map(p => p * 0.8)
 }
+
 
 
   // -------------------------------
