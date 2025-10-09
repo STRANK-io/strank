@@ -483,10 +483,10 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 
 
 /**
- * 파워 추정 함수 (v5.6 - Z6 안정화 + 고속 감쇠 강화)
- * - 평균파워 현실화(60W 기준 보정)
- * - 중속(20~35km/h) 강화, 고속(35km/h 이상) 감쇠 강화
- * - Z6 과대 검출 억제(상위 10%만 반영)
+ * 파워 추정 함수 (v5.9 - Z6 지속시간 기반 안정화 최종버전)
+ * - 평균파워 현실화 (60W 기준 보정)
+ * - 저속 감쇠 완화 / 고속 감쇠 강화
+ * - Z6 지속시간(≥2초) 기반 판정으로 과대 검출 방지
  * - GPS 안정도 포함
  */
 
@@ -543,7 +543,9 @@ function estimatePower(
   const speed = rollingMean(medianFilter(limitedSpeed, 3), 5, true, 1)
     .map(s => Math.min(Math.max(s, 0), 22)) // 속도상한 22 m/s (~79 km/h)
 
-  // GPS 안정도 평가
+  // -------------------------------
+  // ③ GPS 안정도 계산
+  // -------------------------------
   let unstableCount = 0
   for (let i = 1; i < speed.length; i++) {
     const diff = Math.abs(speed[i] - speed[i - 1])
@@ -552,7 +554,7 @@ function estimatePower(
   const gpsStability = 1 - unstableCount / speed.length
 
   // -------------------------------
-  // ③ 고도 변화 반영
+  // ④ 고도 변화 반영
   // -------------------------------
   const altSmooth = rollingMean(altitudeM, 10, true, 1)
   const dAlt: number[] = []
@@ -565,7 +567,7 @@ function estimatePower(
   }
 
   // -------------------------------
-  // ④ 파워 계산
+  // ⑤ 파워 계산
   // -------------------------------
   const power: number[] = []
   for (let i = 0; i < speed.length; i++) {
@@ -585,7 +587,7 @@ function estimatePower(
     // 속도별 감쇠 곡선
     if (speedKmh < 40) totalPower *= speedKmh / 40
     if (speedKmh < 15) totalPower *= 0.8
-    if (speedKmh > 30) totalPower *= 0.8
+    if (speedKmh > 30) totalPower *= 0.8 // 고속 감쇠 강화
     totalPower = Math.min(700, totalPower)
 
     if (i > 0) {
@@ -597,7 +599,7 @@ function estimatePower(
   }
 
   // -------------------------------
-  // ⑤ 평균 보정 (저평균 보정)
+  // ⑥ 평균 보정 (저평균 보정)
   // -------------------------------
   const avg = mean(power)
   let adjusted = power
@@ -608,38 +610,36 @@ function estimatePower(
   }
 
   // -------------------------------
-  // ⑥ 최소 파워 하한 (60W)
+  // ⑦ 최소 파워 하한
   // -------------------------------
   adjusted = adjusted.map(p => Math.max(60, p))
 
-// -------------------------------
-// ⑦ Z6 과대 검출 억제 (지속시간 + 강도 기준 완전 적용)
-// -------------------------------
-const thresholdZ6 = 0.93 * max(adjusted) // 상위 7%만 Z6로 인식
-let zone6Segments = 0
-let segmentLength = 0
+  // -------------------------------
+  // ⑧ Z6 지속시간 기반 과대 검출 억제
+  // -------------------------------
+  const thresholdZ6 = 0.93 * max(adjusted) // 상위 7 %만 인식
+  let zone6Segments = 0
+  let segmentLength = 0
 
-for (let i = 0; i < adjusted.length; i++) {
-  if (adjusted[i] >= thresholdZ6) {
-    segmentLength++
-  } else {
-    if (segmentLength >= 2) zone6Segments += segmentLength // 연속 2초 이상만 유효
-    segmentLength = 0
+  for (let i = 0; i < adjusted.length; i++) {
+    if (adjusted[i] >= thresholdZ6) {
+      segmentLength++
+    } else {
+      if (segmentLength >= 2) zone6Segments += segmentLength // 2초 이상만 유효
+      segmentLength = 0
+    }
   }
-}
-if (segmentLength >= 2) zone6Segments += segmentLength // 끝부분 처리
+  if (segmentLength >= 2) zone6Segments += segmentLength
 
-const zone6Ratio = zone6Segments / adjusted.length
+  const zone6Ratio = zone6Segments / adjusted.length
 
-// 비율이 여전히 높으면 감쇠
-if (zone6Ratio > 0.05) {
-  adjusted = adjusted.map(p => p * 0.8)
-}
-
-
+  // 과도 시 감쇠
+  if (zone6Ratio > 0.05) {
+    adjusted = adjusted.map(p => p * 0.8)
+  }
 
   // -------------------------------
-  // ⑧ 스무딩 후 반환
+  // ⑨ 스무딩 후 반환
   // -------------------------------
   return {
     power: rollingMean(adjusted, 5, true, 1),
