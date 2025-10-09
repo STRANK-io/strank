@@ -483,7 +483,7 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 
 
 /**
- * 파워 추정 함수 (v8.4 - 완전 안정판 / 현실표시보정 OFF)
+ * 파워 추정 함수 (v8.4-safe - 완전 안정판 / 현실표시보정 OFF)
  * -----------------------------------------------------------
  * ✅ GPS 튐 완화 및 속도 안정화 (median + rolling mean)
  * ✅ 고도 변화율 gradient 기반 안정화 (clip ±0.5)
@@ -492,10 +492,11 @@ function medianFilter(data: number[], kernelSize: number): number[] {
  * ✅ 파워 상한 470W
  * ✅ 평균 스케일 보정 (목표 평균 110~120W)
  * ✅ Z6 인식 0.88×max 파워 기준
+ * ✅ 기존 rollingMean 등과 충돌 방지 (별도 네임스페이스)
  * -----------------------------------------------------------
  */
 
-function estimatePower_v84(
+export function estimatePower_v84_safe(
   distanceM: number[],
   altitudeM: number[],
   dt: number[],
@@ -512,7 +513,7 @@ function estimatePower_v84(
   // -------------------------------
   // ① 거리 gap 보정 (GPS 튐 완화)
   // -------------------------------
-  const distSmooth = rollingMean(distanceM, 5, true, 1)
+  const distSmooth = rollingMean_v84(distanceM, 5)
   const dDist: number[] = []
   for (let i = 0; i < distSmooth.length; i++) {
     if (i === 0) dDist.push(0)
@@ -544,8 +545,8 @@ function estimatePower_v84(
     }
   }
 
-  const speed = rollingMean(medianFilter(limitedSpeed, 3), 5, true, 1)
-    .map(s => Math.min(Math.max(s, 0), 22))
+  const speed = rollingMean_v84(medianFilter_v84(limitedSpeed, 3), 5)
+    .map(s => Math.min(Math.max(s, 0), 22)) // 22m/s = 79km/h 상한
 
   // -------------------------------
   // ③ GPS 안정도 계산
@@ -560,9 +561,9 @@ function estimatePower_v84(
   // -------------------------------
   // ④ 고도 변화 안정화 (gradient + clip)
   // -------------------------------
-  const altSmooth = rollingMean(altitudeM, 10, true, 1)
-  const grad = gradient(altSmooth)
-  const dAlt = rollingMean(grad, 20, true, 1).map(v =>
+  const altSmooth = rollingMean_v84(altitudeM, 10)
+  const grad = gradient_v84(altSmooth)
+  const dAlt = rollingMean_v84(grad, 20).map(v =>
     Math.min(Math.max(v, -0.5), 0.5)
   )
 
@@ -589,7 +590,7 @@ function estimatePower_v84(
     if (i > 1 && totalPower > power[i - 1] * 1.15 && totalPower > power[i - 2] * 1.15)
       totalPower = power[i - 1]
 
-    // 고속 구간 리얼리티 강화 (32km/h 이상)
+    // 고속 구간 리얼리티 강화
     if (speedKmh > 32) totalPower *= 1.05
 
     power.push(Math.min(totalPower, 470))
@@ -598,7 +599,7 @@ function estimatePower_v84(
   // -------------------------------
   // ⑥ 평균파워 보정 (목표 110~120W)
   // -------------------------------
-  const avg = mean(power)
+  const avg = mean_v84(power)
   const scale = Math.min(1.8, Math.max(0.8, 115 / (avg || 1)))
   let adjusted = power.map(p => p * scale * Math.max(0.9, gpsStability))
 
@@ -606,8 +607,8 @@ function estimatePower_v84(
   // ⑦ Z6 구간 비율 계산 (상위 12% 인식)
   // -------------------------------
   const thresholdZ6 = 0.88 * Math.max(...adjusted)
-  let zone6Segments = 0,
-    segmentLength = 0
+  let zone6Segments = 0
+  let segmentLength = 0
   for (let i = 0; i < adjusted.length; i++) {
     if (adjusted[i] >= thresholdZ6) segmentLength++
     else {
@@ -621,9 +622,7 @@ function estimatePower_v84(
   // -------------------------------
   // ⑧ 스무딩 및 반환
   // -------------------------------
-  const finalPower = rollingMean(adjusted, 5, true, 1).map(p =>
-    Math.max(60, p)
-  )
+  const finalPower = rollingMean_v84(adjusted, 5).map(p => Math.max(60, p))
 
   return {
     power: finalPower,
@@ -632,16 +631,17 @@ function estimatePower_v84(
   }
 }
 
-// -------------------------------
-// 유틸 함수
-// -------------------------------
-function mean(arr: number[]): number {
+/* ================================
+   🔧 내부 유틸 (v84 전용 이름)
+================================ */
+
+function mean_v84(arr: number[]): number {
   const valid = arr.filter(v => !isNaN(v))
   return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0
 }
 
-function rollingMean(arr: number[], window = 5, centered = true, pad = 1): number[] {
-  const result = []
+function rollingMean_v84(arr: number[], window = 5): number[] {
+  const result: number[] = []
   for (let i = 0; i < arr.length; i++) {
     const start = Math.max(0, i - Math.floor(window / 2))
     const end = Math.min(arr.length, i + Math.floor(window / 2))
@@ -651,8 +651,8 @@ function rollingMean(arr: number[], window = 5, centered = true, pad = 1): numbe
   return result
 }
 
-function medianFilter(arr: number[], window = 3): number[] {
-  const result = []
+function medianFilter_v84(arr: number[], window = 3): number[] {
+  const result: number[] = []
   for (let i = 0; i < arr.length; i++) {
     const start = Math.max(0, i - Math.floor(window / 2))
     const end = Math.min(arr.length, i + Math.floor(window / 2))
@@ -662,8 +662,8 @@ function medianFilter(arr: number[], window = 3): number[] {
   return result
 }
 
-function gradient(arr: number[]): number[] {
-  const grad = []
+function gradient_v84(arr: number[]): number[] {
+  const grad: number[] = []
   for (let i = 0; i < arr.length; i++) {
     if (i === 0) grad.push(arr[1] - arr[0])
     else if (i === arr.length - 1) grad.push(arr[i] - arr[i - 1])
@@ -671,9 +671,6 @@ function gradient(arr: number[]): number[] {
   }
   return grad
 }
-
-
-
 
 
 
