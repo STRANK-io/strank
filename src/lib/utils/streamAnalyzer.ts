@@ -484,10 +484,16 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 
 
 /**
- * 파워 추정 함수 (v5.1 - 평균 유지, 최대파워만 추가 하향)
- * - 평균: 80~110W / 최대: 300~350W 목표
+ * 파워 추정 함수 (v5.2 - 평균 현실화 + Z6 과대 억제)
+ * - 평균: 약 70~120W / 최대: 약 300~450W 목표
+ * - 개선점:
+ *   ① 저속 감쇠 완화
+ *   ② 고도 반영 기준 완화
+ *   ③ 순간 급등 억제 (스파이크 컷)
+ *   ④ 전체 평균 재보정
  */
-function estimatePower(
+
+function estimatePowerV52(
   distanceM: number[],
   altitudeM: number[],
   dt: number[],
@@ -500,7 +506,9 @@ function estimatePower(
 ): number[] {
   if (distanceM.length < 2) return []
 
-  // 거리·시간 gap 보정
+  // -------------------------------
+  // ① 거리 gap 보정
+  // -------------------------------
   const distSmooth = rollingMean(distanceM, 5, true, 1)
   const dDist: number[] = []
   for (let i = 0; i < distSmooth.length; i++) {
@@ -514,11 +522,14 @@ function estimatePower(
     }
   }
 
-  // 속도 계산
+  // -------------------------------
+  // ② 속도 계산 및 제한
+  // -------------------------------
   const gpsSpeed = dDist.map((dd, i) => dd / Math.max(1, dt[i] || 1))
-  const rawSpeed = velocitySmooth && velocitySmooth.some(v => v > 0)
-    ? velocitySmooth.map((vs, i) => (vs + gpsSpeed[i]) / 2)
-    : gpsSpeed
+  const rawSpeed =
+    velocitySmooth && velocitySmooth.some(v => v > 0)
+      ? velocitySmooth.map((vs, i) => (vs + gpsSpeed[i]) / 2)
+      : gpsSpeed
 
   const limitedSpeed: number[] = []
   for (let i = 0; i < rawSpeed.length; i++) {
@@ -534,24 +545,28 @@ function estimatePower(
   const speed = rollingMean(medianFilter(limitedSpeed, 3), 5, true, 1)
     .map(s => Math.min(Math.max(s, 0), 20))
 
-  // 고도 변화 (±0.8m 이하만 반영)
+  // -------------------------------
+  // ③ 고도 변화 반영 (완화)
+  // -------------------------------
   const altSmooth = rollingMean(altitudeM, 10, true, 1)
   const dAlt: number[] = []
   for (let i = 0; i < altSmooth.length; i++) {
     if (i === 0) dAlt.push(0)
     else {
       const diff = altSmooth[i] - altSmooth[i - 1]
-      dAlt.push(Math.abs(diff) > 0.8 ? 0 : diff)
+      dAlt.push(Math.abs(diff) > 1.5 ? 0 : diff) // 0.8 → 1.5m
     }
   }
 
-  // 파워 계산
+  // -------------------------------
+  // ④ 파워 계산
+  // -------------------------------
   const power: number[] = []
   for (let i = 0; i < speed.length; i++) {
     const s = speed[i]
     const deltaTime = Math.max(1, dt[i] || 1)
     let gradPower = mass * g * dAlt[i] / deltaTime
-    gradPower *= 0.7 // 고도항 감쇠
+    gradPower *= 0.9 // 고도항 감쇠 완화
 
     const rollPower = mass * g * cr * s
     const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
@@ -563,20 +578,42 @@ function estimatePower(
     const minPower = 15 + 2 * speedKmh
     totalPower = Math.max(minPower, totalPower)
 
-    // 저속 감쇠
+    // 저속 감쇠 완화 (0.4 → 0.7)
     if (speedKmh < 40) totalPower *= speedKmh / 40
-    if (speedKmh < 15) totalPower *= 0.4
+    if (speedKmh < 15) totalPower *= 0.7
 
-    // 고속 피크 감쇠
-    if (speedKmh > 30) totalPower *= 0.9
+    // 고속 피크 감쇠 (완화)
+    if (speedKmh > 30) totalPower *= 0.95
 
-    // 상한 제한 (450W)
-    totalPower = Math.min(450, totalPower)
+    // 상한 (600W)
+    totalPower = Math.min(600, totalPower)
+
+    // 순간 스파이크 억제
+    if (i > 0) {
+      const prev = power[i - 1] || totalPower
+      totalPower = Math.min(totalPower, prev * 1.4)
+    }
 
     power.push(totalPower)
   }
 
-  return rollingMean(power, 3, true, 1)
+  // -------------------------------
+  // ⑤ 전체 평균 보정 (저평균 보정)
+  // -------------------------------
+  const avg = mean(power)
+  const scale = avg < 50 ? 2.0 : avg < 100 ? 1.3 : 1.0
+  const adjusted = power.map(p => p * scale)
+
+  // -------------------------------
+  // ⑥ 스무딩 후 반환
+  // -------------------------------
+  return rollingMean(adjusted, 3, true, 1)
+}
+
+// 유틸 함수
+function mean(arr: number[]): number {
+  const valid = arr.filter(v => !isNaN(v))
+  return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0
 }
 
 
