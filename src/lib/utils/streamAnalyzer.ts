@@ -484,10 +484,7 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 
 
 /**
- * 파워 추정 함수 (v5.4 - 저평균 보정 + 최소파워 하한)
- * - 평균파워가 70W 미만일 경우 자동 스케일업
- * - 모든 구간 최소 파워 70W 이상 유지
- * - Z6 과대 감쇠, GPS 안정도 계산 포함
+ * 파워 추정 함수 (v5.5 - 저속 완화 + 중강도 보정 + Z6 정교화)
  */
 
 function estimatePower(
@@ -583,27 +580,23 @@ for (let i = 0; i < speed.length; i++) {
   totalPower = Math.max(minPower, totalPower)
 
   // ✅ 저속 및 중속 감쇠
-  if (speedKmh < 40) totalPower *= speedKmh / 40
-  if (speedKmh < 15) totalPower *= 0.7
-  if (speedKmh > 30) totalPower *= 0.95
+  if (speedKmh < 40) totalPower *= 0.7 + 0.3 * (speedKmh / 40)
+  if (speedKmh < 15) totalPower *= 0.8
 
-  // ✅ 고속 한계 및 GPS 튐 완화
-  totalPower = Math.min(600, totalPower)
+  // ✅ 고속 감쇠 완화
+   if (speedKmh > 30) totalPower *= 0.98
+  
+  // ✅ 급등·급락 보정
+   if (i > 0) {
+     const prev = power[i - 1] || totalPower
+     const ratio = totalPower / Math.max(prev, 1)
+     if (ratio > 1.25) totalPower = prev * 1.25
+     if (ratio < 0.7) totalPower = prev * 0.7
+   }
 
-  // ✅ 순간 파워 급등 제한 (Z6 억제 핵심)
-  if (i > 0) {
-    const prev = power[i - 1] || totalPower
-    const ratio = totalPower / Math.max(prev, 1)
-
-    // 🚫 이전 파워보다 1.2배 이상 급등 시 보정
-    if (ratio > 1.2) totalPower = prev * 1.2
-
-    // 🚫 급락도 완화 (너무 낮게 떨어지면 이상함)
-    if (ratio < 0.7) totalPower = prev * 0.7
-  }
-
-  power.push(totalPower)
-}
+   totalPower = Math.min(700, totalPower)
+   power.push(totalPower)
+ }
 
 
 
@@ -618,8 +611,8 @@ for (let i = 0; i < speed.length; i++) {
   const avg = mean(power)
   let adjusted = power
 
-  if (avg < 70) {
-    const scale = Math.min(2.0, 70 / Math.max(avg, 1))
+  if (avg < 100) {
+    const scale = Math.min(1.8, 100 / Math.max(avg, 1))
     adjusted = adjusted.map(p => p * scale)
   }
 
@@ -634,9 +627,8 @@ for (let i = 0; i < speed.length; i++) {
   const thresholdZ6 = 0.9 * max(adjusted)
   const zone6Count = adjusted.filter(p => p >= thresholdZ6).length
   const zone6Ratio = zone6Count / adjusted.length
-
   if (zone6Ratio > 0.08) {
-    adjusted = adjusted.map(p => p * 0.85)
+    adjusted = adjusted.map(p => (p >= thresholdZ6 ? p * 0.9 : p))
   }
 
   // -------------------------------
