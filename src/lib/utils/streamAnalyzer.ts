@@ -484,13 +484,13 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 
 
 /**
- * 파워 추정 함수 (v6.4 - GPS Spike 대응·Z6 밸런스 안정화 버전)
+ * 파워 추정 함수 (v6.5 - 중속 강화 + Z6 억제 강화 최종버전)
  * -------------------------------------------------------------
- * ✅ GPS 튐/가속 이상 억제 (거리·속도·가속도 필터)
- * ✅ 평균파워 정상화 (80W 기준 보정)
- * ✅ Z6 스파이크 억제 (2초 미만 감쇠만 적용)
- * ✅ Z1 과다 현상 완화 / Z2~Z3 복원
- * ✅ 전체 스무딩 순서 조정 (평활화 → 보정 → 감쇠)
+ * ✅ 평균파워 현실화 (80W 기준 + 중속 가중)
+ * ✅ 저속 감쇠 완화 / 고속 감쇠 유지
+ * ✅ Z6 스파이크(3초 미만) 완전 억제
+ * ✅ Z1 과다비율 해소 / Z2~Z3 복원
+ * ✅ GPS 안정도 기반 전체 감쇠
  * -------------------------------------------------------------
  */
 
@@ -513,13 +513,11 @@ function estimatePower(
   // -------------------------------
   const distSmooth = rollingMean(distanceM, 5, true, 1)
   const dDist: number[] = []
-
   for (let i = 0; i < distSmooth.length; i++) {
     if (i === 0) dDist.push(0)
     else {
       const dd = distSmooth[i] - distSmooth[i - 1]
       const dtVal = Math.max(1, dt[i] || 1)
-      // 과도한 점프 억제
       if (dtVal > 5) dDist.push(0)
       else if (dd > 15) dDist.push((dDist[i - 1] || 0) * 0.5)
       else dDist.push(dd)
@@ -547,7 +545,7 @@ function estimatePower(
   }
 
   const speed = rollingMean(medianFilter(limitedSpeed, 3), 5, true, 1)
-    .map(s => Math.min(Math.max(s, 0), 22)) // 최대 79km/h 제한
+    .map(s => Math.min(Math.max(s, 0), 22)) // 79 km/h 상한
 
   // -------------------------------
   // ③ GPS 안정도 계산
@@ -583,15 +581,16 @@ function estimatePower(
     const gradPower = (mass * g * dAlt[i] * 0.9) / deltaTime
     const rollPower = mass * g * cr * s
     const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
-
     let totalPower = gradPower + rollPower + aeroPower
+
     const speedKmh = s * 3.6
     const minPower = 10 + 1.8 * speedKmh
     totalPower = Math.max(minPower, totalPower)
 
-    if (speedKmh < 15) totalPower *= 0.9 // 저속 감쇠
-    if (speedKmh > 30) totalPower *= 0.85 // 고속 감쇠
-    totalPower = Math.min(700, totalPower)
+    // 속도별 보정
+    if (speedKmh < 15) totalPower *= 0.95  // 저속 완화
+    else if (speedKmh >= 20 && speedKmh <= 35) totalPower *= 1.12 // ✅ 중속 강화
+    else if (speedKmh > 35) totalPower *= 0.85 // 고속 감쇠
 
     // 급가속 억제
     if (i > 0) {
@@ -603,14 +602,14 @@ function estimatePower(
   }
 
   // -------------------------------
-  // ⑥ 1차 평활화 후 평균 보정 (80W 기준)
+  // ⑥ 평활화 + 평균 스케일 보정
   // -------------------------------
   const smoothBase = rollingMean(basePower, 7, true, 1)
   const avg = mean(smoothBase)
-
   let adjusted = smoothBase
+
   if (avg < 80) {
-    const scale = Math.min(1.8, 80 / Math.max(avg, 1))
+    const scale = Math.min(2.0, 80 / Math.max(avg, 1)) // 스케일 상한 2.0
     adjusted = adjusted.map(p => p * scale)
   }
 
@@ -621,15 +620,15 @@ function estimatePower(
   adjusted = adjusted.map(p => p * stabilityFactor)
 
   // -------------------------------
-  // ⑧ Z6 스파이크 억제 (2초 미만 구간만)
+  // ⑧ Z6 스파이크 억제 (3초 미만 구간 감쇠)
   // -------------------------------
   const thresholdZ6 = 0.93 * max(adjusted)
   let segLen = 0
   for (let i = 0; i < adjusted.length; i++) {
     if (adjusted[i] >= thresholdZ6) segLen++
     else {
-      if (segLen > 0 && segLen < 2) {
-        for (let j = i - segLen; j < i; j++) adjusted[j] *= 0.9 // 단기 스파이크만 감쇠
+      if (segLen > 0 && segLen < 3) {
+        for (let j = i - segLen; j < i; j++) adjusted[j] *= 0.85
       }
       segLen = 0
     }
@@ -639,7 +638,6 @@ function estimatePower(
   // ⑨ 최종 스무딩 + Z6 재계산
   // -------------------------------
   const finalPower = rollingMean(adjusted, 5, true, 1)
-
   const thresholdZ6f = 0.93 * max(finalPower)
   let z6f = 0, lenf = 0
   for (let i = 0; i < finalPower.length; i++) {
@@ -673,6 +671,7 @@ function mean(arr: number[]): number {
 function max(arr: number[]): number {
   return arr.length ? Math.max(...arr.filter(v => !isNaN(v))) : 0
 }
+
 
 
 
