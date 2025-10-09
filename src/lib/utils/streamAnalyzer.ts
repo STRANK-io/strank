@@ -493,7 +493,7 @@ function medianFilter(data: number[], kernelSize: number): number[] {
  *   ④ 전체 평균 재보정
  */
 
-function estimatePowerV52(
+function estimatePower(
   distanceM: number[],
   altitudeM: number[],
   dt: number[],
