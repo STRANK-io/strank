@@ -484,10 +484,11 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 
 
 /**
- * 파워 추정 함수 (v5.4 - 저평균 보정 + 최소파워 하한)
- * - 평균파워가 70W 미만일 경우 자동 스케일업
- * - 모든 구간 최소 파워 70W 이상 유지
- * - Z6 과대 감쇠, GPS 안정도 계산 포함
+ * 파워 추정 함수 (v5.5 - 중속 강화 + 고속 감쇠 완화 + Z6 억제 강화)
+ * - 평균파워 저평균 보정(60W 기준)
+ * - 저속 감쇠 완화, 중속(20~35km/h) 강화
+ * - Z6 과대 검출 시 자동 감쇠(0.85배)
+ * - GPS 안정도 계산 포함
  */
 
 function estimatePower(
@@ -540,7 +541,7 @@ function estimatePower(
   }
 
   const speed = rollingMean(medianFilter(limitedSpeed, 3), 5, true, 1)
-    .map(s => Math.min(Math.max(s, 0), 20))
+    .map(s => Math.min(Math.max(s, 0), 22)) // 속도상한 22m/s (~79km/h)
 
   // GPS 안정도 평가
   let unstableCount = 0
@@ -570,7 +571,7 @@ function estimatePower(
   for (let i = 0; i < speed.length; i++) {
     const s = speed[i]
     const deltaTime = Math.max(1, dt[i] || 1)
-    let gradPower = mass * g * dAlt[i] / deltaTime
+    let gradPower = (mass * g * dAlt[i]) / deltaTime
     gradPower *= 0.9
 
     const rollPower = mass * g * cr * s
@@ -578,17 +579,18 @@ function estimatePower(
     let totalPower = gradPower + rollPower + aeroPower
 
     const speedKmh = s * 3.6
-    const minPower = 15 + 2 * speedKmh
+    const minPower = 10 + 1.8 * speedKmh // 저속 하한 완화
     totalPower = Math.max(minPower, totalPower)
 
+    // 속도별 감쇠 곡선
     if (speedKmh < 40) totalPower *= speedKmh / 40
-    if (speedKmh < 15) totalPower *= 0.7
-    if (speedKmh > 30) totalPower *= 0.95
-    totalPower = Math.min(600, totalPower)
+    if (speedKmh < 15) totalPower *= 0.8
+    if (speedKmh > 30) totalPower *= 0.85
+    totalPower = Math.min(700, totalPower) // 최대 제한 살짝 완화
 
     if (i > 0) {
       const prev = power[i - 1] || totalPower
-      totalPower = Math.min(totalPower, prev * 1.4)
+      totalPower = Math.min(totalPower, prev * 1.3)
     }
 
     power.push(totalPower)
@@ -600,15 +602,15 @@ function estimatePower(
   const avg = mean(power)
   let adjusted = power
 
-  if (avg < 70) {
-    const scale = Math.min(2.0, 70 / Math.max(avg, 1))
+  if (avg < 60) {
+    const scale = Math.min(1.8, 60 / Math.max(avg, 1))
     adjusted = adjusted.map(p => p * scale)
   }
 
   // -------------------------------
-  // ⑥ 최소 파워 하한 설정 (70W)
+  // ⑥ 최소 파워 하한 설정 (60W)
   // -------------------------------
-  adjusted = adjusted.map(p => Math.max(70, p))
+  adjusted = adjusted.map(p => Math.max(60, p))
 
   // -------------------------------
   // ⑦ Z6 과대 검출 + 자동 감쇠
@@ -617,17 +619,17 @@ function estimatePower(
   const zone6Count = adjusted.filter(p => p >= thresholdZ6).length
   const zone6Ratio = zone6Count / adjusted.length
 
-  if (zone6Ratio > 0.1) {
-    adjusted = adjusted.map(p => p * 0.9)
+  if (zone6Ratio > 0.08) {
+    adjusted = adjusted.map(p => p * 0.85)
   }
 
   // -------------------------------
   // ⑧ 스무딩 후 반환
   // -------------------------------
   return {
-    power: rollingMean(adjusted, 3, true, 1),
+    power: rollingMean(adjusted, 5, true, 1), // 부드럽게
     gpsStability,
-    zone6Ratio
+    zone6Ratio,
   }
 }
 
@@ -642,6 +644,7 @@ function mean(arr: number[]): number {
 function max(arr: number[]): number {
   return arr.length ? Math.max(...arr.filter(v => !isNaN(v))) : 0
 }
+
 
 
 
