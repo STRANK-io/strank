@@ -624,8 +624,18 @@ function estimatePower(
   const zone6Ratio = zone6Count / adjusted.length
 
   if (zone6Ratio > 0.08) {
-    adjusted = adjusted.map(p =>
+    adjusted = adjusted.map(p => p * 0.8)
+}
 
+// -------------------------------
+// ⑧ 스무딩 후 반환
+// -------------------------------
+return {
+  power: rollingMean(adjusted, 3, true, 1),
+  gpsStability,
+  zone6Ratio
+}
+}
 
 
 
