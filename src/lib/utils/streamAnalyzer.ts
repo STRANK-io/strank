@@ -637,7 +637,14 @@ return {
 }
 }
 
+function mean(arr: number[]): number {
+  const valid = arr.filter(v => !isNaN(v))
+  return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0
+}
 
+function max(arr: number[]): number {
+  return arr.length ? Math.max(...arr.filter(v => !isNaN(v))) : 0
+}
 
 
 
