@@ -483,13 +483,12 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 
 
 /**
- * 파워 추정 함수 (v5.9 - Z6 지속시간 기반 안정화 최종버전)
- * - 평균파워 현실화 (60W 기준 보정)
- * - 저속 감쇠 완화 / 고속 감쇠 강화
- * - Z6 지속시간(≥2초) 기반 판정으로 과대 검출 방지
+ * 파워 추정 함수 (v6.0 - Z6 최종 반영)
+ * - 평균파워 현실화
+ * - 저속 완화 / 고속 감쇠 강화
+ * - Z6 지속시간(≥2초) 기반 판정 + 감쇠 후 재계산
  * - GPS 안정도 포함
  */
-
 function estimatePower(
   distanceM: number[],
   altitudeM: number[],
@@ -584,10 +583,9 @@ function estimatePower(
     const minPower = 10 + 1.8 * speedKmh
     totalPower = Math.max(minPower, totalPower)
 
-    // 속도별 감쇠 곡선
     if (speedKmh < 40) totalPower *= speedKmh / 40
     if (speedKmh < 15) totalPower *= 0.8
-    if (speedKmh > 30) totalPower *= 0.8 // 고속 감쇠 강화
+    if (speedKmh > 30) totalPower *= 0.8
     totalPower = Math.min(700, totalPower)
 
     if (i > 0) {
@@ -603,7 +601,6 @@ function estimatePower(
   // -------------------------------
   const avg = mean(power)
   let adjusted = power
-
   if (avg < 60) {
     const scale = Math.min(1.8, 60 / Math.max(avg, 1))
     adjusted = adjusted.map(p => p * scale)
@@ -617,34 +614,44 @@ function estimatePower(
   // -------------------------------
   // ⑧ Z6 지속시간 기반 과대 검출 억제
   // -------------------------------
-  const thresholdZ6 = 0.93 * max(adjusted) // 상위 7 %만 인식
+  const thresholdZ6 = 0.93 * max(adjusted)
   let zone6Segments = 0
   let segmentLength = 0
-
   for (let i = 0; i < adjusted.length; i++) {
-    if (adjusted[i] >= thresholdZ6) {
-      segmentLength++
-    } else {
-      if (segmentLength >= 2) zone6Segments += segmentLength // 2초 이상만 유효
+    if (adjusted[i] >= thresholdZ6) segmentLength++
+    else {
+      if (segmentLength >= 2) zone6Segments += segmentLength
       segmentLength = 0
     }
   }
   if (segmentLength >= 2) zone6Segments += segmentLength
 
-  const zone6Ratio = zone6Segments / adjusted.length
-
-  // 과도 시 감쇠
-  if (zone6Ratio > 0.05) {
-    adjusted = adjusted.map(p => p * 0.8)
-  }
+  let zone6Ratio = zone6Segments / adjusted.length
+  if (zone6Ratio > 0.05) adjusted = adjusted.map(p => p * 0.8)
 
   // -------------------------------
-  // ⑨ 스무딩 후 반환
+  // ⑨ 감쇠 후 Z6 비율 재계산 (최종반영)
+  // -------------------------------
+  const thresholdZ6_final = 0.93 * max(adjusted)
+  let zone6SegmentsFinal = 0
+  let segmentLenFinal = 0
+  for (let i = 0; i < adjusted.length; i++) {
+    if (adjusted[i] >= thresholdZ6_final) segmentLenFinal++
+    else {
+      if (segmentLenFinal >= 2) zone6SegmentsFinal += segmentLenFinal
+      segmentLenFinal = 0
+    }
+  }
+  if (segmentLenFinal >= 2) zone6SegmentsFinal += segmentLenFinal
+  zone6Ratio = zone6SegmentsFinal / adjusted.length
+
+  // -------------------------------
+  // ⑩ 스무딩 후 반환
   // -------------------------------
   return {
     power: rollingMean(adjusted, 5, true, 1),
     gpsStability,
-    zone6Ratio,
+    zone6Ratio, // ✅ 감쇠 후 최종비율 반환
   }
 }
 
@@ -659,9 +666,6 @@ function mean(arr: number[]): number {
 function max(arr: number[]): number {
   return arr.length ? Math.max(...arr.filter(v => !isNaN(v))) : 0
 }
-
-
-
 
 
 
