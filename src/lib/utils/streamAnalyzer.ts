@@ -585,7 +585,7 @@ function estimatePower(
     // 속도별 감쇠 곡선
     if (speedKmh < 40) totalPower *= speedKmh / 40
     if (speedKmh < 15) totalPower *= 0.8
-    if (speedKmh > 30) totalPower *= 0.8 // (기존 0.85 → 0.8, 고속 감쇠 강화)
+    if (speedKmh > 30) totalPower *= 0.8
     totalPower = Math.min(700, totalPower)
 
     if (i > 0) {
