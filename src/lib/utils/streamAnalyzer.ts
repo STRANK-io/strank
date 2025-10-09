@@ -1180,31 +1180,35 @@ export async function analyzeStreamData(userId: string, streamsData: any): Promi
   if (!streams.watts || streams.watts.every(w => !w)) {
   console.log('⚡ 파워: 추정값으로 대체')
 
-  let est = estimatePower(
+
+  // ✅ v5.4 파워 추정 (객체 반환)
+  const estResult = estimatePower(
     streams.distance!,
     streams.altitude!,
     dt,
     streams.velocity_smooth
   )
 
-  // 600W 이상이 3초 이상 지속되지 않으면 제외
-  est = sanitizeZ7(est, dt, 600, 3)
+  // ✅ 600W 이상이 3초 이상 지속되지 않으면 제외 (Z7 필터)
+  estResult.power = sanitizeZ7(estResult.power, dt, 600, 3)
 
-  streams.watts = est
+  // ✅ watts 스트림에 파워 배열만 저장
+  streams.watts = estResult.power
 
-    // FTP 추정
-    const ftpResult = estimateFtpWithoutPower(
-      streams.distance!, 
-      streams.altitude!, 
-      dt, 
-      streams.velocity_smooth, 
-      totalTime, 
-      estimatePower
-    )
-    ftp60 = ftpResult.ftp60
-  } else {
-    ftp60 = computeFtpFromPower(streams.watts, dt, totalTime, 60 * 60, 1.0)
-  }
+  // ✅ FTP 추정 (파워 없음 시 대체)
+  const ftpResult = estimateFtpWithoutPower(
+    streams.distance!,
+    streams.altitude!,
+    dt,
+    streams.velocity_smooth,
+    totalTime,
+    estimatePower // ⚡ estimatePower 함수 전달
+  )
+  ftp60 = ftpResult.ftp60
+} else {
+  // ⚡ 실제 파워센서 데이터 있는 경우
+  ftp60 = computeFtpFromPower(streams.watts, dt, totalTime, 60 * 60, 1.0)
+}
 
   // 스무딩 옵션 적용
   if (SMOOTH_POWER && streams.watts) {
