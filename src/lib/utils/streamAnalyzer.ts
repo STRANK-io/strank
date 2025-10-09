@@ -484,13 +484,10 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 
 
 /**
- * 파워 추정 함수 (v5.2 - 평균 현실화 + Z6 과대 억제)
- * - 평균: 약 70~120W / 최대: 약 300~450W 목표
- * - 개선점:
- *   ① 저속 감쇠 완화
- *   ② 고도 반영 기준 완화
- *   ③ 순간 급등 억제 (스파이크 컷)
- *   ④ 전체 평균 재보정
+ * 파워 추정 함수 (v5.4 - 저평균 보정 + 최소파워 하한)
+ * - 평균파워가 70W 미만일 경우 자동 스케일업
+ * - 모든 구간 최소 파워 70W 이상 유지
+ * - Z6 과대 감쇠, GPS 안정도 계산 포함
  */
 
 function estimatePower(
@@ -503,8 +500,8 @@ function estimatePower(
   cr = 0.007,
   rho = 1.226,
   g = 9.81
-): number[] {
-  if (distanceM.length < 2) return []
+): { power: number[]; gpsStability: number; zone6Ratio: number } {
+  if (distanceM.length < 2) return { power: [], gpsStability: 0, zone6Ratio: 0 }
 
   // -------------------------------
   // ① 거리 gap 보정
@@ -523,7 +520,7 @@ function estimatePower(
   }
 
   // -------------------------------
-  // ② 속도 계산 및 제한
+  // ② 속도 계산 및 튐 보정
   // -------------------------------
   const gpsSpeed = dDist.map((dd, i) => dd / Math.max(1, dt[i] || 1))
   const rawSpeed =
@@ -537,7 +534,7 @@ function estimatePower(
     else {
       const prev = limitedSpeed[i - 1]
       const accel = (rawSpeed[i] - prev) / Math.max(1, dt[i] || 1)
-      if (Math.abs(accel) > 2) limitedSpeed.push(prev)
+      if (Math.abs(accel) > 1.5) limitedSpeed.push(prev)
       else limitedSpeed.push(rawSpeed[i])
     }
   }
@@ -545,8 +542,16 @@ function estimatePower(
   const speed = rollingMean(medianFilter(limitedSpeed, 3), 5, true, 1)
     .map(s => Math.min(Math.max(s, 0), 20))
 
+  // GPS 안정도 평가
+  let unstableCount = 0
+  for (let i = 1; i < speed.length; i++) {
+    const diff = Math.abs(speed[i] - speed[i - 1])
+    if (diff > 2) unstableCount++
+  }
+  const gpsStability = 1 - unstableCount / speed.length
+
   // -------------------------------
-  // ③ 고도 변화 반영 (완화)
+  // ③ 고도 변화 반영
   // -------------------------------
   const altSmooth = rollingMean(altitudeM, 10, true, 1)
   const dAlt: number[] = []
@@ -554,7 +559,7 @@ function estimatePower(
     if (i === 0) dAlt.push(0)
     else {
       const diff = altSmooth[i] - altSmooth[i - 1]
-      dAlt.push(Math.abs(diff) > 1.5 ? 0 : diff) // 0.8 → 1.5m
+      dAlt.push(Math.abs(diff) > 1.5 ? 0 : diff)
     }
   }
 
@@ -566,29 +571,21 @@ function estimatePower(
     const s = speed[i]
     const deltaTime = Math.max(1, dt[i] || 1)
     let gradPower = mass * g * dAlt[i] / deltaTime
-    gradPower *= 0.9 // 고도항 감쇠 완화
+    gradPower *= 0.9
 
     const rollPower = mass * g * cr * s
     const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
     let totalPower = gradPower + rollPower + aeroPower
 
     const speedKmh = s * 3.6
-
-    // 하한
     const minPower = 15 + 2 * speedKmh
     totalPower = Math.max(minPower, totalPower)
 
-    // 저속 감쇠 완화 (0.4 → 0.7)
     if (speedKmh < 40) totalPower *= speedKmh / 40
     if (speedKmh < 15) totalPower *= 0.7
-
-    // 고속 피크 감쇠 (완화)
     if (speedKmh > 30) totalPower *= 0.95
-
-    // 상한 (600W)
     totalPower = Math.min(600, totalPower)
 
-    // 순간 스파이크 억제
     if (i > 0) {
       const prev = power[i - 1] || totalPower
       totalPower = Math.min(totalPower, prev * 1.4)
@@ -598,22 +595,52 @@ function estimatePower(
   }
 
   // -------------------------------
-  // ⑤ 전체 평균 보정 (저평균 보정)
+  // ⑤ 평균 보정 (저평균 보정)
   // -------------------------------
   const avg = mean(power)
-  const scale = avg < 50 ? 2.0 : avg < 100 ? 1.3 : 1.0
-  const adjusted = power.map(p => p * scale)
+  let adjusted = power
+
+  if (avg < 70) {
+    const scale = Math.min(2.0, 70 / Math.max(avg, 1))
+    adjusted = adjusted.map(p => p * scale)
+  }
 
   // -------------------------------
-  // ⑥ 스무딩 후 반환
+  // ⑥ 최소 파워 하한 설정 (70W)
   // -------------------------------
-  return rollingMean(adjusted, 3, true, 1)
+  adjusted = adjusted.map(p => Math.max(70, p))
+
+  // -------------------------------
+  // ⑦ Z6 과대 검출 + 자동 감쇠
+  // -------------------------------
+  const thresholdZ6 = 0.85 * max(adjusted)
+  const zone6Count = adjusted.filter(p => p >= thresholdZ6).length
+  const zone6Ratio = zone6Count / adjusted.length
+
+  if (zone6Ratio > 0.1) {
+    adjusted = adjusted.map(p => p * 0.9)
+  }
+
+  // -------------------------------
+  // ⑧ 스무딩 후 반환
+  // -------------------------------
+  return {
+    power: rollingMean(adjusted, 3, true, 1),
+    gpsStability,
+    zone6Ratio
+  }
 }
 
+// -------------------------------
 // 유틸 함수
+// -------------------------------
 function mean(arr: number[]): number {
   const valid = arr.filter(v => !isNaN(v))
   return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0
+}
+
+function max(arr: number[]): number {
+  return arr.length ? Math.max(...arr.filter(v => !isNaN(v))) : 0
 }
 
 
