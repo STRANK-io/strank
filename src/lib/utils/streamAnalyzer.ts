@@ -534,7 +534,7 @@ function estimatePower(
     else {
       const prev = limitedSpeed[i - 1]
       const accel = (rawSpeed[i] - prev) / Math.max(1, dt[i] || 1)
-      if (Math.abs(accel) > 1.0) limitedSpeed.push(prev)
+      if (Math.abs(accel) > 1.5) limitedSpeed.push(prev)
       else limitedSpeed.push(rawSpeed[i])
     }
   }
@@ -563,48 +563,36 @@ function estimatePower(
     }
   }
 
-  
-// -------------------------------
-// ④ 파워 계산 (Z6 안정화 버전)
-// -------------------------------
-const power: number[] = []
-for (let i = 0; i < speed.length; i++) {
-  const s = speed[i]
-  const deltaTime = Math.max(1, dt[i] || 1)
-  let gradPower = (mass * g * dAlt[i]) / deltaTime
-  gradPower *= 0.9
+  // -------------------------------
+  // ④ 파워 계산
+  // -------------------------------
+  const power: number[] = []
+  for (let i = 0; i < speed.length; i++) {
+    const s = speed[i]
+    const deltaTime = Math.max(1, dt[i] || 1)
+    let gradPower = mass * g * dAlt[i] / deltaTime
+    gradPower *= 0.9
 
-  const rollPower = mass * g * cr * s
-  const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
-  let totalPower = gradPower + rollPower + aeroPower
+    const rollPower = mass * g * cr * s
+    const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
+    let totalPower = gradPower + rollPower + aeroPower
 
-  const speedKmh = s * 3.6
-  const minPower = 15 + 2 * speedKmh
-  totalPower = Math.max(minPower, totalPower)
+    const speedKmh = s * 3.6
+    const minPower = 15 + 2 * speedKmh
+    totalPower = Math.max(minPower, totalPower)
 
-  // ✅ 저속 및 중속 감쇠
-  if (speedKmh < 40) totalPower *= speedKmh / 40
-  if (speedKmh < 15) totalPower *= 0.7
-  if (speedKmh > 30) totalPower *= 0.95
+    if (speedKmh < 40) totalPower *= speedKmh / 40
+    if (speedKmh < 15) totalPower *= 0.7
+    if (speedKmh > 30) totalPower *= 0.95
+    totalPower = Math.min(600, totalPower)
 
-  // ✅ 고속 한계 및 GPS 튐 완화
-  totalPower = Math.min(600, totalPower)
+    if (i > 0) {
+      const prev = power[i - 1] || totalPower
+      totalPower = Math.min(totalPower, prev * 1.4)
+    }
 
-  // ✅ 순간 파워 급등 제한 (Z6 억제 핵심)
-  if (i > 0) {
-    const prev = power[i - 1] || totalPower
-    const ratio = totalPower / Math.max(prev, 1)
-
-    // 🚫 이전 파워보다 1.2배 이상 급등 시 보정
-    if (ratio > 1.2) totalPower = prev * 1.2
-
-    // 🚫 급락도 완화 (너무 낮게 떨어지면 이상함)
-    if (ratio < 0.7) totalPower = prev * 0.7
+    power.push(totalPower)
   }
-
-  power.push(totalPower)
-}
-
 
   // -------------------------------
   // ⑤ 평균 보정 (저평균 보정)
@@ -625,12 +613,12 @@ for (let i = 0; i < speed.length; i++) {
   // -------------------------------
   // ⑦ Z6 과대 검출 + 자동 감쇠
   // -------------------------------
-  const thresholdZ6 = 0.9 * max(adjusted)
+  const thresholdZ6 = 0.85 * max(adjusted)
   const zone6Count = adjusted.filter(p => p >= thresholdZ6).length
   const zone6Ratio = zone6Count / adjusted.length
 
-  if (zone6Ratio > 0.08) {
-    adjusted = adjusted.map(p => p * 0.85)
+  if (zone6Ratio > 0.1) {
+    adjusted = adjusted.map(p => p * 0.9)
   }
 
   // -------------------------------
@@ -654,6 +642,9 @@ function mean(arr: number[]): number {
 function max(arr: number[]): number {
   return arr.length ? Math.max(...arr.filter(v => !isNaN(v))) : 0
 }
+
+
+
 
 
 
