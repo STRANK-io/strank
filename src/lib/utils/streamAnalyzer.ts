@@ -482,8 +482,11 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 }
 
 
+
+
+
 /**
- * 파워 추정 함수 (v8.4-safe - 완전 안정판 / 현실표시보정 OFF)
+ * 파워 추정 함수 (v8.4-ep - 완전 안정판 / 현실표시보정 OFF)
  * -----------------------------------------------------------
  * ✅ GPS 튐 완화 및 속도 안정화 (median + rolling mean)
  * ✅ 고도 변화율 gradient 기반 안정화 (clip ±0.5)
@@ -492,11 +495,11 @@ function medianFilter(data: number[], kernelSize: number): number[] {
  * ✅ 파워 상한 470W
  * ✅ 평균 스케일 보정 (목표 평균 110~120W)
  * ✅ Z6 인식 0.88×max 파워 기준
- * ✅ 기존 rollingMean 등과 충돌 방지 (별도 네임스페이스)
+ * ✅ 기존 rollingMean 등과 충돌 방지 (ep 네임스페이스)
  * -----------------------------------------------------------
  */
 
-export function estimatePower_v84_safe(
+export function estimatePower(
   distanceM: number[],
   altitudeM: number[],
   dt: number[],
@@ -513,7 +516,7 @@ export function estimatePower_v84_safe(
   // -------------------------------
   // ① 거리 gap 보정 (GPS 튐 완화)
   // -------------------------------
-  const distSmooth = rollingMean_v84(distanceM, 5)
+  const distSmooth = rollingMean_ep(distanceM, 5)
   const dDist: number[] = []
   for (let i = 0; i < distSmooth.length; i++) {
     if (i === 0) dDist.push(0)
@@ -545,7 +548,7 @@ export function estimatePower_v84_safe(
     }
   }
 
-  const speed = rollingMean_v84(medianFilter_v84(limitedSpeed, 3), 5)
+  const speed = rollingMean_ep(medianFilter_ep(limitedSpeed, 3), 5)
     .map(s => Math.min(Math.max(s, 0), 22)) // 22m/s = 79km/h 상한
 
   // -------------------------------
@@ -561,9 +564,9 @@ export function estimatePower_v84_safe(
   // -------------------------------
   // ④ 고도 변화 안정화 (gradient + clip)
   // -------------------------------
-  const altSmooth = rollingMean_v84(altitudeM, 10)
-  const grad = gradient_v84(altSmooth)
-  const dAlt = rollingMean_v84(grad, 20).map(v =>
+  const altSmooth = rollingMean_ep(altitudeM, 10)
+  const grad = gradient_ep(altSmooth)
+  const dAlt = rollingMean_ep(grad, 20).map(v =>
     Math.min(Math.max(v, -0.5), 0.5)
   )
 
@@ -599,7 +602,7 @@ export function estimatePower_v84_safe(
   // -------------------------------
   // ⑥ 평균파워 보정 (목표 110~120W)
   // -------------------------------
-  const avg = mean_v84(power)
+  const avg = mean_ep(power)
   const scale = Math.min(1.8, Math.max(0.8, 115 / (avg || 1)))
   let adjusted = power.map(p => p * scale * Math.max(0.9, gpsStability))
 
@@ -622,7 +625,7 @@ export function estimatePower_v84_safe(
   // -------------------------------
   // ⑧ 스무딩 및 반환
   // -------------------------------
-  const finalPower = rollingMean_v84(adjusted, 5).map(p => Math.max(60, p))
+  const finalPower = rollingMean_ep(adjusted, 5).map(p => Math.max(60, p))
 
   return {
     power: finalPower,
@@ -632,15 +635,15 @@ export function estimatePower_v84_safe(
 }
 
 /* ================================
-   🔧 내부 유틸 (v84 전용 이름)
+   🔧 내부 유틸 (ep 네임스페이스)
 ================================ */
 
-function mean_v84(arr: number[]): number {
+function mean_ep(arr: number[]): number {
   const valid = arr.filter(v => !isNaN(v))
   return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0
 }
 
-function rollingMean_v84(arr: number[], window = 5): number[] {
+function rollingMean_ep(arr: number[], window = 5): number[] {
   const result: number[] = []
   for (let i = 0; i < arr.length; i++) {
     const start = Math.max(0, i - Math.floor(window / 2))
@@ -651,7 +654,7 @@ function rollingMean_v84(arr: number[], window = 5): number[] {
   return result
 }
 
-function medianFilter_v84(arr: number[], window = 3): number[] {
+function medianFilter_ep(arr: number[], window = 3): number[] {
   const result: number[] = []
   for (let i = 0; i < arr.length; i++) {
     const start = Math.max(0, i - Math.floor(window / 2))
@@ -662,7 +665,7 @@ function medianFilter_v84(arr: number[], window = 3): number[] {
   return result
 }
 
-function gradient_v84(arr: number[]): number[] {
+function gradient_ep(arr: number[]): number[] {
   const grad: number[] = []
   for (let i = 0; i < arr.length; i++) {
     if (i === 0) grad.push(arr[1] - arr[0])
@@ -671,6 +674,7 @@ function gradient_v84(arr: number[]): number[] {
   }
   return grad
 }
+
 
 
 
