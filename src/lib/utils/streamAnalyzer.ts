@@ -563,42 +563,8 @@ function estimatePower(
     }
   }
 
-  // -------------------------------
-  // ④ 파워 계산
-  // -------------------------------
-  const power: number[] = []
-  for (let i = 0; i < speed.length; i++) {
-    const s = speed[i]
-    const deltaTime = Math.max(1, dt[i] || 1)
-    let gradPower = mass * g * dAlt[i] / deltaTime
-    gradPower *= 0.9
-
-    const rollPower = mass * g * cr * s
-    const aeroPower = 0.5 * rho * cda * Math.pow(s, 3)
-    let totalPower = gradPower + rollPower + aeroPower
-
-    const speedKmh = s * 3.6
-    const minPower = 15 + 2 * speedKmh
-    totalPower = Math.max(minPower, totalPower)
-
-    if (speedKmh < 40) totalPower *= speedKmh / 40
-    if (speedKmh < 15) totalPower *= 0.7
-    if (speedKmh > 30) totalPower *= 0.95
-    totalPower = Math.min(600, totalPower)
-
-    if (i > 0) {
-      const prev = power[i - 1] || totalPower
-      totalPower = Math.min(totalPower, prev * 1.4)
-    }
-
-    power.push(totalPower)
-  }
-
-
-
   
-
- // -------------------------------
+// -------------------------------
 // ④ 파워 계산 (Z6 안정화 버전)
 // -------------------------------
 const power: number[] = []
