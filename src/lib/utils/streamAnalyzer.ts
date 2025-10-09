@@ -584,7 +584,7 @@ for (let i = 0; i < speed.length; i++) {
 
   // ✅ 저속 및 중속 감쇠
   if (speedKmh < 40) totalPower *= speedKmh / 40
-  if (speedKmh < 15) totalPower *= 0.7
+  if (speedKmh < 15) totalPower *= 0.85
   if (speedKmh > 30) totalPower *= 0.95
 
   // ✅ 고속 한계 및 GPS 튐 완화
@@ -605,11 +605,6 @@ for (let i = 0; i < speed.length; i++) {
   power.push(totalPower)
 }
 
-
-
-
-
-
   
 
   // -------------------------------
@@ -621,12 +616,18 @@ for (let i = 0; i < speed.length; i++) {
   if (avg < 70) {
     const scale = Math.min(2.0, 70 / Math.max(avg, 1))
     adjusted = adjusted.map(p => p * scale)
+  } else if (avg < 100) {
+  const scale = 1 + (100 - avg) / 300
+  adjusted = adjusted.map(p => p * scale)
   }
 
   // -------------------------------
   // ⑥ 최소 파워 하한 설정 (70W)
   // -------------------------------
   adjusted = adjusted.map(p => Math.max(70, p))
+
+  if (gpsStability < 0.7) adjusted = adjusted.map(p => p * 0.9)
+
 
   // -------------------------------
   // ⑦ Z6 과대 검출 + 자동 감쇠
