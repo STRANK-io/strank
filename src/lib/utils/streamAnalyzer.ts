@@ -19,7 +19,7 @@ interface StreamData {
   cadence?: number[]
   moving?: (number | boolean)[]
 }
- 
+
 interface RiderStyle {
   icon: string
   name: string
