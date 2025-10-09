@@ -482,13 +482,12 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 }
 
 
-
 /**
- * 파워 추정 함수 (v5.5 - 중속 강화 + 고속 감쇠 완화 + Z6 억제 강화)
- * - 평균파워 저평균 보정(60W 기준)
- * - 저속 감쇠 완화, 중속(20~35km/h) 강화
- * - Z6 과대 검출 시 자동 감쇠(0.85배)
- * - GPS 안정도 계산 포함
+ * 파워 추정 함수 (v5.6 - Z6 안정화 + 고속 감쇠 강화)
+ * - 평균파워 현실화(60W 기준 보정)
+ * - 중속(20~35km/h) 강화, 고속(35km/h 이상) 감쇠 강화
+ * - Z6 과대 검출 억제(상위 10%만 반영)
+ * - GPS 안정도 포함
  */
 
 function estimatePower(
@@ -502,7 +501,8 @@ function estimatePower(
   rho = 1.226,
   g = 9.81
 ): { power: number[]; gpsStability: number; zone6Ratio: number } {
-  if (distanceM.length < 2) return { power: [], gpsStability: 0, zone6Ratio: 0 }
+  if (distanceM.length < 2)
+    return { power: [], gpsStability: 0, zone6Ratio: 0 }
 
   // -------------------------------
   // ① 거리 gap 보정
@@ -541,7 +541,7 @@ function estimatePower(
   }
 
   const speed = rollingMean(medianFilter(limitedSpeed, 3), 5, true, 1)
-    .map(s => Math.min(Math.max(s, 0), 22)) // 속도상한 22m/s (~79km/h)
+    .map(s => Math.min(Math.max(s, 0), 22)) // 속도상한 22 m/s (~79 km/h)
 
   // GPS 안정도 평가
   let unstableCount = 0
@@ -579,14 +579,14 @@ function estimatePower(
     let totalPower = gradPower + rollPower + aeroPower
 
     const speedKmh = s * 3.6
-    const minPower = 10 + 1.8 * speedKmh // 저속 하한 완화
+    const minPower = 10 + 1.8 * speedKmh
     totalPower = Math.max(minPower, totalPower)
 
     // 속도별 감쇠 곡선
     if (speedKmh < 40) totalPower *= speedKmh / 40
     if (speedKmh < 15) totalPower *= 0.8
-    if (speedKmh > 30) totalPower *= 0.85
-    totalPower = Math.min(700, totalPower) // 최대 제한 살짝 완화
+    if (speedKmh > 30) totalPower *= 0.8 // (기존 0.85 → 0.8, 고속 감쇠 강화)
+    totalPower = Math.min(700, totalPower)
 
     if (i > 0) {
       const prev = power[i - 1] || totalPower
@@ -608,14 +608,14 @@ function estimatePower(
   }
 
   // -------------------------------
-  // ⑥ 최소 파워 하한 설정 (60W)
+  // ⑥ 최소 파워 하한 (60W)
   // -------------------------------
   adjusted = adjusted.map(p => Math.max(60, p))
 
   // -------------------------------
-  // ⑦ Z6 과대 검출 + 자동 감쇠
+  // ⑦ Z6 과대 검출 억제
   // -------------------------------
-  const thresholdZ6 = 0.85 * max(adjusted)
+  const thresholdZ6 = 0.9 * max(adjusted) // 상위 10%만 Z6로 판정
   const zone6Count = adjusted.filter(p => p >= thresholdZ6).length
   const zone6Ratio = zone6Count / adjusted.length
 
@@ -627,7 +627,7 @@ function estimatePower(
   // ⑧ 스무딩 후 반환
   // -------------------------------
   return {
-    power: rollingMean(adjusted, 5, true, 1), // 부드럽게
+    power: rollingMean(adjusted, 5, true, 1),
     gpsStability,
     zone6Ratio,
   }
@@ -644,6 +644,8 @@ function mean(arr: number[]): number {
 function max(arr: number[]): number {
   return arr.length ? Math.max(...arr.filter(v => !isNaN(v))) : 0
 }
+
+
 
 
 
