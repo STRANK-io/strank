@@ -483,8 +483,6 @@ function medianFilter(data: number[], kernelSize: number): number[] {
 
 
 
-
-
 /**
  * 파워 추정 함수 (v8.4-ep - 완전 안정판 / 현실표시보정 OFF)
  * -----------------------------------------------------------
@@ -494,7 +492,6 @@ function medianFilter(data: number[], kernelSize: number): number[] {
  * ✅ 고속 구간(>35km/h) 감쇠 0.65배
  * ✅ 파워 상한 470W
  * ✅ 평균 스케일 보정 (목표 평균 110~120W)
- * ✅ Z6 인식 0.88×max 파워 기준
  * ✅ 기존 rollingMean 등과 충돌 방지 (ep 네임스페이스)
  * -----------------------------------------------------------
  */
@@ -509,9 +506,9 @@ export function estimatePower(
   cr = 0.007,
   rho = 1.226,
   g = 9.81
-): { power: number[]; gpsStability: number; zone6Ratio: number } {
+): { power: number[]; gpsStability: number } {
   if (distanceM.length < 3)
-    return { power: [], gpsStability: 0, zone6Ratio: 0 }
+    return { power: [], gpsStability: 0 }
 
   // -------------------------------
   // ① 거리 gap 보정 (GPS 튐 완화)
@@ -604,33 +601,16 @@ export function estimatePower(
   // -------------------------------
   const avg = mean_ep(power)
   const scale = Math.min(1.8, Math.max(0.8, 115 / (avg || 1)))
-  let adjusted = power.map(p => p * scale * Math.max(0.9, gpsStability))
+  const adjusted = power.map(p => p * scale * Math.max(0.9, gpsStability))
 
   // -------------------------------
-  // ⑦ Z6 구간 비율 계산 (상위 12% 인식)
-  // -------------------------------
-  const thresholdZ6 = 0.88 * Math.max(...adjusted)
-  let zone6Segments = 0
-  let segmentLength = 0
-  for (let i = 0; i < adjusted.length; i++) {
-    if (adjusted[i] >= thresholdZ6) segmentLength++
-    else {
-      if (segmentLength >= 2) zone6Segments += segmentLength
-      segmentLength = 0
-    }
-  }
-  if (segmentLength >= 2) zone6Segments += segmentLength
-  const zone6Ratio = zone6Segments / adjusted.length
-
-  // -------------------------------
-  // ⑧ 스무딩 및 반환
+  // ⑦ 스무딩 및 반환
   // -------------------------------
   const finalPower = rollingMean_ep(adjusted, 5).map(p => Math.max(60, p))
 
   return {
     power: finalPower,
     gpsStability,
-    zone6Ratio,
   }
 }
 
@@ -674,6 +654,9 @@ function gradient_ep(arr: number[]): number[] {
   }
   return grad
 }
+
+
+
 
 
 
