@@ -1189,6 +1189,7 @@ export async function analyzeStreamData(userId: string, streamsData: any): Promi
       ftp60: null,
       riderStyle: { icon:'🚲', name:'데이터 없음', desc:'유효한 주행 데이터가 없습니다.' },
       courseName: null
+      hasPowerData: false,
     }
   }
 
