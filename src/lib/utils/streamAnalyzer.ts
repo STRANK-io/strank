@@ -225,10 +225,7 @@ function pickBestPOI(pois: {name: string | null, tags: any}[], baseName: string 
     const name = p.name
 
     // 🥇 1. 최우선: '고개', '재', highway=pass 포함
-    if (
-      (name.includes("고개") || name.includes("재")) ||
-      p.tags.highway === "pass"
-    ) score = 101
+    if (/(고개|재|pass|jae|toge|ling)/i.test(name) || p.tags.highway === "pass") score = 101
 
     // 2. 댐, 보, 산, 대교 등 (기존 상위권 유지)
     else if (p.tags.man_made === "dam") score = 100
