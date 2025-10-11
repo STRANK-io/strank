@@ -1394,3 +1394,4 @@ return {
   ...results,
   hasPowerData: detectPowerData(streamsData), // ✅ 파워 데이터 감지 결과 추가
 }
+}
