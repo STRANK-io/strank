@@ -66,6 +66,11 @@ export async function generateActivityDescriptionWithGPT(
       throw new Error(ERROR_CODES.OPENAI.API_ERROR)
     }
 
+const hasPowerData =
+  Array.isArray(activityData.streamsData?.watts?.data) &&
+  activityData.streamsData.watts.data.length > 10 &&
+  activityData.streamsData.watts.data.some((v: number) => Number.isFinite(v) && v > 0)
+
     // 랭킹 데이터 로깅
     console.log('📊 랭킹 데이터:', {
       rankingData,
@@ -190,10 +195,6 @@ ${streamAnalysis ? `
 - 최대파워: ${streamAnalysis.최대파워}W
 - 최고심박수: ${streamAnalysis.최고심박수}bpm
 - 평균케이던스: ${streamAnalysis.평균케이던스}rpm
-- 파워데이터 상태: ${
-  activityData.streamsData?.watts?.data?.length > 0
-    ? '스트림에 파워데이터 있음'
-    : '스트림에 파워데이터 없음'
 }
 - courseName: ${
   (streamAnalysis as any)?.courseName 
@@ -286,6 +287,8 @@ ${streamAnalysis ? `${streamAnalysis.riderStyle.icon} 라이딩스타일 : ${str
 
 ■ 파워·심박 존 훈련 분석
 스트림 데이터 분석 결과를 기반으로 이번 훈련 결과를 150자 이내로 제안해줘. 예시의 폼은 유지해줘.
+- 파워데이터 상태: ${hasPowerData ? '스트림에 파워데이터 있음' : '스트림에 파워데이터 없음'}
+
 
 파워데이터가 있을때 :
 📈 파워·심박 존 훈련 분석
