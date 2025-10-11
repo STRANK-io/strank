@@ -5,13 +5,13 @@ import { openai } from '@ai-sdk/openai'
 import { z } from 'zod'
 import { generateRankingSection } from '@/lib/utils/description'
 import { analyzeStreamData } from '@/lib/utils/streamAnalyzer'
+import OpenAI from 'openai'
+const client = new OpenAI()
 
-// API 키 확인
 if (!process.env.OPENAI_API_KEY) {
   throw new Error('OPENAI_API_KEY가 설정되지 않았습니다.')
 }
 
-// 활동 데이터 스키마 정의
 const activityDataSchema = z.object({
   date: z.string(),
   distance: z.number(),
@@ -25,7 +25,6 @@ const activityDataSchema = z.object({
   streamsData: z.any().optional(), // 스트림 데이터 전체 포함
 })
 
-// 랭킹 데이터 스키마 정의
 const rankingDataSchema = z.object({
   distanceRankCity: z.number().nullable(),
   distanceRankDistrict: z.number().nullable(),
@@ -41,10 +40,8 @@ export async function generateActivityDescriptionWithGPT(
   rankingData?: z.infer<typeof rankingDataSchema>
 ): Promise<string> {
   
-  // 요청 메시지 배열 선언 (전역)
   const messages: Array<{ role: 'system' | 'user'; content: string }> = []
   
-  // 스트림 데이터 분석
   let streamAnalysis = null
   if (activityData.streamsData) {
     try {
@@ -57,8 +54,9 @@ export async function generateActivityDescriptionWithGPT(
     }
   }
 
+const hasPowerData = streamAnalysis?.hasPowerData ?? false
+
   try {
-    // API 키 확인
     if (!process.env.OPENAI_API_KEY) {
       logError('OpenAI API 키가 설정되지 않음', {
         functionName: 'generateActivityDescriptionWithGPT',
@@ -66,18 +64,11 @@ export async function generateActivityDescriptionWithGPT(
       throw new Error(ERROR_CODES.OPENAI.API_ERROR)
     }
 
-const hasPowerData =
-  Array.isArray(activityData.streamsData?.watts?.data) &&
-  activityData.streamsData.watts.data.length > 10 &&
-  activityData.streamsData.watts.data.some((v: number) => Number.isFinite(v) && v > 0)
-
-    // 랭킹 데이터 로깅
     console.log('📊 랭킹 데이터:', {
       rankingData,
       time: new Date().toISOString()
     })
 
-    // 랭킹 섹션 미리 생성
     const rankingSection = rankingData
       ? generateRankingSection({
           rankings: rankingData,
@@ -86,13 +77,11 @@ const hasPowerData =
         })
       : ''
     
-    // 생성된 랭킹 섹션 로깅
     console.log('📝 생성된 랭킹 섹션:', {
       rankingSection,
       time: new Date().toISOString()
     })
 
-    // 템플릿 준비
     console.log('🔍 템플릿 생성 전 스트림 데이터 확인:', {
       hasStreamsData: !!activityData.streamsData,
       streamsDataType: typeof activityData.streamsData,
@@ -195,7 +184,6 @@ ${streamAnalysis ? `
 - 최대파워: ${streamAnalysis.최대파워}W
 - 최고심박수: ${streamAnalysis.최고심박수}bpm
 - 평균케이던스: ${streamAnalysis.평균케이던스}rpm
-}
 - courseName: ${
   (streamAnalysis as any)?.courseName 
     || (
@@ -293,7 +281,6 @@ ${streamAnalysis ? `${streamAnalysis.riderStyle.icon} 라이딩스타일 : ${str
 스트림 데이터 분석 결과를 기반으로 이번 훈련 결과를 150자 이내로 제안해줘. 예시의 폼은 유지해줘.
 - 파워데이터 상태: ${hasPowerData ? '스트림에 파워데이터 있음' : '스트림에 파워데이터 없음'}
 
-
 파워데이터가 있을때 :
 ⚪ Z1 회복       : P [Z1_P]% / H [Z1_H]%
 🔵 Z2 지구력    : P [Z2_P]% / H [Z2_H]%
@@ -330,7 +317,6 @@ Z4: [H_Z4]bpm / Z5: [H_Z5]bpm
  STRANK??????????????, ????????????🚴`
     })
 
-    // 요청 메시지 전체 출력
     console.log('\n' + '='.repeat(80))
     console.log('📤 GPT API 요청 메시지:')
     console.log('='.repeat(80))
@@ -338,11 +324,6 @@ Z4: [H_Z4]bpm / Z5: [H_Z5]bpm
     console.log('='.repeat(80))
     console.log('📤 요청 메시지 출력 완료\n')
 
-    // GPT-5는 새로운 API 방식 사용
-    const OpenAI = require('openai')
-    const client = new OpenAI()
-    
-    // 메시지를 GPT-5 형식으로 변환 (스트림 데이터 분석 결과 포함)
     const gpt5Input = messages.map(msg => `${msg.role}: ${msg.content}`).join('\n\n')
     
     console.log('📊 토큰 수 줄이기:', {
@@ -352,15 +333,14 @@ Z4: [H_Z4]bpm / Z5: [H_Z5]bpm
     })
     
     const response = await client.responses.create({
-      model: "gpt-5-mini",
+      model: "gpt-5-mini-2025-08-07",
       input: gpt5Input,
-      reasoning: { effort: "low" },  // 추론 노력 낮게 설정
-      text: { verbosity: "low" }     // 출력 간결하게 설정
+      reasoning: { effort: "low" },
+      text: { verbosity: "low" }
     })
     
     const text = response.output_text
 
-    // 생성된 텍스트 전체 출력
     console.log('\n' + '='.repeat(80))
     console.log('📝 생성된 텍스트 전체 내용:')
     console.log('='.repeat(80))
@@ -382,7 +362,6 @@ Z4: [H_Z4]bpm / Z5: [H_Z5]bpm
       throw new Error(ERROR_CODES.OPENAI.DESCRIPTION_GENERATION_FAILED)
     }
 
-    // 최종 생성된 텍스트 로깅
     console.log('✅ GPT 응답 완료:', {
       generatedText: text.substring(0, 500) + '...', // 생성된 텍스트의 앞부분만 로깅
       time: new Date().toISOString()
@@ -390,7 +369,6 @@ Z4: [H_Z4]bpm / Z5: [H_Z5]bpm
 
     return text
   } catch (error: any) {
-    // API 호출 한도 초과 에러 처리
     if (error.status === 429) {
       logError('OpenAI API 호출 한도 초과', {
         error,
@@ -399,7 +377,6 @@ Z4: [H_Z4]bpm / Z5: [H_Z5]bpm
       throw new Error(ERROR_CODES.OPENAI.API_LIMIT_EXCEEDED)
     }
 
-    // 기타 API 에러 처리
     logError('OpenAI API 호출 중 오류 발생', {
       error,
       functionName: 'generateActivityDescriptionWithGPT',
