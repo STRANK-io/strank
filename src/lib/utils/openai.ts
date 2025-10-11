@@ -128,14 +128,7 @@ ${rankingSection}
 [작성가이드에 맞춰 작성]
 
 📈 파워·심박 존 훈련 분석
-⚪ Z1 회복       : P [Z1_P]% / H [Z1_H]%
-🔵 Z2 지구력    : P [Z2_P]% / H [Z2_H]%
-🟢 Z3 템포       : P [Z3_P]% / H [Z3_H]%
-🟠 Z4 임계       : P [Z4_P]% / H [Z4_H]%
-🔴 Z5 최대산소 : P [Z5_P]% / H [Z5_H]%
-🟣 Z6 무산소    : P [Z6_P]%
-⚡ Z7 스프린트 : P [Z7_P]%
-📌 [작성가이드에 맞춰 작성]
+[작성가이드에 맞춰 작성]
 
 ⚡ 피크파워 분석
 5초: [P_5s]W / 1분: [P_1min]W / 2분: [P_2min]W
@@ -197,6 +190,11 @@ ${streamAnalysis ? `
 - 최대파워: ${streamAnalysis.최대파워}W
 - 최고심박수: ${streamAnalysis.최고심박수}bpm
 - 평균케이던스: ${streamAnalysis.평균케이던스}rpm
+- 파워데이터 상태: ${
+  activityData.streamsData?.watts?.data?.length > 0
+    ? '스트림에 파워데이터 있음'
+    : '스트림에 파워데이터 없음'
+}
 - courseName: ${
   (streamAnalysis as any)?.courseName 
     || (
@@ -211,11 +209,19 @@ ${streamAnalysis ? `
 FTP 분석:
 - 60분 FTP: ${streamAnalysis.ftp60 || 'N/A'}W
 
+const safe = (v: number | undefined | null) => Number.isFinite(v) ? v : 0
+
 파워존 분포:
 - Z1: ${streamAnalysis.powerZoneRatios.Z1}% / Z2: ${streamAnalysis.powerZoneRatios.Z2}% / Z3: ${streamAnalysis.powerZoneRatios.Z3}% / Z4: ${streamAnalysis.powerZoneRatios.Z4}% / Z5: ${streamAnalysis.powerZoneRatios.Z5}% / Z6: ${streamAnalysis.powerZoneRatios.Z6 || 0}% / Z7: ${streamAnalysis.powerZoneRatios.Z7 || 0}%
 
+- Z1-3: ${safe(streamAnalysis.powerZoneRatios.Z1) + safe(streamAnalysis.powerZoneRatios.Z2) + safe(streamAnalysis.powerZoneRatios.Z3)}%
+- Z4-6: ${safe(streamAnalysis.powerZoneRatios.Z4) + safe(streamAnalysis.powerZoneRatios.Z5) + safe(streamAnalysis.powerZoneRatios.Z6)}%
+
 심박존 분포:
 - Z1: ${streamAnalysis.hrZoneRatios.Z1}% / Z2: ${streamAnalysis.hrZoneRatios.Z2}% / Z3: ${streamAnalysis.hrZoneRatios.Z3}% / Z4: ${streamAnalysis.hrZoneRatios.Z4}% / Z5: ${streamAnalysis.hrZoneRatios.Z5}%
+
+- Z1-2: ${safe(streamAnalysis.hrZoneRatios.Z1) + safe(streamAnalysis.hrZoneRatios.Z2)}%
+- Z3-4: ${safe(streamAnalysis.hrZoneRatios.Z3) + safe(streamAnalysis.hrZoneRatios.Z4)}%
 
 피크파워 분석:
 - 5초: ${streamAnalysis.peakPowers['5s']}W / 1분: ${streamAnalysis.peakPowers['1min']}W / 2분: ${streamAnalysis.peakPowers['2min']}W
@@ -281,16 +287,25 @@ ${streamAnalysis ? `${streamAnalysis.riderStyle.icon} 라이딩스타일 : ${str
 🏁 <!-- 훈련 방향과 기대 효과를 1~2문장으로 간결히 제시하라 -->
 
 ■ 파워·심박 존 훈련 분석
-스트림 데이터 분석 결과를 기반으로 제안해줘. 예시의 폼은 유지해줘.
-예시)
-⚪ Z1 회복       : P ??% / H ??%
-🔵 Z2 지구력    : P ??% / H ??%
-🟢 Z3 템포       : P ??% / H ??%
-🟠 Z4 임계       : P ??% / H ??%
-🔴 Z5 최대산소 : P ??% / H ??%
-🟣 Z6 무산소    : P ??%
-⚡ Z7 스프린트 : P ??%
-📌 ????????????????????????????????????????????????????????
+스트림 데이터 분석 결과를 기반으로 이번 훈련 결과를 150자 이내로 제안해줘. 예시의 폼은 유지해줘.
+
+파워데이터가 있을때 :
+📈 파워·심박 존 훈련 분석
+⚪ Z1 회복       : P [Z1_P]% / H [Z1_H]%
+🔵 Z2 지구력    : P [Z2_P]% / H [Z2_H]%
+🟢 Z3 템포       : P [Z3_P]% / H [Z3_H]%
+🟠 Z4 임계       : P [Z4_P]% / H [Z4_H]%
+🔴 Z5 최대산소 : P [Z5_P]% / H [Z5_H]%
+🟣 Z6 무산소    : P [Z6_P]%
+⚡ Z7 스프린트 : P [Z7_P]%
+📌 <!-- 파워, 심박을 기반으로 훈련내용을 1~2문장으로 간결히 제시하라 -->
+
+파워데이터가 없을 때 :
+📈 훈련 분석 (GPS 기반)
+⚪ 회복/지속: P [Z1-3_P]% / H [Z1-2_H]%
+🔵 템포/임계: P [Z4-6_P]% / H [Z3-4_H]%
+🔴 고강도: P [Z7_P]% / H [Z5_H]%
+📌 <!-- 파워, 심박을 기반으로 훈련내용을 1~2문장으로 간결히 제시하라 -->
 
 ■ 피크파워 분석
 피크파워분석의 데이터가 0이면 값을 추측하지말고 0으로 표현해줘
