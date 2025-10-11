@@ -136,6 +136,9 @@ function sanitizeName(name?: string | null): string | null {
   if (/^\+?\d{6,}$/.test(trimmed.replace(/\s+/g, ""))) return null // 전화번호
   if (/^\D*\d{3,}$/.test(trimmed)) return null // 숫자 ID 기반 (예: "0501222551")
   if (trimmed.length < 2) return null // 너무 짧은 경우
+  if (
+    /(커피|카페|coffee|cafe|편의점|마트|식자재|병원|의원|재단|센터|학원|교회|성당|교회관|사무소|지점|점$|고등학교|중학교|초등학교|재단법인)/i.test(trimmed)
+  ) return null
   return trimmed
 }
 
