@@ -336,7 +336,7 @@ Z4: [H_Z4]bpm / Z5: [H_Z5]bpm
       model: "gpt-5-mini-2025-08-07",
       input: gpt5Input,
       reasoning: { effort: "low" },
-      text: { verbosity: "low" }
+      response_format: { type: "text" }
     })
     
     const text = response.output_text
