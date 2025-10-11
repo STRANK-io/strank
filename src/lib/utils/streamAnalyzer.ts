@@ -1127,6 +1127,19 @@ function determineRiderStyle(data: {
 }
 
 
+// =========================================
+// 파워 데이터 감지 함수 추가 👇
+// =========================================
+function detectPowerData(streamsData: any): boolean {
+  if (!streamsData?.watts?.data) return false
+  const data = streamsData.watts.data
+  return (
+    Array.isArray(data) &&
+    data.length > 10 &&
+    data.some((v: number) => Number.isFinite(v) && v > 0)
+  )
+}
+
 
 
 // =========================================
@@ -1376,6 +1389,8 @@ const ftpResult = estimateFtpWithoutPower(
 
   console.log('📍코스명 감지 결과:', results.courseName)
 
-  console.log('✅ 스트림 데이터 분석 완료')
-  return results
+console.log('✅ 스트림 데이터 분석 완료')
+return {
+  ...results,
+  hasPowerData: detectPowerData(streamsData), // ✅ 파워 데이터 감지 결과 추가
 }
