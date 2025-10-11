@@ -1188,7 +1188,7 @@ export async function analyzeStreamData(userId: string, streamsData: any): Promi
       hrZoneAverages: { Z1:null,Z2:null,Z3:null,Z4:null,Z5:null },
       ftp60: null,
       riderStyle: { icon:'🚲', name:'데이터 없음', desc:'유효한 주행 데이터가 없습니다.' },
-      courseName: null
+      courseName: null,
       hasPowerData: false,
     }
   }
