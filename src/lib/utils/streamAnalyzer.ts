@@ -42,6 +42,7 @@ interface AnalysisResult {
   ftp60: number | null
   riderStyle: RiderStyle
   courseName?: string | null
+  hasPowerData: boolean
 }
 
 // =========================================
