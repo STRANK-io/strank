@@ -224,34 +224,28 @@ function pickBestPOI(pois: {name: string | null, tags: any}[], baseName: string 
     let score = 0
     const name = p.name
 
-    // 1. 최우선: 댐, 보, 산, 대교
-    if (p.tags.man_made === "dam") score = 100
+    // 🥇 1. 최우선: '고개', '재', highway=pass 포함
+    if (
+      (name.includes("고개") || name.includes("재")) ||
+      p.tags.highway === "pass"
+    ) score = 101
+
+    // 2. 댐, 보, 산, 대교 등 (기존 상위권 유지)
+    else if (p.tags.man_made === "dam") score = 100
     else if (p.tags.waterway === "weir" || p.tags.man_made === "weir") score = 98
     else if (["peak","hill","ridge"].includes(p.tags.natural)) score = 95
     else if (p.tags.man_made === "bridge" && (name.includes("대교") || name.includes("Bridge"))) score = 90
-    else if (p.tags.highway === "pass") score = 85
-
-    // 2. 물 관련
     else if (p.tags.waterway === "river" || p.tags.natural === "water" || p.tags.place === "sea") score = 80
     else if (p.tags.water === "reservoir" || p.tags.landuse === "reservoir" || p.tags.water === "lake") score = 75
-
-    // 3. 교통/역사적 거점
     else if (p.tags.railway === "station" && (p.tags.station === "subway" || p.tags.subway === "yes")) score = 78
     else if (p.tags.railway === "station") score = 72
-
-    // 4. 관광/문화
     else if (["attraction","viewpoint","theme_park","zoo","museum"].includes(p.tags.tourism)) score = 70
     else if (p.tags.historic) score = 65
     else if (["temple","church","mosque","cathedral","shrine"].includes(p.tags.religion) || p.tags.amenity === "place_of_worship") score = 60
-
-    // 5. 레저/자연
     else if (["park","garden","resort","stadium"].includes(p.tags.leisure)) score = 55
     else if (["cliff","volcano","cape","valley","forest"].includes(p.tags.natural)) score = 50
-
-    // 6. 전망/기타
     else if (["tower","lighthouse"].includes(p.tags.man_made) || p.tags["tower:type"] === "observation") score = 45
     else if (p.tags.man_made === "pier" || p.tags.harbour) score = 40
-
     else score = 10
 
     return { ...p, score }
@@ -261,6 +255,7 @@ function pickBestPOI(pois: {name: string | null, tags: any}[], baseName: string 
   scored.sort((a, b) => b.score - a.score)
   return scored[0]?.name || baseName || "알 수 없음"
 }
+
 
 // ✅ 최종 코스명 생성
 export async function generateCourseName(
