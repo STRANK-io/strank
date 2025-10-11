@@ -335,8 +335,7 @@ Z4: [H_Z4]bpm / Z5: [H_Z5]bpm
     const response = await client.responses.create({
       model: "gpt-5-mini-2025-08-07",
       input: gpt5Input,
-      reasoning: { effort: "low" },
-      response_format: { type: "text" }
+      reasoning: { effort: "low" }
     })
     
     const text = response.output_text
