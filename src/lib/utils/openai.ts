@@ -75,7 +75,7 @@ const hasPowerData = streamAnalysis?.hasPowerData ?? false
           district: rankingData.district || '',
           province: rankingData.province || '지역 없음'
         })
-      : ''
+      : null
     
     console.log('📝 생성된 랭킹 섹션:', {
       rankingSection,
@@ -92,10 +92,7 @@ const hasPowerData = streamAnalysis?.hasPowerData ?? false
     const template = `
 🚴 STRANK AI 라이딩 리포트
 📅 [년-월-일-요일]
-
-${rankingSection}
-
-🔍라이딩 분석 정보
+${rankingSection ? `\n${rankingSection}\n\n` : '\n'}🔍라이딩 분석 정보
 🚴총거리: [총거리] km
 🚵총고도: [총고도] m
 🪫평균속도: [평균속도] km/h
