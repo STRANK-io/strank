@@ -209,19 +209,17 @@ ${streamAnalysis ? `
 FTP 분석:
 - 60분 FTP: ${streamAnalysis.ftp60 || 'N/A'}W
 
-const safe = (v: number | undefined | null) => Number.isFinite(v) ? v : 0
-
 파워존 분포:
 - Z1: ${streamAnalysis.powerZoneRatios.Z1}% / Z2: ${streamAnalysis.powerZoneRatios.Z2}% / Z3: ${streamAnalysis.powerZoneRatios.Z3}% / Z4: ${streamAnalysis.powerZoneRatios.Z4}% / Z5: ${streamAnalysis.powerZoneRatios.Z5}% / Z6: ${streamAnalysis.powerZoneRatios.Z6 || 0}% / Z7: ${streamAnalysis.powerZoneRatios.Z7 || 0}%
 
-- Z1-3: ${safe(streamAnalysis.powerZoneRatios.Z1) + safe(streamAnalysis.powerZoneRatios.Z2) + safe(streamAnalysis.powerZoneRatios.Z3)}%
-- Z4-6: ${safe(streamAnalysis.powerZoneRatios.Z4) + safe(streamAnalysis.powerZoneRatios.Z5) + safe(streamAnalysis.powerZoneRatios.Z6)}%
+- Z1-3: ${streamAnalysis.powerZoneRatios.Z1 + streamAnalysis.powerZoneRatios.Z2 + streamAnalysis.powerZoneRatios.Z3}%
+- Z4-6: ${streamAnalysis.powerZoneRatios.Z4 + streamAnalysis.powerZoneRatios.Z5 + streamAnalysis.powerZoneRatios.Z6}%
 
 심박존 분포:
 - Z1: ${streamAnalysis.hrZoneRatios.Z1}% / Z2: ${streamAnalysis.hrZoneRatios.Z2}% / Z3: ${streamAnalysis.hrZoneRatios.Z3}% / Z4: ${streamAnalysis.hrZoneRatios.Z4}% / Z5: ${streamAnalysis.hrZoneRatios.Z5}%
 
-- Z1-2: ${safe(streamAnalysis.hrZoneRatios.Z1) + safe(streamAnalysis.hrZoneRatios.Z2)}%
-- Z3-4: ${safe(streamAnalysis.hrZoneRatios.Z3) + safe(streamAnalysis.hrZoneRatios.Z4)}%
+- Z1-2: ${streamAnalysis.hrZoneRatios.Z1 + streamAnalysis.hrZoneRatios.Z2}%
+- Z3-4: ${streamAnalysis.hrZoneRatios.Z3 + streamAnalysis.hrZoneRatios.Z4}%
 
 피크파워 분석:
 - 5초: ${streamAnalysis.peakPowers['5s']}W / 1분: ${streamAnalysis.peakPowers['1min']}W / 2분: ${streamAnalysis.peakPowers['2min']}W
